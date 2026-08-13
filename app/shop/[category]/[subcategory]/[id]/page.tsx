@@ -2,11 +2,11 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { createServerClient } from "@/lib/supabase/server";
 import type { DbProduct } from "@/lib/supabase/types";
 import ProductCard from "@/components/ProductCard";
 import ProductActions from "@/components/ProductActions";
+import ProductGallery from "@/components/ProductGallery";
 
 /* ─── Display name maps ───────────────────────────────── */
 const CATEGORY_NAMES: Record<string, string> = {
@@ -136,31 +136,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
           {/* Two-column layout */}
           <div className="flex flex-col lg:flex-row gap-12 lg:gap-20 items-start">
 
-            {/* ── Left: image ── */}
+            {/* ── Left: image gallery ── */}
             <div className="w-full lg:w-1/2 flex-shrink-0">
-              <div className="aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] overflow-hidden relative">
-                {product.image_url ? (
-                  <Image
-                    src={product.image_url}
-                    alt={product.name}
-                    fill
-                    priority
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-8">
-                    <div className="w-10 h-px bg-[rgba(196,163,115,0.18)]" />
-                    <span
-                      aria-hidden="true"
-                      className="font-display text-[0.55rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.20)]"
-                    >
-                      Image Coming Soon
-                    </span>
-                    <div className="w-10 h-px bg-[rgba(196,163,115,0.18)]" />
-                  </div>
-                )}
-              </div>
+              <ProductGallery
+                images={[product.image_url].filter(Boolean) as string[]}
+                alt={product.name}
+              />
             </div>
 
             {/* ── Right: product info ── */}
