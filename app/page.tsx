@@ -4,28 +4,44 @@ import Button from "@/components/Button";
 /* ─── Category data ───────────────────────────────────── */
 const categories = [
   {
-    id: "fragrance",
-    title: "Sacred Fragrance",
-    shortTitle: "Sacred Fragrance",
-    href: "/shop/sacred-fragrance",
+    id: "candle",
+    title: "Candles",
+    shortTitle: "Candles",
+    href: "/shop/candle",
     description:
-      "Hand-rolled incense sticks, dhoop cones, and resin blends crafted from sustainably harvested botanicals.",
+      "Two collections of scented wax — Nakshatra in glass, Mandala in tin — chosen for the quality of stillness each fragrance holds.",
   },
   {
-    id: "light",
-    title: "Sacred Light",
-    shortTitle: "Sacred Light",
-    href: "/shop/sacred-light",
+    id: "idol",
+    title: "Idols",
+    shortTitle: "Idols",
+    href: "/shop/idol",
     description:
-      "Pure beeswax and soy candles, brass diyas, and taper holders — each piece a study in quiet illumination.",
+      "Ganesha and Lakshmi, cast for the home altar — sacred presence for the space that holds what matters.",
   },
   {
-    id: "gifting",
-    title: "Sacred Gifting",
-    shortTitle: "Sacred Gifting",
-    href: "/shop/sacred-gifting",
+    id: "bracelet",
+    title: "Spiritual Bracelets",
+    shortTitle: "Bracelets",
+    href: "/shop/bracelet",
     description:
-      "Curated bundles and pooja gift sets, thoughtfully assembled for weddings, festivals, and new beginnings.",
+      "Rudraksh mala and rose quartz, hand-knotted for the wrist and worn in daily practice.",
+  },
+  {
+    id: "gift",
+    title: "Gift Sets",
+    shortTitle: "Gift Sets",
+    href: "/shop/gift",
+    description:
+      "Curated boxes for the festivals and occasions that mark a sacred year — assembled with the care the moment deserves.",
+  },
+  {
+    id: "pooja-essentials",
+    title: "Pooja Essentials",
+    shortTitle: "Pooja Essentials",
+    href: "/shop/pooja-essentials",
+    description:
+      "Incense sticks, ghee batti, camphor — the foundational items of daily ritual in their purest and simplest forms.",
   },
 ];
 
@@ -100,7 +116,7 @@ export default function Home() {
           </div>
 
           {/* Category cards — Damson on Ivory */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
             {categories.map((cat) => (
               <div
                 key={cat.id}
