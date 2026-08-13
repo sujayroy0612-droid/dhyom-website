@@ -38,7 +38,7 @@ export default async function RootLayout({
         <CartProvider>
           <Header logoUrl={logoUrl} />
           <main>{children}</main>
-          <Footer />
+          <Footer logoUrl={logoUrl} />
         </CartProvider>
       </body>
     </html>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 const navLinks = [
   { label: "Home",    href: "/" },
@@ -7,19 +8,33 @@ const navLinks = [
   { label: "Contact", href: "/contact" },
 ];
 
-export default function Footer() {
+export default function Footer({ logoUrl }: { logoUrl?: string | null }) {
   return (
     <footer className="bg-ink border-t border-[rgba(196,163,115,0.10)]">
       <div className="max-w-5xl mx-auto px-6 py-16 flex flex-col items-center gap-10">
 
         {/* Logo / Wordmark */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-7 h-7 rounded-full border border-[rgba(196,163,115,0.40)] flex items-center justify-center">
-            <span className="font-display text-[0.55rem] tracking-[0.15em] text-brass">D</span>
-          </div>
-          <span className="font-display text-base tracking-[0.18em] text-brass group-hover:text-ivory transition-colors duration-200">
-            DHYOM
-          </span>
+          {logoUrl ? (
+            <div className="relative h-8 w-32">
+              <Image
+                src={logoUrl}
+                alt="Dhyom"
+                fill
+                className="object-contain object-left"
+                sizes="128px"
+              />
+            </div>
+          ) : (
+            <>
+              <div className="w-7 h-7 rounded-full border border-[rgba(196,163,115,0.40)] flex items-center justify-center">
+                <span className="font-display text-[0.55rem] tracking-[0.15em] text-brass">D</span>
+              </div>
+              <span className="font-display text-base tracking-[0.18em] text-brass group-hover:text-ivory transition-colors duration-200">
+                DHYOM
+              </span>
+            </>
+          )}
         </Link>
 
         {/* Tagline */}
@@ -46,12 +61,12 @@ export default function Footer() {
         {/* Social + legal row */}
         <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-10 text-center">
           <a
-            href="https://instagram.com/dhyom03"
+            href="https://instagram.com/dhyom.in"
             target="_blank"
             rel="noopener noreferrer"
             className="font-display text-[0.58rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.55)] hover:text-brass transition-colors duration-200"
           >
-            Instagram — @dhyom03
+            Instagram — @dhyom.in
           </a>
           <span className="hidden sm:block w-px h-3 bg-[rgba(196,163,115,0.18)]" />
           <p className="font-display text-[0.55rem] tracking-[0.18em] uppercase text-[rgba(245,237,224,0.22)]">
