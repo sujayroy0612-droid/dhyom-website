@@ -9,11 +9,10 @@ interface Product {
   name: string;
   category: string;
   image_url: string | null;
+  image_urls: string[];
 }
 
-type UploadStatus = "idle" | "uploading" | "done" | "error";
-
-const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
+const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -24,239 +23,228 @@ const CATEGORY_LABELS: Record<string, string> = {
   "pooja-essentials": "Pooja Essential",
 };
 
+async function uploadToCloudinary(file: File, publicId: string): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("upload_preset", UPLOAD_PRESET);
+  fd.append("public_id", publicId);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+    method: "POST", body: fd,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error?.message ?? "Cloudinary upload failed");
+  }
+  const data = await res.json();
+  return data.secure_url as string;
+}
+
 export default function UploadImagesPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statuses, setStatuses] = useState<Record<string, UploadStatus>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [products,  setProducts]  = useState<Product[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [uploading, setUploading] = useState<Record<string, string>>({}); // id → "primary"|"gallery"
+  const [errors,    setErrors]    = useState<Record<string, string>>({});
+  const primaryRef = useRef<Record<string, HTMLInputElement | null>>({});
+  const galleryRef = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     supabase
       .from("products")
-      .select("id, name, category, image_url")
-      .order("category")
-      .order("name")
+      .select("id, name, category, image_url, image_urls")
+      .order("category").order("name")
       .then(({ data }) => {
-        setProducts((data as Product[]) ?? []);
+        setProducts((data ?? []).map(p => ({
+          ...p,
+          image_urls: Array.isArray(p.image_urls) ? p.image_urls : [],
+        })) as Product[]);
         setLoading(false);
       });
   }, []);
 
-  function setStatus(id: string, status: UploadStatus) {
-    setStatuses((prev) => ({ ...prev, [id]: status }));
+  function setErr(id: string, msg: string) {
+    setErrors(p => ({ ...p, [id]: msg }));
+    setTimeout(() => setErrors(p => ({ ...p, [id]: "" })), 5000);
   }
 
-  async function handleFile(product: Product, file: File) {
-    setStatus(product.id, "uploading");
-    setErrors((prev) => ({ ...prev, [product.id]: "" }));
-
+  /* ── Upload primary image ── */
+  async function handlePrimary(product: Product, file: File) {
+    setUploading(p => ({ ...p, [product.id]: "primary" }));
     try {
-      // 1 — Upload to Cloudinary (unsigned)
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("upload_preset", UPLOAD_PRESET);
-      // Use product id as the public_id so overwriting replaces the old image
-      fd.append("public_id", `products/${product.id}`);
-
-      const czRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-        { method: "POST", body: fd }
-      );
-      if (!czRes.ok) {
-        const body = await czRes.json().catch(() => ({}));
-        throw new Error(body.error?.message ?? "Cloudinary upload failed");
-      }
-      const czData = await czRes.json();
-      const imageUrl: string = czData.secure_url;
-
-      // 2 — Save URL back to Supabase
-      const { error: sbErr } = await supabase
-        .from("products")
-        .update({ image_url: imageUrl })
-        .eq("id", product.id);
-
-      if (sbErr) throw new Error(`Supabase: ${sbErr.message}`);
-
-      // 3 — Update local state so thumbnail appears immediately
-      setProducts((prev) =>
-        prev.map((p) => (p.id === product.id ? { ...p, image_url: imageUrl } : p))
-      );
-      setStatus(product.id, "done");
-      setTimeout(() => setStatus(product.id, "idle"), 2500);
+      const url = await uploadToCloudinary(file, `products/${product.id}`);
+      await supabase.from("products").update({ image_url: url }).eq("id", product.id);
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_url: url } : p));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      setErrors((prev) => ({ ...prev, [product.id]: msg }));
-      setStatus(product.id, "error");
-      setTimeout(() => setStatus(product.id, "idle"), 4000);
+      setErr(product.id, err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(p => ({ ...p, [product.id]: "" }));
     }
   }
 
-  const uploaded = products.filter((p) => p.image_url).length;
-  const missing = products.length - uploaded;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#12060e] flex items-center justify-center">
-        <div className="w-6 h-6 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" />
-      </div>
-    );
+  /* ── Add a gallery image ── */
+  async function handleGallery(product: Product, file: File) {
+    setUploading(p => ({ ...p, [product.id]: "gallery" }));
+    try {
+      const idx = (product.image_urls?.length ?? 0) + 1;
+      const url = await uploadToCloudinary(file, `products/${product.id}_gallery_${idx}`);
+      const newUrls = [...(product.image_urls ?? []), url];
+      await supabase.from("products").update({ image_urls: newUrls }).eq("id", product.id);
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_urls: newUrls } : p));
+    } catch (err) {
+      setErr(product.id, err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(p => ({ ...p, [product.id]: "" }));
+    }
   }
+
+  /* ── Remove a gallery image ── */
+  async function removeGallery(product: Product, urlToRemove: string) {
+    const newUrls = (product.image_urls ?? []).filter(u => u !== urlToRemove);
+    await supabase.from("products").update({ image_urls: newUrls }).eq("id", product.id);
+    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_urls: newUrls } : p));
+  }
+
+  const totalImages = products.reduce((s, p) => s + (p.image_url ? 1 : 0) + (p.image_urls?.length ?? 0), 0);
+  const withPrimary = products.filter(p => p.image_url).length;
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#12060e] flex items-center justify-center">
+      <div className="w-6 h-6 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#12060e] pt-8 pb-16 px-8">
       <div className="max-w-5xl mx-auto">
 
-        {/* ── Header ── */}
-        <div className="mb-10">
-          <p className="font-display text-[0.52rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.40)] mb-3">
-            Admin · Internal Tool
+        {/* Header */}
+        <div className="mb-8">
+          <p className="font-display text-[0.44rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.35)] mb-1">Admin · Internal Tool</p>
+          <h1 className="font-display text-ivory mb-1" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Product Images</h1>
+          <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-sm">
+            Each product can have one primary image plus multiple gallery images.
           </p>
-          <h1
-            className="font-display text-ivory mb-2"
-            style={{ fontSize: "clamp(1.5rem, 3vw, 2.2rem)", letterSpacing: "0.05em" }}
-          >
-            Product Image Upload
-          </h1>
-          <p className="font-body font-light italic text-[rgba(245,237,224,0.38)] text-sm leading-relaxed max-w-lg">
-            Upload product images to Cloudinary. The URL is saved to Supabase instantly — no rebuild needed.
-          </p>
-          <div className="mt-6 w-10 h-px bg-[rgba(196,163,115,0.22)]" />
         </div>
 
-        {/* ── Stats ── */}
+        {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
-            { label: "Total Products", value: products.length, color: "text-ivory" },
-            { label: "Images Uploaded", value: uploaded, color: "text-brass" },
-            { label: "Missing Images", value: missing, color: missing === 0 ? "text-[rgba(100,210,100,0.75)]" : "text-[rgba(210,90,90,0.75)]" },
+            { label: "Products",        value: products.length,  color: "text-ivory" },
+            { label: "Have Primary",    value: withPrimary,      color: "text-brass" },
+            { label: "Total Images",    value: totalImages,      color: "text-[rgba(80,200,120,0.80)]" },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-damson border border-[rgba(196,163,115,0.14)] rounded-[5px] px-4 py-3.5">
-              <p className="font-display text-[0.44rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.40)] mb-1.5">
-                {label}
-              </p>
-              <p className={`font-display ${color}`} style={{ fontSize: "1.4rem", letterSpacing: "0.04em" }}>
-                {value}
-              </p>
+            <div key={label} className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] px-4 py-4">
+              <p className="font-display text-[0.42rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.38)] mb-1.5">{label}</p>
+              <p className={`font-display ${color}`} style={{ fontSize: "1.5rem", letterSpacing: "0.04em" }}>{value}</p>
             </div>
           ))}
         </div>
 
-        {/* ── Table ── */}
-        <div className="bg-damson border border-[rgba(196,163,115,0.14)] rounded-[6px] overflow-hidden">
+        {/* Product list */}
+        <div className="flex flex-col gap-3">
+          {products.map(product => {
+            const busy = uploading[product.id];
+            const errMsg = errors[product.id];
+            const allImages = [product.image_url, ...(product.image_urls ?? [])].filter(Boolean) as string[];
 
-          {/* Table header */}
-          <div className="hidden sm:grid sm:grid-cols-[64px_1fr_130px_170px] gap-4 px-5 py-3 border-b border-[rgba(196,163,115,0.10)]">
-            {["Image", "Product", "Category", "Action"].map((h) => (
-              <span key={h} className="font-display text-[0.44rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.38)]">
-                {h}
-              </span>
-            ))}
-          </div>
+            return (
+              <div key={product.id} className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] px-5 py-4">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
 
-          {/* Rows */}
-          <div className="divide-y divide-[rgba(196,163,115,0.07)]">
-            {products.map((product) => {
-              const status = statuses[product.id] ?? "idle";
-              const errMsg = errors[product.id];
-
-              return (
-                <div key={product.id} className="flex flex-col sm:grid sm:grid-cols-[64px_1fr_130px_170px] gap-3 sm:gap-4 items-start sm:items-center px-5 py-4">
-
-                  {/* Thumbnail */}
-                  <div className="w-16 h-16 rounded-[4px] border border-[rgba(196,163,115,0.12)] bg-[#270b1b] overflow-hidden relative flex-shrink-0">
-                    {product.image_url ? (
-                      <Image
-                        src={product.image_url}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                        sizes="64px"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="font-display text-[0.34rem] tracking-[0.08em] uppercase text-[rgba(196,163,115,0.18)]">
-                          None
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Name + URL */}
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className="font-display text-ivory leading-snug"
-                      style={{ fontSize: "0.82rem", letterSpacing: "0.04em" }}
-                    >
-                      {product.name}
-                    </p>
-                    <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-[0.68rem] mt-0.5 truncate">
-                      {product.image_url
-                        ? product.image_url.replace("https://res.cloudinary.com/", "cld/")
-                        : "No image yet"}
+                  {/* Product info */}
+                  <div className="sm:w-44 flex-shrink-0">
+                    <p className="font-display text-ivory text-[0.80rem] tracking-wide leading-snug">{product.name}</p>
+                    <p className="font-display text-[0.42rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.40)] mt-0.5">
+                      {CATEGORY_LABELS[product.category] ?? product.category}
                     </p>
                     {errMsg && (
-                      <p className="font-body font-light text-[rgba(210,90,90,0.70)] text-[0.70rem] mt-1 leading-snug">
-                        {errMsg}
-                      </p>
+                      <p className="font-body font-light text-[rgba(200,80,80,0.75)] text-[0.68rem] mt-1.5 leading-snug">{errMsg}</p>
                     )}
                   </div>
 
-                  {/* Category */}
-                  <span className="font-display text-[0.50rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.42)]">
-                    {CATEGORY_LABELS[product.category] ?? product.category}
-                  </span>
+                  {/* Image strip */}
+                  <div className="flex-1 flex items-start gap-2 flex-wrap">
 
-                  {/* Upload button */}
-                  <div className="w-full sm:w-auto">
-                    <input
-                      ref={(el) => { fileRefs.current[product.id] = el; }}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFile(product, file);
-                        e.target.value = "";
-                      }}
-                    />
+                    {/* Primary image */}
+                    <div className="relative group">
+                      <div className={[
+                        "w-20 h-20 rounded-[4px] border-[1.5px] overflow-hidden relative bg-[#270b1b] flex items-center justify-center",
+                        product.image_url ? "border-brass" : "border-[rgba(196,163,115,0.20)] border-dashed",
+                      ].join(" ")}>
+                        {product.image_url ? (
+                          <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="80px" />
+                        ) : (
+                          <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.22)]">Primary</span>
+                        )}
+                        {/* Primary badge */}
+                        <span className="absolute top-1 left-1 bg-brass text-ink font-display text-[0.36rem] tracking-[0.08em] uppercase px-1 py-0.5 rounded-[2px] leading-none">P</span>
+                      </div>
+                      {/* Replace overlay */}
+                      <button
+                        onClick={() => primaryRef.current[product.id]?.click()}
+                        disabled={!!busy}
+                        className="absolute inset-0 bg-[rgba(10,3,7,0.55)] opacity-0 group-hover:opacity-100 transition-opacity rounded-[4px] flex items-center justify-center disabled:cursor-not-allowed"
+                      >
+                        <span className="font-display text-ivory text-[0.40rem] tracking-[0.12em] uppercase">
+                          {busy === "primary" ? "…" : "Replace"}
+                        </span>
+                      </button>
+                      <input
+                        ref={el => { primaryRef.current[product.id] = el; }}
+                        type="file" accept="image/*" className="hidden"
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handlePrimary(product, f); e.target.value = ""; }}
+                      />
+                    </div>
+
+                    {/* Gallery images */}
+                    {(product.image_urls ?? []).map((url, i) => (
+                      <div key={url} className="relative group">
+                        <div className="w-20 h-20 rounded-[4px] border border-[rgba(196,163,115,0.20)] overflow-hidden relative bg-[#270b1b]">
+                          <Image src={url} alt={`${product.name} gallery ${i + 1}`} fill className="object-cover" sizes="80px" />
+                        </div>
+                        {/* Remove button */}
+                        <button
+                          onClick={() => removeGallery(product, url)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[rgba(200,60,60,0.85)] text-white text-xs leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[rgba(220,50,50,1)]"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Add gallery image button */}
                     <button
-                      type="button"
-                      disabled={status === "uploading"}
-                      onClick={() => fileRefs.current[product.id]?.click()}
-                      className={[
-                        "w-full font-display text-[0.52rem] tracking-[0.18em] uppercase rounded-[3px] px-4 py-2.5 border transition-all duration-200 active:scale-[0.98]",
-                        status === "done"
-                          ? "border-[rgba(100,200,100,0.40)] text-[rgba(100,215,100,0.80)] bg-[rgba(100,200,100,0.06)]"
-                          : status === "error"
-                          ? "border-[rgba(200,80,80,0.40)] text-[rgba(200,80,80,0.75)]"
-                          : status === "uploading"
-                          ? "border-[rgba(196,163,115,0.18)] text-[rgba(196,163,115,0.35)] cursor-not-allowed"
-                          : product.image_url
-                          ? "border-[rgba(196,163,115,0.28)] text-[rgba(196,163,115,0.55)] hover:border-[rgba(196,163,115,0.55)] hover:text-brass"
-                          : "border-[rgba(196,163,115,0.42)] text-brass hover:bg-[rgba(196,163,115,0.07)] hover:border-[rgba(196,163,115,0.65)]",
-                      ].join(" ")}
+                      onClick={() => galleryRef.current[product.id]?.click()}
+                      disabled={!!busy}
+                      className="w-20 h-20 rounded-[4px] border border-dashed border-[rgba(196,163,115,0.22)] hover:border-[rgba(196,163,115,0.45)] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      {status === "uploading" ? "Uploading…"
-                        : status === "done" ? "Saved ✓"
-                        : status === "error" ? "Failed — retry"
-                        : product.image_url ? "Replace"
-                        : "Upload Image"}
+                      {busy === "gallery" ? (
+                        <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.20)] border-t-brass animate-spin" />
+                      ) : (
+                        <>
+                          <span className="text-[rgba(196,163,115,0.45)] text-lg leading-none">+</span>
+                          <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.35)]">Add</span>
+                        </>
+                      )}
                     </button>
+                    <input
+                      ref={el => { galleryRef.current[product.id] = el; }}
+                      type="file" accept="image/*" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleGallery(product, f); e.target.value = ""; }}
+                    />
+
+                    {/* Image count */}
+                    <div className="self-end mb-1 ml-1">
+                      <span className="font-body font-light text-[rgba(245,237,224,0.22)] text-xs">
+                        {allImages.length} image{allImages.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+
                   </div>
-
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
-
-        {/* ── Footer note ── */}
-        <p className="font-body font-light italic text-[rgba(245,237,224,0.20)] text-[0.76rem] text-center mt-8 leading-relaxed">
-          Images upload to Cloudinary (preset: <span className="text-[rgba(196,163,115,0.35)]">dhyom-products</span>).
-          If the Supabase update fails, add an UPDATE policy on the products table:{" "}
-          <span className="text-[rgba(196,163,115,0.35)]">create policy &quot;admin update&quot; on products for update using (true);</span>
-        </p>
 
       </div>
     </div>

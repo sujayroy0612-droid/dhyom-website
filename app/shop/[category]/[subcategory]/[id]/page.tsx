@@ -75,7 +75,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const supabase = createServerClient();
   const cols =
-    "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,created_at";
+    "id,name,type,subcategory,collection,fragrance,price,description,image_url,image_urls,category,stock,created_at";
 
   const [productRes, relatedRes] = await Promise.all([
     supabase.from("products").select(cols).eq("id", id).single(),
@@ -139,7 +139,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             {/* ── Left: image gallery ── */}
             <div className="w-full lg:w-1/2 flex-shrink-0">
               <ProductGallery
-                images={[product.image_url].filter(Boolean) as string[]}
+                images={[product.image_url, ...(product.image_urls ?? [])].filter(Boolean) as string[]}
                 alt={product.name}
               />
             </div>

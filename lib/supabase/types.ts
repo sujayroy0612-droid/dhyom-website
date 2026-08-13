@@ -19,6 +19,7 @@ export interface DbProduct {
   stock: number;
   description: string;
   image_url: string;
+  image_urls: string[];
   created_at: string;
 }
 
