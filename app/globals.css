@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ── Brand palette: Divine Damson & Champagne Brass ── */
+  --color-ink:          #0F0508;
+  --color-black-plum:   #1A0A14;
+  --color-damson:       #3D1428;
+  --color-velvet-wine:  #6B2A48;   /* hover/gradient states only */
+  --color-brass:        #C4A373;   /* accent only — never a background */
+  --color-ivory:        #F5EDE0;
+
+  /* Derived surfaces */
+  --color-damson-border:   rgba(196, 163, 115, 0.18);  /* brass at low opacity */
+  --color-damson-subtle:   rgba(196, 163, 115, 0.08);
+  --color-ivory-secondary: rgba(245, 237, 224, 0.60);
+  --color-ivory-muted:     rgba(245, 237, 224, 0.35);
+
+  /* Typography */
+  --font-display: 'Cinzel', Georgia, serif;
+  --font-body:    'Cormorant Garamond', Georgia, serif;
+
+  /* Spacing / radius */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 14px;
+
+  --transition-base: 220ms ease;
+  --transition-slow: 400ms ease;
+}
+
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  overflow-y: scroll;   /* always-visible scrollbar; body is scroll container */
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--color-black-plum);
+  color: var(--color-ivory);
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* All headings use Cinzel with enforced letter-spacing */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.05em;   /* ≥ 4px at 16px base */
+  line-height: 1.2;
+}
+
+/* Never pure white */
+::selection {
+  background-color: var(--color-damson);
+  color: var(--color-brass);
+}
+
+/* Scrollbar — branded, visible enough to signal more content */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--color-ink); }
+::-webkit-scrollbar-thumb { background: var(--color-brass); opacity: 0.6; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ivory); }
