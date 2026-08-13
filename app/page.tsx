@@ -163,10 +163,17 @@ export default async function Home() {
               alt=""
               fill
               priority
-              className="object-cover opacity-20"
+              className="object-cover"
               sizes="100vw"
             />
-            <div className="absolute inset-0 bg-damson/60" />
+            {/* Gradient overlay: opaque at top/bottom (text legibility), transparent in centre (photo shows through) */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to bottom, rgba(61,20,40,0.78) 0%, rgba(61,20,40,0.22) 28%, rgba(61,20,40,0.10) 50%, rgba(61,20,40,0.25) 72%, rgba(61,20,40,0.72) 100%)",
+              }}
+            />
           </>
         )}
         <div
@@ -183,7 +190,7 @@ export default async function Home() {
         </p>
 
         <h1
-          className="font-display text-ivory relative mb-7 max-w-3xl"
+          className="font-display text-ivory relative mb-3 max-w-3xl"
           style={{ fontSize: "clamp(2.6rem, 6vw, 4.8rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
         >
           Bring the Sacred
@@ -191,14 +198,22 @@ export default async function Home() {
           <span className="text-brass">Home</span>
         </h1>
 
-        <p className="font-body font-light italic text-[rgba(245,237,224,0.58)] text-lg max-w-md mb-10 leading-relaxed relative">
-          Dhyom curates premium, eco-conscious home and pooja décor rooted in
-          Indian tradition — for the mindful modern home.
+        <p
+          className="font-body font-light italic text-[rgba(245,237,224,0.58)] text-lg max-w-lg mb-12 leading-relaxed relative"
+          style={{ textShadow: "0 1px 14px rgba(15,5,8,0.90), 0 0 28px rgba(15,5,8,0.70)" }}
+        >
+          Dhyom curates premium, eco-conscious home and pooja décor
+          <br />
+          rooted in Indian tradition — for the mindful modern home.
         </p>
 
-        <div className="flex flex-wrap gap-4 justify-center relative">
-          <Button href="/shop" size="lg">Explore the Collection</Button>
-          <Button href="/about" variant="secondary" size="lg">Our Story</Button>
+        <div className="relative">
+          <Link
+            href="/shop"
+            className="inline-flex items-center justify-center font-display uppercase tracking-[0.22em] rounded-full transition-all duration-200 active:scale-[0.98] px-8 py-2.5 text-[0.65rem] bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383]"
+          >
+            Explore the Collection
+          </Link>
         </div>
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[rgba(196,163,115,0.35)]">
