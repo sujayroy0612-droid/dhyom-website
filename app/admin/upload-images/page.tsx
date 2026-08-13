@@ -97,14 +97,14 @@ export default function UploadImagesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black-plum flex items-center justify-center">
+      <div className="min-h-screen bg-[#12060e] flex items-center justify-center">
         <div className="w-6 h-6 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black-plum pt-24 pb-24 px-6">
+    <div className="min-h-screen bg-[#12060e] pt-8 pb-16 px-8">
       <div className="max-w-5xl mx-auto">
 
         {/* ── Header ── */}
