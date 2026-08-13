@@ -38,8 +38,9 @@ export default function CouponsPage() {
   useEffect(() => {
     supabase.from("coupons").select("*").order("created_at", { ascending: false })
       .then(({ data, error }) => {
-        if (error?.message?.includes("does not exist") || error?.code === "42P01") {
+        if (error) {
           setTableError(true);
+          setFormError(`${error.message} [code: ${(error as { code?: string }).code ?? "none"}]`);
         } else {
           setCoupons((data ?? []) as Coupon[]);
         }
@@ -110,6 +111,11 @@ export default function CouponsPage() {
 alter table coupons enable row level security;
 create policy "service role full access" on coupons using (true) with check (true);`}
           </pre>
+          {formError && (
+            <p className="font-mono text-[rgba(200,80,80,0.70)] text-xs mt-4 break-all">
+              Raw error: {formError}
+            </p>
+          )}
           <p className="font-body font-light italic text-[rgba(245,237,224,0.28)] text-xs mt-4">
             After running the SQL, refresh this page.
           </p>
