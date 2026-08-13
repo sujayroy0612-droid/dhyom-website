@@ -1,4 +1,5 @@
 import { HTMLAttributes } from "react";
+import Image from "next/image";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   title?: string;
@@ -31,11 +32,13 @@ export default function Card({
       {...props}
     >
       {imageUrl ? (
-        <div className="aspect-[4/3] overflow-hidden bg-black-plum">
-          <img
+        <div className="aspect-[4/3] overflow-hidden bg-black-plum relative">
+          <Image
             src={imageUrl}
             alt={imageAlt ?? title ?? ""}
-            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+            fill
+            className="object-cover transition-transform duration-500 hover:scale-105"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         </div>
       ) : (

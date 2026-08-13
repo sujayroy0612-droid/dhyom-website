@@ -1,5 +1,8 @@
+export const dynamic = "force-dynamic";
+
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createServerClient } from "@/lib/supabase/server";
 import type { DbProduct } from "@/lib/supabase/types";
 import ProductCard from "@/components/ProductCard";
@@ -60,19 +63,6 @@ function buildDetailLabel(p: DbProduct): string {
 
 function getSubcategorySlug(p: DbProduct): string {
   return p.collection ?? p.subcategory ?? "";
-}
-
-/* ─── Static params ───────────────────────────────────── */
-export async function generateStaticParams() {
-  const supabase = createServerClient();
-  const { data } = await supabase
-    .from("products")
-    .select("id, category, subcategory, collection");
-  return (data ?? []).map((p) => ({
-    category: p.category as string,
-    subcategory: ((p.collection ?? p.subcategory) as string) ?? "",
-    id: p.id as string,
-  }));
 }
 
 /* ─── Page ────────────────────────────────────────────── */
@@ -148,15 +138,18 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
             {/* ── Left: image ── */}
             <div className="w-full lg:w-1/2 flex-shrink-0">
-              <div className="aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] flex items-center justify-center overflow-hidden">
+              <div className="aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] overflow-hidden relative">
                 {product.image_url ? (
-                  <img
+                  <Image
                     src={product.image_url}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    priority
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                   />
                 ) : (
-                  <div className="flex flex-col items-center gap-3 text-center px-8">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-8">
                     <div className="w-10 h-px bg-[rgba(196,163,115,0.18)]" />
                     <span
                       aria-hidden="true"

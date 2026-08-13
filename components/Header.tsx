@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/lib/cart/CartContext";
@@ -96,7 +97,7 @@ function BagIcon() {
 }
 
 /* ─── Component ───────────────────────────────────────── */
-export default function Header() {
+export default function Header({ logoUrl }: { logoUrl?: string | null }) {
   const pathname = usePathname();
   const { totalItems } = useCart();
 
@@ -170,12 +171,27 @@ export default function Header() {
 
         {/* ── Logo ── */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-7 h-7 rounded-full border border-[rgba(196,163,115,0.5)] flex items-center justify-center">
-            <span className="font-display text-[0.55rem] tracking-[0.15em] text-brass">D</span>
-          </div>
-          <span className="font-display text-base tracking-[0.18em] text-brass group-hover:text-ivory transition-colors duration-200">
-            DHYOM
-          </span>
+          {logoUrl ? (
+            <div className="relative h-8 w-32 flex-shrink-0">
+              <Image
+                src={logoUrl}
+                alt="Dhyom"
+                fill
+                className="object-contain object-left"
+                sizes="128px"
+                priority
+              />
+            </div>
+          ) : (
+            <>
+              <div className="w-7 h-7 rounded-full border border-[rgba(196,163,115,0.5)] flex items-center justify-center flex-shrink-0">
+                <span className="font-display text-[0.55rem] tracking-[0.15em] text-brass">D</span>
+              </div>
+              <span className="font-display text-base tracking-[0.18em] text-brass group-hover:text-ivory transition-colors duration-200">
+                DHYOM
+              </span>
+            </>
+          )}
         </Link>
 
         {/* ── Desktop nav ── */}

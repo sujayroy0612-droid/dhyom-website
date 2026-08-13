@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useCart, CartItem } from "@/lib/cart/CartContext";
 import { supabase } from "@/lib/supabase/client";
 
@@ -37,9 +38,9 @@ function CartRow({
   return (
     <div className="flex gap-5 py-6">
       {/* Thumbnail */}
-      <div className="w-20 h-20 flex-shrink-0 bg-[#270b1b] rounded-[4px] border border-[rgba(196,163,115,0.12)] flex items-center justify-center overflow-hidden">
+      <div className="w-20 h-20 flex-shrink-0 bg-[#270b1b] rounded-[4px] border border-[rgba(196,163,115,0.12)] flex items-center justify-center overflow-hidden relative">
         {item.imageUrl ? (
-          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+          <Image src={item.imageUrl} alt={item.name} fill className="object-cover" sizes="80px" />
         ) : (
           <span className="font-display text-[0.36rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.18)]">
             DHYOM

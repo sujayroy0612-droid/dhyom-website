@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createServerClient } from "@/lib/supabase/server";
 
 interface OrderItem {
@@ -114,12 +115,14 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
             {order.items.map((item) => (
               <div key={item.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
                 <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-10 h-10 flex-shrink-0 bg-[#270b1b] rounded-[3px] border border-[rgba(196,163,115,0.10)] flex items-center justify-center overflow-hidden">
+                  <div className="w-10 h-10 flex-shrink-0 bg-[#270b1b] rounded-[3px] border border-[rgba(196,163,115,0.10)] flex items-center justify-center overflow-hidden relative">
                     {item.imageUrl ? (
-                      <img
+                      <Image
                         src={item.imageUrl}
                         alt={item.name}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="40px"
                       />
                     ) : (
                       <span className="font-display text-[0.28rem] tracking-[0.1em] uppercase text-[rgba(196,163,115,0.18)]">

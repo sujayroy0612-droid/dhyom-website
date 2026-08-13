@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export interface Product {
   id: string;
@@ -27,12 +28,14 @@ export default function ProductCard({
       className="group bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_16px_48px_rgba(15,5,8,0.55)]"
     >
       {/* Image */}
-      <div className="aspect-square bg-[#270b1b] flex items-center justify-center overflow-hidden flex-shrink-0">
+      <div className="aspect-square bg-[#270b1b] flex items-center justify-center overflow-hidden flex-shrink-0 relative">
         {imageUrl ? (
-          <img
+          <Image
             src={imageUrl}
             alt={name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           />
         ) : (
           <span

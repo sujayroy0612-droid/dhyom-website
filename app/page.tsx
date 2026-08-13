@@ -1,9 +1,20 @@
 import Link from "next/link";
+import Image from "next/image";
 import Button from "@/components/Button";
 import ProductCard from "@/components/ProductCard";
 import NewsletterForm from "@/components/NewsletterForm";
 import { createServerClient } from "@/lib/supabase/server";
+import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import type { DbProduct } from "@/lib/supabase/types";
+
+/* ─── Category → asset key map ───────────────────────── */
+const CATEGORY_ASSET: Record<string, string> = {
+  candle:             "category_candle",
+  idol:               "category_idol",
+  bracelet:           "category_bracelet",
+  gift:               "category_gift",
+  "pooja-essentials": "category_pooja_essentials",
+};
 
 /* ─── Category data ───────────────────────────────────── */
 const categories = [
@@ -122,17 +133,15 @@ function getSubcategorySlug(p: DbProduct): string {
 
 /* ─── Page ────────────────────────────────────────────── */
 export default async function Home() {
-  /* Featured products — 1–2 from each category for variety.
-     TODO: add a `featured boolean default false` column to products
-     and filter .eq('featured', true) for fully curated selection. */
   const supabase = createServerClient();
   const cols = "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,created_at";
-  const [candleRes, idolRes, braceletRes, giftRes, poojaRes] = await Promise.all([
+  const [candleRes, idolRes, braceletRes, giftRes, poojaRes, assets] = await Promise.all([
     supabase.from("products").select(cols).eq("category", "candle").limit(2),
     supabase.from("products").select(cols).eq("category", "idol").limit(1),
     supabase.from("products").select(cols).eq("category", "bracelet").limit(1),
     supabase.from("products").select(cols).eq("category", "gift").limit(1),
     supabase.from("products").select(cols).eq("category", "pooja-essentials").limit(1),
+    fetchSiteAssets().catch((): SiteAssets => ({})),
   ]);
   const featured: DbProduct[] = [
     ...(candleRes.data ?? []),
@@ -146,7 +155,20 @@ export default async function Home() {
     <div className="min-h-screen">
 
       {/* ══ HERO — Damson (30%) ══════════════════════════════ */}
-      <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson">
+      <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson overflow-hidden">
+        {assets.hero_background && (
+          <>
+            <Image
+              src={assets.hero_background}
+              alt=""
+              fill
+              priority
+              className="object-cover opacity-20"
+              sizes="100vw"
+            />
+            <div className="absolute inset-0 bg-damson/60" />
+          </>
+        )}
         <div
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none"
@@ -209,10 +231,20 @@ export default async function Home() {
                 href={cat.href}
                 className="bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden group hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.28)] transition-all duration-300 flex flex-col"
               >
-                <div className="aspect-[4/3] bg-[#2a0c1c] flex items-center justify-center overflow-hidden">
-                  <span aria-hidden="true" className="font-display text-[0.55rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.22)]">
-                    Image coming soon
-                  </span>
+                <div className="aspect-[4/3] bg-[#2a0c1c] flex items-center justify-center overflow-hidden relative">
+                  {assets[CATEGORY_ASSET[cat.id]] ? (
+                    <Image
+                      src={assets[CATEGORY_ASSET[cat.id]]!}
+                      alt={cat.title}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                  ) : (
+                    <span aria-hidden="true" className="font-display text-[0.55rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.22)]">
+                      Image coming soon
+                    </span>
+                  )}
                 </div>
                 <div className="p-7 flex flex-col gap-4">
                   <h3 className="font-display text-ivory" style={{ fontSize: "1.05rem", letterSpacing: "0.05em" }}>
@@ -318,18 +350,29 @@ export default async function Home() {
         <div className="max-w-6xl mx-auto flex flex-col lg:flex-row">
 
           {/* Image area */}
-          <div className="lg:w-3/5 aspect-[4/3] lg:aspect-auto lg:min-h-[520px] bg-[#270b1b] flex items-center justify-center relative overflow-hidden flex-shrink-0">
-            {/* Subtle velvet-wine depth */}
-            <div
-              aria-hidden="true"
-              className="absolute inset-0"
-              style={{
-                background: "radial-gradient(ellipse 80% 80% at 30% 60%, rgba(107,42,72,0.25) 0%, transparent 70%)",
-              }}
-            />
-            <span aria-hidden="true" className="font-display text-[0.55rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.18)] relative">
-              Campaign image coming soon
-            </span>
+          <div className="lg:w-3/5 aspect-[4/3] lg:aspect-auto lg:min-h-[520px] bg-[#270b1b] relative overflow-hidden flex-shrink-0">
+            {assets.seasonal_banner ? (
+              <Image
+                src={assets.seasonal_banner}
+                alt="Seasonal collection"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 60vw"
+              />
+            ) : (
+              <>
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0"
+                  style={{
+                    background: "radial-gradient(ellipse 80% 80% at 30% 60%, rgba(107,42,72,0.25) 0%, transparent 70%)",
+                  }}
+                />
+                <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center font-display text-[0.55rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.18)]">
+                  Campaign image coming soon
+                </span>
+              </>
+            )}
           </div>
 
           {/* Text */}
