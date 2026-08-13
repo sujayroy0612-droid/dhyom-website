@@ -1,200 +1,202 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
-import type { DbProduct } from "@/lib/supabase/types";
-import ProductCard from "@/components/ProductCard";
 
-/* ─── Category metadata ───────────────────────────────── */
-const categoryMeta: Record<
+/* ─── Subcategory data per category ───────────────────── */
+const SUBCATEGORIES: Record<
   string,
-  { name: string; description: string; dbValue: string }
+  { slug: string; title: string; description: string }[]
 > = {
-  candle: {
-    name: "Candles",
-    description:
-      "Two collections — Nakshatra in glass, Mandala in tin. Each fragrance chosen for the quality of its stillness.",
-    dbValue: "candle",
-  },
-  idol: {
-    name: "Idols",
-    description:
-      "Sacred figures for the home altar. Cast with reverence for the deities they represent.",
-    dbValue: "idol",
-  },
-  bracelet: {
-    name: "Spiritual Bracelets",
-    description:
-      "Traditional stones and seeds, strung for the wrist. Worn in daily practice.",
-    dbValue: "bracelet",
-  },
-  gift: {
-    name: "Gift Sets",
-    description:
-      "Curated boxes for every sacred occasion — festivals, weddings, and the rituals that mark a year.",
-    dbValue: "gift",
-  },
-  "pooja-essentials": {
-    name: "Pooja Essentials",
-    description:
-      "The foundational items of daily ritual — incense, ghee batti, camphor — in their purest forms.",
-    dbValue: "pooja-essentials",
-  },
+  candle: [
+    {
+      slug: "nakshatra",
+      title: "Nakshatra Collection",
+      description:
+        "Sandalwood, lavender, vanilla, coffee, citrus — each fragrance poured into glass. Long burn, clean presence.",
+    },
+    {
+      slug: "mandala",
+      title: "Mandala Collection",
+      description:
+        "The same five fragrances in a travel tin. Portable, practical, and no less considered.",
+    },
+  ],
+  idol: [
+    {
+      slug: "ganesha",
+      title: "Ganesha",
+      description:
+        "He who clears the way — for the home that makes room for new beginnings.",
+    },
+    {
+      slug: "lakshmi",
+      title: "Lakshmi",
+      description:
+        "Abundance arrived as presence. For the threshold of the home.",
+    },
+  ],
+  bracelet: [
+    {
+      slug: "rudraksh",
+      title: "Rudraksh Mala",
+      description: "Traditional beads, hand-knotted for daily practice.",
+    },
+    {
+      slug: "rose-quartz",
+      title: "Rose Quartz",
+      description: "A stone with a long history of being carried close. Simply strung.",
+    },
+  ],
+  gift: [
+    {
+      slug: "diwali",
+      title: "Diwali",
+      description: "Light, fragrance, and intention — for the festival of lights.",
+    },
+    {
+      slug: "rakhi",
+      title: "Rakhi",
+      description: "For the bond that does not need occasion to mean something.",
+    },
+    {
+      slug: "chhath",
+      title: "Chhath Puja",
+      description: "Sacred items for the festival of the sun and the dawn it honours.",
+    },
+    {
+      slug: "ganesh-chaturthi",
+      title: "Ganesh Chaturthi",
+      description: "Assembled for the arrival of Ganesha.",
+    },
+    {
+      slug: "dussehra",
+      title: "Dussehra",
+      description: "For the day that marks what goodness can do.",
+    },
+    {
+      slug: "corporate",
+      title: "Corporate Gifting",
+      description: "Rooted in Indian tradition. For the workplace that values meaning.",
+    },
+    {
+      slug: "wedding",
+      title: "Wedding",
+      description: "For the beginning of a shared sacred life.",
+    },
+  ],
+  "pooja-essentials": [
+    {
+      slug: "incense-sticks",
+      title: "Incense Sticks",
+      description: "Hand-rolled, slow to burn. For the daily ritual, offered without ceremony.",
+    },
+    {
+      slug: "incense-cones",
+      title: "Incense Cones",
+      description: "For the corner you return to. One cone, the room entirely changed.",
+    },
+    {
+      slug: "ghee-batti",
+      title: "Ghee Batti",
+      description: "Pure cow ghee in the traditional form. For the diya as it has always burned.",
+    },
+    {
+      slug: "camphor",
+      title: "Camphor Tablets",
+      description: "For the aarti flame. As clean and certain as it has always been.",
+    },
+  ],
 };
 
-/* ─── Helpers ─────────────────────────────────────────── */
-function buildLabel(product: DbProduct): string {
-  const parts: (string | null)[] = [
-    product.collection
-      ? product.collection.charAt(0).toUpperCase() + product.collection.slice(1)
-      : product.type.charAt(0).toUpperCase() + product.type.slice(1),
-    product.fragrance ?? null,
-  ];
-  return parts.filter(Boolean).join(" · ");
+const CATEGORY_NAMES: Record<string, string> = {
+  candle: "Candles",
+  idol: "Idols",
+  bracelet: "Spiritual Bracelets",
+  gift: "Gift Sets",
+  "pooja-essentials": "Pooja Essentials",
+};
+
+export function generateStaticParams() {
+  return Object.keys(SUBCATEGORIES).map((category) => ({ category }));
 }
 
-/* ─── Page ────────────────────────────────────────────── */
 interface PageProps {
   params: { category: string };
 }
 
-export function generateStaticParams() {
-  return Object.keys(categoryMeta).map((category) => ({ category }));
-}
+export default function CategoryPage({ params }: PageProps) {
+  const { category } = params;
+  const subcategories = SUBCATEGORIES[category];
+  if (!subcategories) notFound();
 
-export default async function CategoryPage({ params }: PageProps) {
-  const meta = categoryMeta[params.category];
-  if (!meta) notFound();
+  const categoryName = CATEGORY_NAMES[category];
 
-  /* ── Fetch from Supabase ── */
-  const supabase = createServerClient();
-  const { data, error } = await supabase
-    .from("products")
-    .select("id, name, type, subcategory, collection, fragrance, price, description, image_url, category, stock, created_at")
-    .eq("category", meta.dbValue)
-    .order("created_at", { ascending: true });
-
-  // Surface fetch errors in development; fail gracefully in production
-  if (error) {
-    console.error("[Supabase] products fetch error:", error.message);
-  }
-
-  const products: DbProduct[] = (data ?? []) as DbProduct[];
-
-  /* ── Render ── */
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-black-plum">
 
-      {/* ── Page header — Damson (30%) ── */}
-      <section className="bg-damson pt-28 pb-16 px-6 relative overflow-hidden">
+      {/* Header */}
+      <section className="bg-damson pt-28 pb-14 px-6 relative overflow-hidden">
         <div
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(107,42,72,0.30) 0%, transparent 70%)",
+              "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(107,42,72,0.28) 0%, transparent 70%)",
           }}
         />
+        <div className="max-w-4xl mx-auto relative">
 
-        <div className="max-w-6xl mx-auto relative">
           {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 mb-8">
-            <Link
-              href="/"
-              className="font-display text-[0.55rem] tracking-[0.2em] uppercase text-[rgba(245,237,224,0.32)] hover:text-[rgba(245,237,224,0.65)] transition-colors duration-200"
-            >
-              Home
-            </Link>
-            <span className="text-[rgba(196,163,115,0.30)] text-xs">›</span>
+          <nav className="flex items-center gap-2 mb-8 flex-wrap">
             <Link
               href="/shop"
-              className="font-display text-[0.55rem] tracking-[0.2em] uppercase text-[rgba(245,237,224,0.32)] hover:text-[rgba(245,237,224,0.65)] transition-colors duration-200"
+              className="font-display text-[0.54rem] tracking-[0.2em] uppercase text-[rgba(245,237,224,0.30)] hover:text-[rgba(245,237,224,0.60)] transition-colors duration-200"
             >
               Shop
             </Link>
-            <span className="text-[rgba(196,163,115,0.30)] text-xs">›</span>
-            <span className="font-display text-[0.55rem] tracking-[0.2em] uppercase text-brass">
-              {meta.name}
+            <span className="text-[rgba(196,163,115,0.28)] text-xs">›</span>
+            <span className="font-display text-[0.54rem] tracking-[0.2em] uppercase text-brass">
+              {categoryName}
             </span>
           </nav>
 
           <h1
-            className="font-display text-ivory mb-4"
-            style={{
-              fontSize: "clamp(2rem, 5vw, 3.5rem)",
-              letterSpacing: "0.05em",
-              lineHeight: 1.1,
-            }}
+            className="font-display text-ivory"
+            style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", letterSpacing: "0.05em" }}
           >
-            {meta.name}
+            {categoryName}
           </h1>
-
-          <div className="w-10 h-px bg-[rgba(196,163,115,0.35)] mb-5" />
-
-          <p className="font-body font-light italic text-[rgba(245,237,224,0.55)] text-lg max-w-xl leading-relaxed">
-            {meta.description}
-          </p>
-
-          {!error && (
-            <p className="font-display text-[0.55rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.40)] mt-6">
-              {products.length === 1
-                ? "1 piece"
-                : `${products.length} pieces`}
-            </p>
-          )}
+          <div className="w-10 h-px bg-[rgba(196,163,115,0.35)] mt-5" />
         </div>
       </section>
 
-      {/* Brass divider */}
-      <div className="max-w-5xl mx-auto px-6">
-        <div className="h-px bg-gradient-to-r from-transparent via-[rgba(196,163,115,0.28)] to-transparent" />
-      </div>
-
-      {/* ── Product grid — Black Plum ── */}
-      <section className="bg-black-plum py-20 px-6">
-        <div className="max-w-6xl mx-auto">
-
-          {/* Error state */}
-          {error && (
-            <div className="text-center py-20">
-              <p className="font-display text-[0.65rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.45)] mb-4">
-                Something went wrong
-              </p>
-              <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-base">
-                We could not load this collection. Please try again shortly.
-              </p>
-            </div>
-          )}
-
-          {/* Empty state */}
-          {!error && products.length === 0 && (
-            <div className="text-center py-24">
-              <p className="font-display text-[0.65rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.45)] mb-5">
-                Nothing here yet
-              </p>
-              <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-lg max-w-sm mx-auto leading-relaxed">
-                This collection is being curated. Return soon — something
-                sacred is on its way.
-              </p>
-            </div>
-          )}
-
-          {/* Product grid */}
-          {!error && products.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  label={buildLabel(product)}
-                  price={product.price}
-                  description={product.description || undefined}
-                  imageUrl={product.image_url || undefined}
-                />
-              ))}
-            </div>
-          )}
-
+      {/* Subcategory tiles */}
+      <section className="px-6 py-16">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {subcategories.map((sub) => (
+            <Link
+              key={sub.slug}
+              href={`/shop/${category}/${sub.slug}`}
+              className="group bg-damson border border-[rgba(196,163,115,0.14)] rounded-[6px] flex flex-col justify-between p-8 min-h-[180px] hover:border-[rgba(196,163,115,0.50)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.40)] hover:-translate-y-0.5 transition-all duration-300"
+            >
+              <div className="flex flex-col gap-3">
+                <h2
+                  className="font-display text-ivory leading-tight"
+                  style={{ fontSize: "1.05rem", letterSpacing: "0.05em" }}
+                >
+                  {sub.title}
+                </h2>
+                <p className="font-body font-light italic text-[rgba(245,237,224,0.48)] text-sm leading-relaxed">
+                  {sub.description}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 mt-6 font-display text-[0.58rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.45)] group-hover:text-brass transition-colors duration-200">
+                View
+                <svg width="12" height="10" viewBox="0 0 12 10" fill="none" stroke="currentColor" strokeWidth="1.2">
+                  <path d="M1 5h10M7 1l4 4-4 4" />
+                </svg>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 

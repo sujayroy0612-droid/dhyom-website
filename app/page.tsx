@@ -108,12 +108,16 @@ const features = [
   },
 ];
 
-/* ─── Label helper (mirrors shop page) ───────────────── */
+/* ─── Helpers ─────────────────────────────────────────── */
 function buildLabel(p: DbProduct): string {
   const first = p.collection
     ? p.collection.charAt(0).toUpperCase() + p.collection.slice(1)
     : p.type.charAt(0).toUpperCase() + p.type.slice(1);
   return [first, p.fragrance ?? null].filter(Boolean).join(" · ");
+}
+
+function getSubcategorySlug(p: DbProduct): string {
+  return p.collection ?? p.subcategory ?? "";
 }
 
 /* ─── Page ────────────────────────────────────────────── */
@@ -171,8 +175,8 @@ export default async function Home() {
         </p>
 
         <div className="flex flex-wrap gap-4 justify-center relative">
-          <Button size="lg">Explore the Collection</Button>
-          <Button variant="secondary" size="lg">Our Story</Button>
+          <Button href="/shop" size="lg">Explore the Collection</Button>
+          <Button href="/about" variant="secondary" size="lg">Our Story</Button>
         </div>
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[rgba(196,163,115,0.35)]">
@@ -200,9 +204,10 @@ export default async function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
             {categories.map((cat) => (
-              <div
+              <Link
                 key={cat.id}
-                className="bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden group hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.28)] transition-all duration-300"
+                href={cat.href}
+                className="bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden group hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.28)] transition-all duration-300 flex flex-col"
               >
                 <div className="aspect-[4/3] bg-[#2a0c1c] flex items-center justify-center overflow-hidden">
                   <span aria-hidden="true" className="font-display text-[0.55rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.22)]">
@@ -216,17 +221,14 @@ export default async function Home() {
                   <p className="font-body font-light italic text-[rgba(245,237,224,0.52)] text-base leading-relaxed">
                     {cat.description}
                   </p>
-                  <Link
-                    href={cat.href}
-                    className="inline-flex items-center gap-2 font-display text-[0.60rem] tracking-[0.2em] uppercase text-brass hover:text-ivory transition-colors duration-200 mt-1"
-                  >
+                  <div className="inline-flex items-center gap-2 font-display text-[0.60rem] tracking-[0.2em] uppercase text-brass group-hover:text-ivory transition-colors duration-200 mt-1">
                     Shop {cat.shortTitle}
                     <svg width="12" height="10" viewBox="0 0 12 10" fill="none" stroke="currentColor" strokeWidth="1.2">
                       <path d="M1 5h10M7 1l4 4-4 4" />
                     </svg>
-                  </Link>
+                  </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -287,6 +289,8 @@ export default async function Home() {
                   key={product.id}
                   id={product.id}
                   name={product.name}
+                  category={product.category}
+                  subcategorySlug={getSubcategorySlug(product)}
                   label={buildLabel(product)}
                   price={product.price}
                   description={product.description || undefined}

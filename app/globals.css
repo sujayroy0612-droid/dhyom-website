@@ -70,3 +70,9 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-track { background: var(--color-ink); }
 ::-webkit-scrollbar-thumb { background: var(--color-brass); opacity: 0.6; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-ivory); }
+
+/* Navigation dropdown entrance */
+@keyframes menu-enter {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
