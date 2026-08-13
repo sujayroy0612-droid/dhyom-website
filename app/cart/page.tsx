@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart, CartItem } from "@/lib/cart/CartContext";
@@ -260,15 +261,24 @@ export default function CartPage() {
 
           {/* ── Left: items ── */}
           <div className="flex-1 min-w-0">
-            <div className="divide-y divide-[rgba(196,163,115,0.10)]">
-              {items.map((item) => (
-                <CartRow
-                  key={item.id}
-                  item={item}
-                  onQtyChange={(q) => setQuantity(item.id, q)}
-                  onRemove={() => removeItem(item.id)}
-                />
-              ))}
+            <div className="flex flex-col">
+              <AnimatePresence initial={false}>
+                {items.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0, height: 0, overflow: "hidden" }}
+                    transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                    className="border-b border-[rgba(196,163,115,0.10)] last:border-b-0"
+                  >
+                    <CartRow
+                      item={item}
+                      onQtyChange={(q) => setQuantity(item.id, q)}
+                      onRemove={() => removeItem(item.id)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
 
             <p className="mt-5 font-display text-[0.52rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.28)]">

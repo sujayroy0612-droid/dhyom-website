@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface Props {
   images: string[];
@@ -12,7 +13,6 @@ export default function ProductGallery({ images, alt }: Props) {
   const [active, setActive] = useState(0);
   const hasMultiple = images.length > 1;
 
-  // No images at all — placeholder
   if (images.length === 0) {
     return (
       <div className="aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] flex flex-col items-center justify-center gap-3">
@@ -25,12 +25,32 @@ export default function ProductGallery({ images, alt }: Props) {
     );
   }
 
+  const MainImage = ({ sizes }: { sizes: string }) => (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={active}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+        className="absolute inset-0"
+      >
+        <Image
+          src={images[active]}
+          alt={alt}
+          fill
+          priority
+          className="object-cover"
+          sizes={sizes}
+        />
+      </motion.div>
+    </AnimatePresence>
+  );
+
   return (
     <>
       {/* ── Desktop: [vertical thumbs] + [main image] side by side ── */}
       <div className="hidden lg:flex gap-3 items-start">
-
-        {/* Vertical thumbnail strip — only when 2+ images */}
         {hasMultiple && (
           <div className="flex flex-col gap-2 w-[76px] flex-shrink-0">
             {images.map((url, i) => (
@@ -56,35 +76,17 @@ export default function ProductGallery({ images, alt }: Props) {
           </div>
         )}
 
-        {/* Main image */}
         <div className="flex-1 aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] overflow-hidden relative">
-          <Image
-            src={images[active]}
-            alt={alt}
-            fill
-            priority
-            className="object-cover transition-opacity duration-200"
-            sizes="(max-width: 1280px) 50vw, 560px"
-          />
+          <MainImage sizes="(max-width: 1280px) 50vw, 560px" />
         </div>
       </div>
 
       {/* ── Mobile: [main image] then [horizontal thumb strip] ── */}
       <div className="flex flex-col gap-3 lg:hidden">
-
-        {/* Main image */}
         <div className="aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] overflow-hidden relative">
-          <Image
-            src={images[active]}
-            alt={alt}
-            fill
-            priority
-            className="object-cover"
-            sizes="100vw"
-          />
+          <MainImage sizes="100vw" />
         </div>
 
-        {/* Horizontal scrollable thumbnail strip — only when 2+ images */}
         {hasMultiple && (
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             {images.map((url, i) => (

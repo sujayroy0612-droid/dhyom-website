@@ -3,6 +3,9 @@ import Image from "next/image";
 import Button from "@/components/Button";
 import ProductCard from "@/components/ProductCard";
 import NewsletterForm from "@/components/NewsletterForm";
+import FadeIn from "@/components/FadeIn";
+import FadeInView from "@/components/FadeInView";
+import { StaggerGrid, StaggerItem } from "@/components/StaggerGrid";
 import { createServerClient } from "@/lib/supabase/server";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import type { DbProduct } from "@/lib/supabase/types";
@@ -185,36 +188,42 @@ export default async function Home() {
           }}
         />
 
-        <p className="font-display text-[0.62rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.60)] mb-7 relative">
-          Sacred · Sustainable · Indian
-        </p>
+        <FadeIn delay={0} className="relative">
+          <p className="font-display text-[0.62rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.60)] mb-7">
+            Sacred · Sustainable · Indian
+          </p>
+        </FadeIn>
 
-        <h1
-          className="font-display text-ivory relative mb-3 max-w-3xl"
-          style={{ fontSize: "clamp(2.6rem, 6vw, 4.8rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
-        >
-          Bring the Sacred
-          <br />
-          <span className="text-brass">Home</span>
-        </h1>
+        <FadeIn delay={0.14} className="relative">
+          <h1
+            className="font-display text-ivory mb-3 max-w-3xl"
+            style={{ fontSize: "clamp(2.6rem, 6vw, 4.8rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
+          >
+            Bring the Sacred
+            <br />
+            <span className="text-brass">Home</span>
+          </h1>
+        </FadeIn>
 
-        <p
-          className="font-body font-light italic text-[rgba(245,237,224,0.58)] text-lg max-w-lg mb-12 leading-relaxed relative"
-          style={{ textShadow: "0 1px 14px rgba(15,5,8,0.90), 0 0 28px rgba(15,5,8,0.70)" }}
-        >
-          Dhyom curates premium, eco-conscious home and pooja décor
-          <br />
-          rooted in Indian tradition — for the mindful modern home.
-        </p>
+        <FadeIn delay={0.30} className="relative">
+          <p
+            className="font-body font-light italic text-[rgba(245,237,224,0.58)] text-lg max-w-lg mb-12 leading-relaxed"
+            style={{ textShadow: "0 1px 14px rgba(15,5,8,0.90), 0 0 28px rgba(15,5,8,0.70)" }}
+          >
+            Dhyom curates premium, eco-conscious home and pooja décor
+            <br />
+            rooted in Indian tradition — for the mindful modern home.
+          </p>
+        </FadeIn>
 
-        <div className="relative">
+        <FadeIn delay={0.44} className="relative">
           <Link
             href="/shop"
-            className="inline-flex items-center justify-center font-display uppercase tracking-[0.22em] rounded-full transition-all duration-200 active:scale-[0.98] px-8 py-2.5 text-[0.65rem] bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383]"
+            className="inline-flex items-center justify-center font-display uppercase tracking-[0.22em] rounded-full transition-colors duration-200 active:scale-[0.98] px-8 py-2.5 text-[0.65rem] bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383]"
           >
             Explore the Collection
           </Link>
-        </div>
+        </FadeIn>
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[rgba(196,163,115,0.35)]">
           <span className="font-display text-[0.55rem] tracking-[0.28em] uppercase">Scroll</span>
@@ -226,7 +235,7 @@ export default async function Home() {
       {/* ══ CATEGORY GRID — Ivory (60%) · Damson cards (30%) ══ */}
       <section className="bg-[#F5EDE0] py-28 px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <FadeInView className="text-center mb-16">
             <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(61,20,40,0.45)] mb-4">
               Our Collections
             </p>
@@ -237,14 +246,14 @@ export default async function Home() {
               The Dhyom Collection
             </h2>
             <div className="mt-5 mx-auto w-12 h-px bg-[rgba(196,163,115,0.45)]" />
-          </div>
+          </FadeInView>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
+          <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
             {categories.map((cat) => (
+              <StaggerItem key={cat.id}>
               <Link
-                key={cat.id}
                 href={cat.href}
-                className="bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden group hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.28)] transition-all duration-300 flex flex-col"
+                className="bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden group hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.28)] transition-all duration-300 flex flex-col h-full"
               >
                 <div className="aspect-[4/3] bg-[#2a0c1c] flex items-center justify-center overflow-hidden relative">
                   {assets[CATEGORY_ASSET[cat.id]] ? (
@@ -276,13 +285,15 @@ export default async function Home() {
                   </div>
                 </div>
               </Link>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerGrid>
         </div>
       </section>
 
 
       {/* ══ FEATURE STRIP — Ink bg ══════════════════════════ */}
+      <FadeInView>
       <section className="bg-ink border-y border-[rgba(196,163,115,0.10)] py-0">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-2 lg:grid-cols-5">
@@ -311,12 +322,13 @@ export default async function Home() {
           </div>
         </div>
       </section>
+      </FadeInView>
 
 
       {/* ══ FEATURED PRODUCTS — Black Plum · Damson cards ══ */}
       <section className="bg-black-plum py-24 px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
+          <FadeInView className="text-center mb-14">
             <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.45)] mb-4">
               Handpicked
             </p>
@@ -327,24 +339,25 @@ export default async function Home() {
               The Collection
             </h2>
             <div className="mt-5 mx-auto w-12 h-px bg-[rgba(196,163,115,0.35)]" />
-          </div>
+          </FadeInView>
 
           {featured.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {featured.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  category={product.category}
-                  subcategorySlug={getSubcategorySlug(product)}
-                  label={buildLabel(product)}
-                  price={product.price}
-                  description={product.description || undefined}
-                  imageUrl={product.image_url || undefined}
-                />
+                <StaggerItem key={product.id}>
+                  <ProductCard
+                    id={product.id}
+                    name={product.name}
+                    category={product.category}
+                    subcategorySlug={getSubcategorySlug(product)}
+                    label={buildLabel(product)}
+                    price={product.price}
+                    description={product.description || undefined}
+                    imageUrl={product.image_url || undefined}
+                  />
+                </StaggerItem>
               ))}
-            </div>
+            </StaggerGrid>
           ) : (
             <p className="text-center font-body font-light italic text-[rgba(245,237,224,0.30)] text-base">
               The collection is being assembled. Return soon.
@@ -361,6 +374,7 @@ export default async function Home() {
 
 
       {/* ══ SEASONAL SPOTLIGHT — Damson · split layout ══════ */}
+      <FadeInView>
       <section className="bg-damson py-0 overflow-hidden">
         <div className="max-w-6xl mx-auto flex flex-col lg:flex-row">
 
@@ -418,9 +432,11 @@ export default async function Home() {
 
         </div>
       </section>
+      </FadeInView>
 
 
       {/* ══ NEWSLETTER CAPTURE — Damson ══════════════════════ */}
+      <FadeInView>
       <section className="bg-damson border-t border-[rgba(196,163,115,0.14)] py-24 px-6">
         <div className="max-w-xl mx-auto text-center">
 
@@ -449,9 +465,11 @@ export default async function Home() {
           </p>
         </div>
       </section>
+      </FadeInView>
 
 
       {/* ══ OUR STORY — Black Plum · Om watermark ══════════ */}
+      <FadeInView>
       <section className="relative bg-black-plum py-32 px-6 overflow-hidden">
         <div
           aria-hidden="true"
@@ -496,6 +514,7 @@ export default async function Home() {
           <Button variant="secondary" size="md">Read Our Story</Button>
         </div>
       </section>
+      </FadeInView>
 
     </div>
   );

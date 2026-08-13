@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import Button from "@/components/Button";
 import { useCart } from "@/lib/cart/CartContext";
 
@@ -80,20 +81,22 @@ export default function ProductActions({
 
       {/* Add to cart button */}
       <div className="flex flex-col gap-3">
-        <Button
-          type="button"
-          variant="secondary"
-          size="md"
-          disabled={!inStock || addedState === "added"}
-          onClick={handleAddToCart}
-          className="w-full sm:w-auto"
-        >
-          {!inStock
-            ? "Currently Unavailable"
-            : addedState === "added"
-            ? "Added to Cart ✓"
-            : "Add to Cart"}
-        </Button>
+        <motion.div whileTap={inStock && addedState !== "added" ? { scale: 0.95 } : {}}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="md"
+            disabled={!inStock || addedState === "added"}
+            onClick={handleAddToCart}
+            className="w-full sm:w-auto"
+          >
+            {!inStock
+              ? "Currently Unavailable"
+              : addedState === "added"
+              ? "Added to Cart ✓"
+              : "Add to Cart"}
+          </Button>
+        </motion.div>
 
         <p
           className={[

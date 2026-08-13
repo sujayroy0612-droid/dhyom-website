@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { CartProvider } from "@/lib/cart/CartContext";
+import Providers from "@/components/Providers";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 
 export const metadata: Metadata = {
@@ -35,11 +35,11 @@ export default async function RootLayout({
         />
       </head>
       <body>
-        <CartProvider>
+        <Providers>
           <Header logoUrl={logoUrl} />
           <main>{children}</main>
           <Footer logoUrl={logoUrl} />
-        </CartProvider>
+        </Providers>
       </body>
     </html>
   );

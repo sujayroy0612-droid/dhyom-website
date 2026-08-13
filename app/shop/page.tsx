@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { fetchSiteAssets } from "@/lib/supabase/site-assets";
+import { StaggerGrid, StaggerItem } from "@/components/StaggerGrid";
 
 export const metadata = { title: "Shop — Dhyom" };
 
@@ -71,12 +72,12 @@ export default async function ShopPage() {
 
       {/* Category tiles */}
       <section className="px-6 py-16">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <StaggerGrid className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {CATEGORIES.map((cat) => {
             const imgUrl = (assets as Record<string, string | null>)[cat.assetKey] ?? null;
             return (
+              <StaggerItem key={cat.slug}>
               <Link
-                key={cat.slug}
                 href={`/shop/${cat.slug}`}
                 className="group bg-damson border border-[rgba(196,163,115,0.14)] rounded-[6px] overflow-hidden flex flex-col hover:border-[rgba(196,163,115,0.50)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.40)] hover:-translate-y-0.5 transition-all duration-300"
               >
@@ -121,9 +122,10 @@ export default async function ShopPage() {
                   </div>
                 </div>
               </Link>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerGrid>
       </section>
 
     </div>
