@@ -13,34 +13,34 @@ export default function Footer({ logoUrl }: { logoUrl?: string | null }) {
     <footer className="bg-ink border-t border-[rgba(196,163,115,0.10)]">
       <div className="max-w-5xl mx-auto px-6 py-16 flex flex-col items-center gap-10">
 
-        {/* Logo / Wordmark */}
-        <Link href="/" className="flex flex-col items-center group">
-          {logoUrl ? (
-            <div className="relative h-20 w-56">
-              <Image
-                src={logoUrl}
-                alt="Dhyom"
-                fill
-                className="object-contain object-center"
-                sizes="224px"
-              />
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-full border border-[rgba(196,163,115,0.40)] flex items-center justify-center">
-                <span className="font-display text-[0.55rem] tracking-[0.15em] text-brass">D</span>
+        {/* Logo + Tagline grouped tightly */}
+        <div className="flex flex-col items-center gap-2">
+          <Link href="/" className="flex flex-col items-center group">
+            {logoUrl ? (
+              <div className="relative h-20 w-56">
+                <Image
+                  src={logoUrl}
+                  alt="Dhyom"
+                  fill
+                  className="object-contain object-center"
+                  sizes="224px"
+                />
               </div>
-              <span className="font-display text-base tracking-[0.18em] text-brass group-hover:text-ivory transition-colors duration-200">
-                DHYOM
-              </span>
-            </div>
-          )}
-        </Link>
-
-        {/* Tagline */}
-        <p className="font-body font-light italic text-[rgba(245,237,224,0.38)] text-sm tracking-wide text-center -mt-4">
-          Bring the Sacred Home
-        </p>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-full border border-[rgba(196,163,115,0.40)] flex items-center justify-center">
+                  <span className="font-display text-[0.55rem] tracking-[0.15em] text-brass">D</span>
+                </div>
+                <span className="font-display text-base tracking-[0.18em] text-brass group-hover:text-ivory transition-colors duration-200">
+                  DHYOM
+                </span>
+              </div>
+            )}
+          </Link>
+          <p className="font-body font-light italic text-[rgba(245,237,224,0.38)] text-sm tracking-wide text-center">
+            Bring the Sacred Home
+          </p>
+        </div>
 
         {/* Nav */}
         <nav className="flex flex-wrap justify-center gap-8">
