@@ -69,7 +69,7 @@ export default async function CategoryPage({ params }: PageProps) {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, type, fragrance, price, description, image_url")
+    .select("id, name, type, subcategory, collection, fragrance, price, description, image_url, category, stock, created_at")
     .eq("category", meta.dbValue)
     .order("created_at", { ascending: true });
 
@@ -78,7 +78,7 @@ export default async function CategoryPage({ params }: PageProps) {
     console.error("[Supabase] products fetch error:", error.message);
   }
 
-  const products: DbProduct[] = data ?? [];
+  const products: DbProduct[] = (data ?? []) as DbProduct[];
 
   /* ── Render ── */
   return (
