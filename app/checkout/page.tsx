@@ -135,7 +135,7 @@ export default function CheckoutPage() {
     }
     setLeadSaving(true);
     // Fire-and-forget — don't block UX on error
-    supabase.from("contacts").insert({ email, phone: leadPhone.trim() || null, tag: "checkout_lead" }).then().catch(() => {});
+    void supabase.from("contacts").insert({ email, phone: leadPhone.trim() || null, tag: "checkout_lead" });
     setForm((prev) => ({ ...prev, email, phone: leadPhone.trim() }));
     setLeadSaving(false);
     setStep("form");
