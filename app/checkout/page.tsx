@@ -267,7 +267,7 @@ export default function CheckoutPage() {
             </h1>
             <div className="mt-4 w-10 h-px bg-[rgba(196,163,115,0.22)]" />
             <p className="mt-5 font-body font-light italic text-[rgba(245,237,224,0.38)] text-[0.95rem] leading-[1.85]">
-              We'll hold your place while you fill in the details.
+              We&rsquo;ll hold your place while you fill in the details.
             </p>
           </div>
 

@@ -142,7 +142,7 @@ export default function DownsellPage() {
             One smaller thought
           </p>
           <h1 className="font-display text-ivory leading-tight" style={{ fontSize: "clamp(1.4rem, 3vw, 2rem)", letterSpacing: "0.05em" }}>
-            Since you're bringing home
+            Since you&rsquo;re bringing home
             <br />
             <span className="text-brass">{originalName}</span>
           </h1>
