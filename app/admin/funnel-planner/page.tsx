@@ -45,10 +45,12 @@ export default function FunnelPlannerPage() {
   const [toast,   setToast]   = useState("");
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("funnel_settings").select("*"),
-      supabase.from("products").select("id, name, category, price").eq("is_visible", true).order("category").order("name"),
-    ]).then(([fRes, pRes]) => {
+    async function load() {
+      const [fRes, pRes] = await Promise.all([
+        supabase.from("funnel_settings").select("*"),
+        supabase.from("products").select("id, name, category, price").eq("is_visible", true).order("category").order("name"),
+      ]);
+
       if (fRes.error) {
         setLoadErr(`funnel_settings error: ${fRes.error.message} (code: ${fRes.error.code})`);
         setLoading(false);
@@ -59,12 +61,32 @@ export default function FunnelPlannerPage() {
         setLoading(false);
         return;
       }
-      const rawRows = (fRes.data ?? []) as FunnelRow[];
+
+      setProducts((pRes.data ?? []) as ProductOption[]);
+
+      let rawRows = (fRes.data ?? []) as FunnelRow[];
+
+      /* Auto-seed if table exists but is empty (INSERT was skipped or RLS silent-filtered) */
+      if (rawRows.length === 0) {
+        const seed = CATEGORY_ORDER.map(c => ({ category: c }));
+        const { data: inserted, error: insErr } = await supabase
+          .from("funnel_settings")
+          .insert(seed)
+          .select("*");
+
+        if (insErr) {
+          setLoadErr(`Seed failed: ${insErr.message} (code: ${insErr.code}) — run the funnel_settings SQL in Supabase then refresh.`);
+          setLoading(false);
+          return;
+        }
+        rawRows = (inserted ?? []) as FunnelRow[];
+      }
+
       rawRows.sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category));
       setRows(rawRows);
-      setProducts((pRes.data ?? []) as ProductOption[]);
       setLoading(false);
-    });
+    }
+    load();
   }, []);
 
   function showToast(msg: string) {
