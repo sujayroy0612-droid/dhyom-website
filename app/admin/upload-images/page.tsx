@@ -73,7 +73,7 @@ export default function UploadImagesPage() {
   async function handlePrimary(product: Product, file: File) {
     setUploading(p => ({ ...p, [product.id]: "primary" }));
     try {
-      const url = await uploadToCloudinary(file, `products/${product.id}`);
+      const url = await uploadToCloudinary(file, `products/${product.id}_${Date.now()}`);
       await supabase.from("products").update({ image_url: url }).eq("id", product.id);
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_url: url } : p));
     } catch (err) {
