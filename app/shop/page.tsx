@@ -48,7 +48,9 @@ export default async function ShopPage() {
     supabase.from("category_visibility").select("category").eq("is_visible", true),
   ]);
   const visibleCatSlugs = new Set((catVisRes.data ?? []).map((r) => r.category as string));
-  const visibleCategories = CATEGORIES.filter((c) => visibleCatSlugs.has(c.slug));
+  const visibleCategories = visibleCatSlugs.size > 0
+    ? CATEGORIES.filter((c) => visibleCatSlugs.has(c.slug))
+    : CATEGORIES;
 
   return (
     <div className="min-h-screen bg-black-plum">

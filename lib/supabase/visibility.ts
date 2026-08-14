@@ -37,6 +37,9 @@ export async function fetchVisibleNavData(): Promise<NavCategory[]> {
     visibleSubs[cat].add(sub);
   }
 
+  // If table is empty or missing, return full nav (fail-open)
+  if (visibleCats.size === 0) return SHOP_NAV;
+
   return SHOP_NAV.filter((cat) => visibleCats.has(cat.category)).map((cat) => ({
     ...cat,
     subcategories: cat.subcategories.filter(

@@ -187,7 +187,10 @@ export default async function Home() {
   ] as DbProduct[];
   const reviews = (reviewsRes.data ?? []) as Review[];
   const visibleCatSlugs = new Set((catVisRes.data ?? []).map((r) => r.category as string));
-  const visibleCategories = categories.filter((c) => visibleCatSlugs.has(c.id));
+  // If table is empty or missing, show all categories (fail-open)
+  const visibleCategories = visibleCatSlugs.size > 0
+    ? categories.filter((c) => visibleCatSlugs.has(c.id))
+    : categories;
 
   return (
     <div className="min-h-screen">
