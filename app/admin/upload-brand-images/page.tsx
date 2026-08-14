@@ -19,6 +19,7 @@ const ASSET_META: { key: string; label: string; description: string }[] = [
   { key: "category_bracelet",         label: "Category Card — Spiritual Bracelets", description: "Image tile for the Bracelets category." },
   { key: "category_gift",             label: "Category Card — Gift Sets",           description: "Image tile for the Gift Sets category." },
   { key: "category_pooja_essentials", label: "Category Card — Pooja Essentials",   description: "Image tile for the Pooja Essentials category." },
+  { key: "purpose_image",             label: "Our Purpose Image",                  description: "Image shown in the Our Purpose section on the homepage." },
 ];
 
 const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
