@@ -63,60 +63,75 @@ const categories = [
   },
 ];
 
-/* ─── Feature strip data ──────────────────────────────── */
-const features = [
+/* ─── Value pillars data ──────────────────────────────── */
+const pillars = [
   {
-    title: "Flat ₹80 Shipping",
-    subtitle: "On every order, always",
+    label: "Eco-Conscious Craft",
+    body: "Charcoal-free, natural ingredients in every product",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
-        <path d="M1 8h14v9a1 1 0 01-1 1H2a1 1 0 01-1-1V8z" />
-        <path d="M15 11h4l2 4v2h-6v-6z" />
-        <circle cx="5.5" cy="18.5" r="1.5" />
-        <circle cx="17.5" cy="18.5" r="1.5" />
-        <path d="M1 8V5a1 1 0 011-1h12a1 1 0 011 1v3" />
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+        {/* Leaf outline */}
+        <path d="M22 4 Q36 10 36 26 Q36 40 22 42 Q8 40 8 26 Q8 10 22 4 Z" />
+        {/* Central midrib */}
+        <line x1="22" y1="6" x2="22" y2="42" />
+        {/* Side veins */}
+        <line x1="22" y1="20" x2="13" y2="14" />
+        <line x1="22" y1="30" x2="31" y2="24" />
       </svg>
     ),
   },
   {
-    title: "No Returns on Opened Items",
-    subtitle: "Please review before opening",
+    label: "Handcrafted in India",
+    body: "Made by skilled artisans, not mass-produced",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
-        <path d="M11 2L3 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6L11 2z" />
-        <path d="M8 11l2.5 2.5L14 8" />
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+        {/* Diya bowl */}
+        <path d="M8 26 Q8 40 22 42 Q36 40 36 26" />
+        {/* Rim */}
+        <path d="M6 24 Q6 22 22 22 Q38 22 38 24 Q38 26 22 27 Q6 26 6 24 Z" />
+        {/* Wick */}
+        <line x1="22" y1="22" x2="22" y2="17" />
+        {/* Flame */}
+        <path d="M22 6 Q26 10 26 15 Q26 19 22 22 Q18 19 18 15 Q18 10 22 6 Z" />
       </svg>
     ),
   },
   {
-    title: "Secure Razorpay Checkout",
-    subtitle: "100% payment protection",
+    label: "Panchagavya Formula",
+    body: "Rooted in traditional Vedic ingredients",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
-        <rect x="3" y="10" width="16" height="10" rx="1.5" />
-        <path d="M7 10V7a4 4 0 018 0v3" />
-        <circle cx="11" cy="15" r="1.2" fill="currentColor" stroke="none" />
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+        {/* Kalash body */}
+        <path d="M15 40 Q9 34 9 24 Q9 16 14 12 L16 8 Q16 6 22 6 Q28 6 28 8 L30 12 Q35 16 35 24 Q35 34 29 40 Z" />
+        {/* Base */}
+        <line x1="12" y1="40" x2="32" y2="40" />
+        {/* Shoulder band */}
+        <path d="M14 16 Q22 19 30 16" />
+        {/* Neck band */}
+        <line x1="15" y1="8" x2="29" y2="8" />
+        {/* Mango / coconut on top */}
+        <path d="M18 6 Q22 1 26 6" />
+        <line x1="22" y1="1" x2="22" y2="6" />
       </svg>
     ),
   },
   {
-    title: "COD Available",
-    subtitle: "Pay when it arrives",
+    label: "Thoughtful Gifting",
+    body: "Curated for the moments that matter",
     icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
-        <rect x="2" y="6" width="18" height="12" rx="1.5" />
-        <path d="M2 10h18" />
-        <path d="M6 14h4" />
-      </svg>
-    ),
-  },
-  {
-    title: "WhatsApp Support",
-    subtitle: "We're here for you",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
-        <path d="M11 2a9 9 0 019 9 9 9 0 01-9 9 8.95 8.95 0 01-4.5-1.2L2 20l1.2-4.5A8.95 8.95 0 012 11a9 9 0 019-9z" />
-        <path d="M8 10.5c.5 2 2.5 3.5 4.5 4 .5-1 .5-1 .5-1l-1-1s-.5 0-1 .5c-.5-.5-1.5-1.5-2-2 .5-.5.5-1 .5-1L8.5 9s0 1-1 1c0 0 .3.2.5.5z" />
+      <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+        {/* Box body */}
+        <rect x="7" y="21" width="30" height="20" rx="1" />
+        {/* Lid */}
+        <rect x="5" y="14" width="34" height="8" rx="1" />
+        {/* Vertical ribbon */}
+        <line x1="22" y1="14" x2="22" y2="41" />
+        {/* Left bow loop */}
+        <path d="M22 14 Q17 7 12 10 Q10 13 16 14" />
+        {/* Right bow loop */}
+        <path d="M22 14 Q27 7 32 10 Q34 13 28 14" />
+        {/* Bow knot */}
+        <circle cx="22" cy="14" r="1.8" />
       </svg>
     ),
   },
@@ -414,84 +429,114 @@ export default async function Home() {
       </FadeInView>
 
 
-      {/* ══ 5a. WHY CHOOSE DHYOM — trust strip ══════════════ */}
-      <FadeInView>
-      <section className="bg-ink border-y border-[rgba(196,163,115,0.10)] py-0">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 lg:grid-cols-5">
-            {features.map((f, i) => (
+      {/* ══ 5a. WHY CHOOSE DHYOM — value pillars ════════════ */}
+      <section className="bg-ink py-24 px-6">
+        <div className="max-w-5xl mx-auto">
+          <FadeInView className="text-center mb-16">
+            <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.42)] mb-4">
+              Our Commitment
+            </p>
+            <h2
+              className="font-display text-ivory"
+              style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "0.05em" }}
+            >
+              Why Choose Dhyom?
+            </h2>
+            <div className="mt-5 mx-auto w-12 h-px bg-[rgba(196,163,115,0.30)]" />
+          </FadeInView>
+
+          <CardGrid gridClassName="grid-cols-2 lg:grid-cols-4 gap-6">
+            {pillars.map((pillar) => (
               <div
-                key={i}
-                className={[
-                  "flex flex-col items-center text-center gap-3 px-6 py-8",
-                  "border-[rgba(196,163,115,0.10)]",
-                  i < features.length - 1 ? "border-b lg:border-b-0 lg:border-r" : "",
-                  i === 4 ? "col-span-2 lg:col-span-1" : "",
-                ].join(" ")}
+                key={pillar.label}
+                className="flex flex-col items-center text-center gap-6 px-6 py-10 border border-[rgba(196,163,115,0.09)] rounded-[4px]"
               >
-                <span className="text-brass opacity-70">{f.icon}</span>
-                <div>
-                  <p className="font-display text-[0.62rem] tracking-[0.12em] uppercase text-ivory leading-snug">
-                    {f.title}
-                  </p>
-                  <p className="font-body font-light italic text-[rgba(245,237,224,0.38)] text-xs mt-1">
-                    {f.subtitle}
+                <span className="text-brass" style={{ opacity: 0.78 }}>
+                  {pillar.icon}
+                </span>
+                <div className="flex flex-col items-center gap-3">
+                  <h3
+                    className="font-display text-ivory leading-snug"
+                    style={{ fontSize: "0.68rem", letterSpacing: "0.14em", textTransform: "uppercase" }}
+                  >
+                    {pillar.label}
+                  </h3>
+                  <div className="w-6 h-px bg-[rgba(196,163,115,0.28)]" />
+                  <p className="font-body font-light italic text-[rgba(245,237,224,0.48)] text-[0.88rem] leading-relaxed">
+                    {pillar.body}
                   </p>
                 </div>
               </div>
             ))}
+          </CardGrid>
+        </div>
+      </section>
+
+      {/* ══ 5b. OUR PURPOSE — image left, text right ════════ */}
+      <section className="bg-black-plum overflow-hidden">
+        <div className="lg:flex lg:min-h-[600px]">
+
+          {/* Image — left on desktop, top on mobile */}
+          <div className="lg:w-[55%] aspect-[4/3] lg:aspect-auto relative bg-[#180a12] flex-shrink-0">
+            {assets.purpose_image ? (
+              <Image
+                src={assets.purpose_image}
+                alt="An artisan crafting a Dhyom product"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 55vw"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="font-display text-[0.55rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.18)]">
+                  Image coming soon
+                </span>
+              </div>
+            )}
+            {/* Edge softener toward text panel */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(to right, transparent 70%, rgba(12,4,10,0.22) 100%)",
+              }}
+            />
           </div>
+
+          {/* Text — right on desktop, below on mobile */}
+          <FadeInView className="lg:w-[45%] flex flex-col justify-center px-8 py-20 lg:px-14 xl:px-20">
+            <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.55)] mb-5">
+              Our Purpose
+            </p>
+            <h2
+              className="font-display text-ivory mb-5"
+              style={{ fontSize: "clamp(1.8rem, 3vw, 2.6rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
+            >
+              Rooted in Tradition,
+              <br />
+              <span className="text-brass">Made with Care</span>
+            </h2>
+            <div className="w-8 h-px bg-[rgba(196,163,115,0.35)] mb-8" />
+            <p className="font-body font-light text-[rgba(245,237,224,0.65)] text-[1.05rem] leading-[1.9] mb-5">
+              We believe a home holds space for both the everyday and the sacred.
+              Dhyom exists to bring intention back into that space — through
+              fragrance, light, and ritual, rooted in Indian tradition and made
+              with care.
+            </p>
+            <p className="font-body font-light italic text-[rgba(245,237,224,0.38)] text-[0.95rem] leading-relaxed mb-10">
+              Each piece begins with a question: does this honour the ritual
+              it is made for? If the answer is yes, it belongs in our collection.
+            </p>
+            <div>
+              <Link href="/shop">
+                <Button variant="secondary" size="md">Explore the Collection</Button>
+              </Link>
+            </div>
+          </FadeInView>
+
         </div>
       </section>
-      </FadeInView>
-
-      {/* ══ 5b. OUR PURPOSE — story narrative ═══════════════ */}
-      <FadeInView>
-      <section className="relative bg-black-plum py-32 px-6 overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
-        >
-          <span
-            className="text-ivory"
-            style={{
-              fontFamily: "Georgia, serif",
-              fontSize: "clamp(18rem, 45vw, 30rem)",
-              opacity: 0.05,
-              lineHeight: 1,
-              userSelect: "none",
-            }}
-          >
-            ॐ
-          </span>
-        </div>
-
-        <div className="relative max-w-xl mx-auto text-center">
-          <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.55)] mb-5">
-            Our Purpose
-          </p>
-          <h2
-            className="font-display text-ivory mb-6"
-            style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "0.05em" }}
-          >
-            Rooted in Ritual
-          </h2>
-          <div className="w-10 h-px bg-[rgba(196,163,115,0.35)] mx-auto mb-10" />
-          <p className="font-body font-light text-[rgba(245,237,224,0.68)] text-lg leading-[1.95] mb-6">
-            Dhyom was born from a simple belief — that the rituals we inherit
-            deserve the finest materials the earth can offer. Every piece in
-            our collection is crafted by skilled artisans using sustainable,
-            ethically sourced materials, honouring both the sacred traditions
-            of India and the world we share.
-          </p>
-          <p className="font-body font-light italic text-[rgba(245,237,224,0.40)] text-base leading-relaxed mb-12">
-            We exist so that your home may hold a little more intention,
-            a little more stillness.
-          </p>
-          <Button variant="secondary" size="md">Read Our Story</Button>
-        </div>
-      </section>
-      </FadeInView>
 
 
       {/* ══ 6. TESTIMONIALS — only if approved reviews exist ═ */}
