@@ -105,16 +105,16 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
         {/* ════════════════════════════════════════════════
             TOP HALF — SHIPPING LABEL
         ════════════════════════════════════════════════ */}
-        <div style={{ padding: "10px 14px 6px" }}>
+        <div style={{ padding: "6px 14px 4px" }}>
 
           {/* Header bar */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #1a0a12", paddingBottom: "6px", marginBottom: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #1a0a12", paddingBottom: "4px", marginBottom: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt="Dhyom" style={{ height: "36px", objectFit: "contain" }} />
+                <img src={logoUrl} alt="Dhyom" style={{ height: "28px", objectFit: "contain" }} />
               ) : (
-                <span style={{ fontSize: "18px", fontWeight: "bold", letterSpacing: "4px" }}>DHYOM</span>
+                <span style={{ fontSize: "16px", fontWeight: "bold", letterSpacing: "4px" }}>DHYOM</span>
               )}
               <span style={{ fontSize: "9px", color: "#666", letterSpacing: "2px", textTransform: "uppercase" }}>Shipping Label</span>
             </div>
@@ -131,30 +131,30 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
           </div>
 
           {/* Shipping label sticker — compact square, all-in-one */}
-          <div style={{ width: "260px", border: "2px solid #111", marginBottom: "8px", fontSize: "10px", lineHeight: "1.55" }}>
+          <div style={{ width: "240px", border: "2px solid #111", marginBottom: "6px", fontSize: "9.5px", lineHeight: "1.5" }}>
 
             {/* TO */}
-            <div style={{ padding: "7px 10px 9px", borderBottom: "1.5px solid #111" }}>
-              <div style={{ fontSize: "7px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "4px" }}>To</div>
-              <div style={{ fontWeight: "bold", fontSize: "13px" }}>{o.first_name} {o.last_name}</div>
-              <div style={{ fontSize: "10px" }}>{o.shipping_street}</div>
-              <div style={{ fontSize: "10px" }}>{o.shipping_city}, {o.shipping_state}</div>
-              <div style={{ fontWeight: "bold", fontSize: "13px", marginTop: "3px" }}>PIN – {o.shipping_pincode}</div>
-              <div style={{ fontSize: "10px", marginTop: "2px" }}>Ph: {o.phone}</div>
+            <div style={{ padding: "5px 9px 7px", borderBottom: "1.5px solid #111" }}>
+              <div style={{ fontSize: "6.5px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "3px" }}>To</div>
+              <div style={{ fontWeight: "bold", fontSize: "12px" }}>{o.first_name} {o.last_name}</div>
+              <div style={{ fontSize: "9.5px" }}>{o.shipping_street}</div>
+              <div style={{ fontSize: "9.5px" }}>{o.shipping_city}, {o.shipping_state}</div>
+              <div style={{ fontWeight: "bold", fontSize: "12px", marginTop: "2px" }}>PIN – {o.shipping_pincode}</div>
+              <div style={{ fontSize: "9.5px", marginTop: "2px" }}>Ph: {o.phone}</div>
             </div>
 
             {/* FROM */}
-            <div style={{ padding: "6px 10px 7px", borderBottom: "1.5px solid #111", background: "#f5f5f5" }}>
-              <div style={{ fontSize: "7px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "3px" }}>From</div>
-              <div style={{ fontWeight: "bold", fontSize: "10px" }}>{SELLER_SHORT}</div>
-              <div style={{ fontSize: "9px" }}>Rajiv Nagar, Road No. 8A, Anand Niketan,</div>
-              <div style={{ fontSize: "9px" }}>PATNA – 800024, Bihar</div>
-              <div style={{ fontSize: "8.5px", color: "#555", marginTop: "2px" }}>GSTIN: {SELLER_GSTIN}</div>
+            <div style={{ padding: "5px 9px 6px", borderBottom: "1.5px solid #111", background: "#f5f5f5" }}>
+              <div style={{ fontSize: "6.5px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "3px" }}>From</div>
+              <div style={{ fontWeight: "bold", fontSize: "9.5px" }}>{SELLER_SHORT}</div>
+              <div style={{ fontSize: "8.5px" }}>Rajiv Nagar, Road No. 8A, Anand Niketan,</div>
+              <div style={{ fontSize: "8.5px" }}>PATNA – 800024, Bihar</div>
+              <div style={{ fontSize: "8px", color: "#555", marginTop: "2px" }}>GSTIN: {SELLER_GSTIN}</div>
             </div>
 
             {/* Items */}
-            <div style={{ padding: "6px 10px 7px" }}>
-              <div style={{ fontSize: "7px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "4px" }}>Description</div>
+            <div style={{ padding: "5px 9px 6px" }}>
+              <div style={{ fontSize: "6.5px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "3px" }}>Description</div>
               <table style={{ borderCollapse: "collapse", width: "100%" }}>
                 <thead>
                   <tr>
