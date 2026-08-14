@@ -233,7 +233,7 @@ export default async function Home() {
 
         <FadeIn delay={0.14} className="relative">
           <h1
-            className="font-display text-ivory mb-3 max-w-3xl"
+            className="font-display text-ivory mb-10 max-w-3xl"
             style={{ fontSize: "clamp(2.6rem, 6vw, 4.8rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
           >
             Bring the Sacred
@@ -243,17 +243,6 @@ export default async function Home() {
         </FadeIn>
 
         <FadeIn delay={0.30} className="relative">
-          <p
-            className="font-body font-light italic text-[rgba(245,237,224,0.58)] text-lg max-w-lg mb-12 leading-relaxed"
-            style={{ textShadow: "0 1px 14px rgba(15,5,8,0.90), 0 0 28px rgba(15,5,8,0.70)" }}
-          >
-            Dhyom curates premium, eco-conscious home and pooja décor
-            <br />
-            rooted in Indian tradition — for the mindful modern home.
-          </p>
-        </FadeIn>
-
-        <FadeIn delay={0.44} className="relative">
           <Link
             href="/shop"
             className="inline-flex items-center justify-center font-display uppercase tracking-[0.22em] rounded-full transition-colors duration-200 active:scale-[0.98] px-8 py-2.5 text-[0.65rem] bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383]"
