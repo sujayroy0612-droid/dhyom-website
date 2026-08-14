@@ -335,15 +335,7 @@ export default function OrdersPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 font-display text-[0.52rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.30)] hover:bg-[rgba(196,163,115,0.07)] hover:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 transition-all duration-150"
                   >
-                    Print Invoice ↗
-                  </a>
-                  <a
-                    href={`/shipping-label/${selected.order_number}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 font-display text-[0.52rem] tracking-[0.18em] uppercase text-[rgba(245,237,224,0.45)] border border-[rgba(245,237,224,0.12)] hover:bg-[rgba(245,237,224,0.04)] hover:border-[rgba(245,237,224,0.25)] rounded-[3px] px-3 py-2 transition-all duration-150"
-                  >
-                    Shipping Label ↗
+                    Print Invoice + Label ↗
                   </a>
                 </div>
               </Section>

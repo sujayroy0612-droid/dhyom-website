@@ -10,56 +10,34 @@ function adminClient() {
   );
 }
 
-interface OrderItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  label?: string;
-}
-
+interface OrderItem { id: string; name: string; price: number; quantity: number; label?: string }
 interface Order {
-  id: string;
-  order_number: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  shipping_street: string;
-  shipping_city: string;
-  shipping_state: string;
-  shipping_pincode: string;
-  items: OrderItem[];
-  subtotal: number;
-  shipping_fee: number;
-  total: number;
-  payment_method: "cod" | "online";
-  payment_status: string;
-  created_at: string;
+  id: string; order_number: string; first_name: string; last_name: string;
+  email: string; phone: string; shipping_street: string; shipping_city: string;
+  shipping_state: string; shipping_pincode: string; order_notes: string | null;
+  items: OrderItem[]; subtotal: number; shipping_fee: number; total: number;
+  payment_method: "cod" | "online"; payment_status: string; created_at: string;
 }
-
 interface Invoice {
-  invoice_number: string;
-  taxable_value: number;
-  gst_amount: number;
-  total_amount: number;
-  invoice_date: string | null;
-  created_at: string;
+  invoice_number: string; taxable_value: number; gst_amount: number;
+  total_amount: number; invoice_date: string | null; created_at: string;
 }
 
-const SELLER_NAME    = "Sujay";
-const SELLER_TRADE   = "Yukti";
+const SELLER_NAME    = "Sujay, trading as Yukti";
+const SELLER_SHORT   = "Yukti";
+const SELLER_ADDR    = "Ground Floor, Road Number 8A, near Ideal Public School, Rajiv Nagar, Patna, Bihar – 800024";
 const SELLER_GSTIN   = "10EFQPS4606H1ZC";
-const SELLER_ADDRESS = "Ground Floor, Road Number 8A, near Ideal Public School, Rajiv Nagar, Patna, Bihar – 800024";
+const SELLER_PAN     = "EFQPS4606H";
 const SELLER_STATE   = "Bihar";
 
-function rupees(n: number) {
-  return "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
+function r2(n: number) { return Math.round(n * 100) / 100; }
+function inr(n: number) { return n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmtDate(s: string) {
   return new Date(s).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
+
+const td: React.CSSProperties = { border: "1px solid #bbb", padding: "4px 6px", fontSize: "10px", verticalAlign: "top" };
+const th: React.CSSProperties = { ...td, background: "#e8e8e8", fontWeight: "bold", textAlign: "center" as const, fontSize: "9px", textTransform: "uppercase" as const, letterSpacing: "0.5px" };
 
 export default async function InvoicePage({ params }: { params: { orderNumber: string } }) {
   const { orderNumber } = params;
@@ -74,192 +52,279 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
   ]);
   if (!iRes.data) notFound();
 
-  const order   = oRes.data as Order;
-  const invoice = iRes.data as Invoice;
-  const logoUrl = logoRes.data?.image_url ?? null;
+  const o        = oRes.data as Order;
+  const inv      = iRes.data as Invoice;
+  const logoUrl  = logoRes.data?.image_url ?? null;
+  const items    = o.items as OrderItem[];
 
-  const isIntraState = order.shipping_state?.toLowerCase().trim() === "bihar";
-  const halfGst      = Math.round(invoice.gst_amount * 50) / 100;
-  const halfGst2     = Math.round((invoice.gst_amount - halfGst) * 100) / 100;
-  const invDate      = fmtDate(invoice.invoice_date ?? invoice.created_at);
-  const ordDate      = fmtDate(order.created_at);
+  const isIntraState = o.shipping_state?.toLowerCase().trim() === "bihar";
+  const invDate      = fmtDate(inv.invoice_date ?? inv.created_at);
+  const ordDate      = fmtDate(o.created_at);
+  const totalQty     = items.reduce((s, i) => s + i.quantity, 0);
+  const printedAt    = (() => {
+    const now = new Date();
+    return `${now.getHours().toString().padStart(2,"0")}${now.getMinutes().toString().padStart(2,"0")} hrs, ${now.toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"2-digit"})}`;
+  })();
+
+  /* Per-item GST (GST-inclusive pricing: back-calculate taxable value) */
+  const lineItems = items.map(item => {
+    const gross    = r2(item.price * item.quantity);
+    const taxable  = r2(gross / 1.05);
+    const tax      = r2(gross - taxable);
+    return { ...item, gross, taxable, tax, total: gross };
+  });
+
+  const shippingFee  = Number(o.shipping_fee ?? 0);
+  const shippingTax  = 0; // shipping shown net, no GST
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
-        @page { size: A4; margin: 12mm; }
+        @page { size: A4; margin: 6mm; }
         @media print {
-          html, body { background: white !important; }
+          html, body { background: white !important; margin: 0; padding: 0; }
           .no-print { display: none !important; }
+          .page-wrap { box-shadow: none !important; }
         }
+        body { font-family: Arial, Helvetica, sans-serif; }
+        table { border-collapse: collapse; width: 100%; }
       `}} />
 
-      <PrintButton orderNumber={order.order_number} />
+      <PrintButton orderNumber={o.order_number} />
 
-      <div className="min-h-screen bg-[#f2ede5] pt-14 pb-12 print:pt-0 print:pb-0 print:bg-white">
-        <div
-          className="max-w-[794px] mx-auto bg-white print:max-w-none print:shadow-none"
-          style={{ boxShadow: "0 4px 32px rgba(0,0,0,0.10)" }}
-        >
+      <div className="no-print" style={{ height: "48px" }} />
 
-          {/* ── Brand header ───────────────────────────────────────── */}
-          <div className="flex items-start justify-between px-10 pt-10 pb-8 border-b-2 border-[#C4A373]">
-            <div>
+      {/* ─── A4 page wrapper ─────────────────────────────── */}
+      <div className="page-wrap" style={{
+        maxWidth: "794px", margin: "0 auto", background: "white",
+        boxShadow: "0 0 20px rgba(0,0,0,0.15)", padding: "0",
+      }}>
+
+        {/* ════════════════════════════════════════════════
+            TOP HALF — SHIPPING LABEL
+        ════════════════════════════════════════════════ */}
+        <div style={{ padding: "10px 14px 6px" }}>
+
+          {/* Header bar */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #1a0a12", paddingBottom: "6px", marginBottom: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt="Dhyom" style={{ height: "60px", objectFit: "contain", objectPosition: "left" }} />
+                <img src={logoUrl} alt="Dhyom" style={{ height: "36px", objectFit: "contain" }} />
               ) : (
-                <h1
-                  className="text-[2.2rem] font-bold tracking-[0.28em] text-[#1a0a12]"
-                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-                >
-                  DHYOM
-                </h1>
+                <span style={{ fontSize: "18px", fontWeight: "bold", letterSpacing: "4px" }}>DHYOM</span>
               )}
-              <div className="mt-4 text-[0.72rem] text-[#1a0a12] leading-relaxed">
-                <p className="font-semibold">{SELLER_NAME}, trading as {SELLER_TRADE}</p>
-                <p>GSTIN: {SELLER_GSTIN}</p>
-                <p className="mt-0.5">{SELLER_ADDRESS}</p>
-                <p>State: {SELLER_STATE}</p>
-              </div>
+              <span style={{ fontSize: "9px", color: "#666", letterSpacing: "2px", textTransform: "uppercase" }}>Shipping Label</span>
             </div>
-
-            <div className="text-right">
-              <div className="inline-block border-2 border-[#1a0a12] px-5 py-2 mb-5">
-                <p className="text-[1rem] font-bold tracking-[0.18em] text-[#1a0a12] uppercase">Tax Invoice</p>
-              </div>
-              <div className="text-[0.72rem] text-[#3a2a1a] space-y-1">
-                <MetaRow label="Invoice No." value={invoice.invoice_number} bold />
-                <MetaRow label="Invoice Date" value={invDate} />
-                <MetaRow label="Order No." value={order.order_number} />
-                <MetaRow label="Order Date" value={ordDate} />
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "10px", color: "#444" }}>Order: <strong>{o.order_number}</strong></span>
+              <span style={{
+                fontSize: "11px", fontWeight: "bold", padding: "3px 10px", borderRadius: "3px", letterSpacing: "1px",
+                background: o.payment_method === "cod" ? "#c0392b" : "#1a7a3a",
+                color: "white",
+              }}>
+                {o.payment_method === "cod" ? "COD" : "PREPAID"}
+              </span>
             </div>
           </div>
 
-          {/* ── Bill to / Ship to ──────────────────────────────────── */}
-          <div className="px-10 py-6 border-b border-[#e0d5c5]">
-            <p className="text-[0.56rem] tracking-[0.22em] uppercase text-[#3a2a1a] font-semibold mb-3">
-              Bill To / Ship To
-            </p>
-            <div className="bg-[#faf6f0] border border-[#e8dece] rounded px-5 py-4 text-[0.76rem] text-[#3a2a1a] leading-relaxed inline-block min-w-[260px]">
-              <p className="font-bold text-[0.88rem] text-[#1a0a12]">{order.first_name} {order.last_name}</p>
-              <p className="mt-1">{order.shipping_street}</p>
-              <p>{order.shipping_city}, {order.shipping_state} – {order.shipping_pincode}</p>
-              <p className="mt-1">Ph: {order.phone}</p>
-              {order.email && <p>{order.email}</p>}
+          {/* Sold By + Ship To */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+            <div style={{ border: "1px solid #ccc", padding: "7px 9px", fontSize: "10px", lineHeight: "1.55" }}>
+              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase", color: "#888", marginBottom: "3px" }}>Sold By</div>
+              <div style={{ fontWeight: "bold" }}>{SELLER_SHORT}</div>
+              <div>Rajiv Nagar, Road No. 8A, near Ideal Public School</div>
+              <div>Anand Niketan, PATNA – 800024</div>
+              <div>GSTIN: {SELLER_GSTIN}</div>
+            </div>
+            <div style={{ border: "2px solid #1a0a12", padding: "7px 9px", fontSize: "10px", lineHeight: "1.55", background: "#fffef8" }}>
+              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase", color: "#555", marginBottom: "3px" }}>Shipping / Customer Address</div>
+              <div style={{ fontWeight: "bold", fontSize: "12px" }}>{o.first_name} {o.last_name}</div>
+              <div>{o.shipping_street}</div>
+              <div>{o.shipping_city}, {o.shipping_state}</div>
+              <div style={{ fontWeight: "bold", fontSize: "13px", marginTop: "2px" }}>PIN – {o.shipping_pincode}</div>
+              <div>Ph: {o.phone}</div>
             </div>
           </div>
 
-          {/* ── Line items ─────────────────────────────────────────── */}
-          <div className="px-10 py-6 border-b border-[#e0d5c5]">
-            <table className="w-full text-[0.74rem] border-collapse">
-              <thead>
-                <tr style={{ background: "#1a0a12" }}>
-                  <th className="px-4 py-3 text-left text-[0.58rem] tracking-[0.14em] uppercase text-[#C4A373] font-medium w-8">
-                    #
-                  </th>
-                  <th className="px-4 py-3 text-left text-[0.58rem] tracking-[0.14em] uppercase text-[#C4A373] font-medium">
-                    Description
-                  </th>
-                  <th className="px-4 py-3 text-center text-[0.58rem] tracking-[0.14em] uppercase text-[#C4A373] font-medium w-14">
-                    Qty
-                  </th>
-                  <th className="px-4 py-3 text-right text-[0.58rem] tracking-[0.14em] uppercase text-[#C4A373] font-medium w-24">
-                    Unit Price
-                  </th>
-                  <th className="px-4 py-3 text-right text-[0.58rem] tracking-[0.14em] uppercase text-[#C4A373] font-medium w-28">
-                    Amount
-                  </th>
+          {/* SKU / Items table */}
+          <table style={{ borderCollapse: "collapse", width: "100%", marginBottom: "6px" }}>
+            <thead>
+              <tr>
+                <th style={{ ...th, width: "30px", textAlign: "left" }}>#</th>
+                <th style={{ ...th, textAlign: "left" }}>Description</th>
+                <th style={{ ...th, width: "40px" }}>QTY</th>
+                <th style={{ ...th, width: "70px" }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineItems.map((item, i) => (
+                <tr key={i}>
+                  <td style={{ ...td }}>{i + 1}</td>
+                  <td style={{ ...td }}>
+                    <span style={{ fontWeight: "bold" }}>{item.name}</span>
+                    {item.label && <span style={{ color: "#666", fontSize: "9px" }}> | {item.label}</span>}
+                  </td>
+                  <td style={{ ...td, textAlign: "center" }}>{item.quantity}</td>
+                  <td style={{ ...td, textAlign: "right" }}>₹{inr(item.gross)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {(order.items as OrderItem[]).map((item, i) => (
-                  <tr key={i} className={i % 2 === 0 ? "" : "bg-[#faf6f0]"}>
-                    <td className="px-4 py-3 text-[#3a2a1a]">{i + 1}</td>
-                    <td className="px-4 py-3 text-[#1a0a12]">
-                      <p className="font-medium">{item.name}</p>
-                      {item.label && (
-                        <p className="text-[0.64rem] text-[#3a2a1a] mt-0.5">{item.label}</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center text-[#3a2a1a]">{item.quantity}</td>
-                    <td className="px-4 py-3 text-right text-[#3a2a1a]">{rupees(item.price)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-[#1a0a12]">
-                      {rupees(item.price * item.quantity)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Label footer */}
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "8px", color: "#888", marginTop: "2px" }}>
+            <span>Not for resale.</span>
+            <span>Printed at {printedAt}</span>
+          </div>
+        </div>
+
+        {/* ════════ TEAR LINE ════════ */}
+        <div style={{ margin: "6px 0", borderTop: "2px dashed #444", position: "relative", textAlign: "center" }}>
+          <span style={{ background: "white", padding: "0 10px", fontSize: "9px", color: "#555", position: "relative", top: "-8px", letterSpacing: "1px" }}>
+            ✂ &nbsp;&nbsp; TEAR HERE &nbsp;&nbsp; ✂
+          </span>
+        </div>
+
+        {/* ════════════════════════════════════════════════
+            BOTTOM HALF — TAX INVOICE
+        ════════════════════════════════════════════════ */}
+        <div style={{ padding: "6px 14px 10px" }}>
+
+          {/* Invoice header row */}
+          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "start", gap: "10px", borderBottom: "1px solid #ccc", paddingBottom: "6px", marginBottom: "6px" }}>
+            <div style={{ fontWeight: "bold", fontSize: "13px", letterSpacing: "1px", border: "1.5px solid #1a0a12", padding: "3px 10px", whiteSpace: "nowrap" as const }}>
+              TAX INVOICE
+            </div>
+            <div style={{ fontSize: "10px", lineHeight: "1.55" }}>
+              <div><strong>Order ID:</strong> {o.order_number}</div>
+              <div><strong>Order Date:</strong> {ordDate}</div>
+            </div>
+            <div style={{ fontSize: "10px", lineHeight: "1.55", textAlign: "right" as const }}>
+              <div><strong>Invoice No:</strong> {inv.invoice_number}</div>
+              <div><strong>Invoice Date:</strong> {invDate}</div>
+              <div><strong>GSTIN:</strong> {SELLER_GSTIN}</div>
+              <div><strong>PAN:</strong> {SELLER_PAN}</div>
+            </div>
           </div>
 
-          {/* ── Totals ─────────────────────────────────────────────── */}
-          <div className="px-10 py-6 border-b border-[#e0d5c5] flex justify-end">
-            <div className="w-72 text-[0.74rem]">
-              <TotalRow label="Taxable Value" value={rupees(invoice.taxable_value)} />
-              {isIntraState ? (
-                <>
-                  <TotalRow label="CGST @ 2.5%" value={rupees(halfGst)} />
-                  <TotalRow label="SGST @ 2.5%" value={rupees(halfGst2)} />
-                </>
-              ) : (
-                <TotalRow label="IGST @ 5%" value={rupees(invoice.gst_amount)} />
+          {/* Sold By | Billing | Shipping — 3 columns */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0", border: "1px solid #bbb", marginBottom: "8px", fontSize: "10px", lineHeight: "1.55" }}>
+            <div style={{ padding: "6px 8px", borderRight: "1px solid #bbb" }}>
+              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" as const, color: "#666", marginBottom: "3px" }}>Sold By</div>
+              <div style={{ fontWeight: "bold" }}>{SELLER_NAME}</div>
+              <div>{SELLER_ADDR}</div>
+              <div>State: {SELLER_STATE}</div>
+              <div>GSTIN: {SELLER_GSTIN}</div>
+            </div>
+            <div style={{ padding: "6px 8px", borderRight: "1px solid #bbb" }}>
+              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" as const, color: "#666", marginBottom: "3px" }}>Billing Address</div>
+              <div style={{ fontWeight: "bold" }}>{o.first_name} {o.last_name}</div>
+              <div>{o.shipping_street}</div>
+              <div>{o.shipping_city}, {o.shipping_state}</div>
+              <div>{o.shipping_pincode}</div>
+              {o.phone && <div>Ph: {o.phone}</div>}
+            </div>
+            <div style={{ padding: "6px 8px" }}>
+              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" as const, color: "#666", marginBottom: "3px" }}>Shipping Address</div>
+              <div style={{ fontWeight: "bold" }}>{o.first_name} {o.last_name}</div>
+              <div>{o.shipping_street}</div>
+              <div>{o.shipping_city}, {o.shipping_state}</div>
+              <div>{o.shipping_pincode}</div>
+            </div>
+          </div>
+
+          {/* Line items GST table */}
+          <table style={{ borderCollapse: "collapse", width: "100%", marginBottom: "6px", fontSize: "9.5px" }}>
+            <thead>
+              <tr>
+                <th style={{ ...th, textAlign: "left", width: "28%" }}>Product</th>
+                <th style={{ ...th, width: "8%" }}>Qty</th>
+                <th style={{ ...th, width: "11%" }}>Amount (₹)</th>
+                <th style={{ ...th, width: "12%" }}>Taxable Value (₹)</th>
+                {isIntraState ? (
+                  <>
+                    <th style={{ ...th, width: "9%" }}>CGST 2.5% (₹)</th>
+                    <th style={{ ...th, width: "9%" }}>SGST 2.5% (₹)</th>
+                  </>
+                ) : (
+                  <th style={{ ...th, width: "10%" }}>IGST 5% (₹)</th>
+                )}
+                <th style={{ ...th, width: "9%" }}>CESS (₹)</th>
+                <th style={{ ...th, width: "11%" }}>Total (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineItems.map((item, i) => (
+                <tr key={i}>
+                  <td style={{ ...td }}>
+                    <div style={{ fontWeight: "bold", fontSize: "9px" }}>{item.name}</div>
+                    {item.label && <div style={{ color: "#555", fontSize: "8.5px" }}>{item.label}</div>}
+                  </td>
+                  <td style={{ ...td, textAlign: "center" }}>{item.quantity}</td>
+                  <td style={{ ...td, textAlign: "right" }}>{inr(item.gross)}</td>
+                  <td style={{ ...td, textAlign: "right" }}>{inr(item.taxable)}</td>
+                  {isIntraState ? (
+                    <>
+                      <td style={{ ...td, textAlign: "right" }}>{inr(r2(item.tax / 2))}</td>
+                      <td style={{ ...td, textAlign: "right" }}>{inr(r2(item.tax - r2(item.tax / 2)))}</td>
+                    </>
+                  ) : (
+                    <td style={{ ...td, textAlign: "right" }}>{inr(item.tax)}</td>
+                  )}
+                  <td style={{ ...td, textAlign: "right" }}>0.00</td>
+                  <td style={{ ...td, textAlign: "right", fontWeight: "bold" }}>{inr(item.total)}</td>
+                </tr>
+              ))}
+              {shippingFee > 0 && (
+                <tr>
+                  <td style={{ ...td, fontStyle: "italic" as const, color: "#555" }}>Shipping Charges</td>
+                  <td style={{ ...td, textAlign: "center" }}>1</td>
+                  <td style={{ ...td, textAlign: "right" }}>{inr(shippingFee)}</td>
+                  <td style={{ ...td, textAlign: "right" }}>{inr(shippingFee)}</td>
+                  {isIntraState ? (
+                    <><td style={{ ...td, textAlign: "right" }}>0.00</td><td style={{ ...td, textAlign: "right" }}>0.00</td></>
+                  ) : (
+                    <td style={{ ...td, textAlign: "right" }}>0.00</td>
+                  )}
+                  <td style={{ ...td, textAlign: "right" }}>0.00</td>
+                  <td style={{ ...td, textAlign: "right", fontWeight: "bold" }}>{inr(shippingFee)}</td>
+                </tr>
               )}
-              {Number(order.shipping_fee) > 0 && (
-                <TotalRow label="Shipping Charges" value={rupees(Number(order.shipping_fee))} />
-              )}
-              <div className="flex justify-between items-center mt-2 pt-2 border-t-2 border-[#C4A373] bg-[#1a0a12] -mx-0.5 px-3 py-3 rounded-b">
-                <span className="font-bold tracking-[0.10em] uppercase text-[0.68rem] text-[#C4A373]">Total</span>
-                <span className="font-bold text-[0.92rem] text-white">{rupees(Number(order.total))}</span>
-              </div>
+            </tbody>
+            <tfoot>
+              <tr style={{ background: "#f0f0f0" }}>
+                <td style={{ ...td, fontWeight: "bold" }}>TOTAL QTY: {totalQty}</td>
+                <td style={{ ...td }}></td>
+                <td colSpan={isIntraState ? 5 : 4} style={{ ...td, textAlign: "right", fontWeight: "bold" }}>
+                  TOTAL PRICE: ₹{inr(Number(o.total))} &nbsp; (All values in INR)
+                </td>
+                <td style={{ ...td }}></td>
+              </tr>
+            </tfoot>
+          </table>
+
+          {/* Footer: registered address + signature */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: "9px", color: "#444", borderTop: "1px solid #ddd", paddingTop: "5px" }}>
+            <div style={{ maxWidth: "60%", lineHeight: "1.5" }}>
+              <div><strong>Seller Registered Address:</strong> {SELLER_NAME}, {SELLER_ADDR}</div>
+              <div style={{ marginTop: "3px", color: "#888" }}>E. &amp; O.E.</div>
+            </div>
+            <div style={{ textAlign: "right" as const, lineHeight: "1.5" }}>
+              <div style={{ fontSize: "11px", fontWeight: "bold", marginBottom: "14px" }}>{SELLER_SHORT}</div>
+              <div style={{ borderTop: "1px solid #666", paddingTop: "2px", fontSize: "8px", color: "#666" }}>Authorized Signature</div>
             </div>
           </div>
 
-          {/* ── Payment ────────────────────────────────────────────── */}
-          <div className="px-10 py-5 border-b border-[#e0d5c5] flex gap-12 text-[0.72rem]">
-            <div>
-              <p className="text-[0.56rem] tracking-[0.18em] uppercase text-[#3a2a1a] mb-1">Payment Method</p>
-              <p className="font-semibold text-[#1a0a12]">
-                {order.payment_method === "cod" ? "Cash on Delivery" : "Online Payment (Razorpay)"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[0.56rem] tracking-[0.18em] uppercase text-[#3a2a1a] mb-1">Payment Status</p>
-              <p className="font-semibold text-[#1a0a12] capitalize">{order.payment_status}</p>
-            </div>
-          </div>
-
-          {/* ── Footer ─────────────────────────────────────────────── */}
-          <div className="px-10 py-6 text-center">
-            <p className="text-[0.64rem] text-[#3a2a1a] tracking-[0.06em]">
-              This is a computer-generated invoice. No physical signature is required.
-            </p>
-            <p className="text-[0.58rem] text-[#3a2a1a] mt-1.5 tracking-wide">
-              DHYOM — Handcrafted with care. Delivered with reverence.
-            </p>
+          {/* Payment note */}
+          <div style={{ marginTop: "6px", fontSize: "9px", color: "#555", borderTop: "1px solid #eee", paddingTop: "4px" }}>
+            Payment Method: <strong>{o.payment_method === "cod" ? "Cash on Delivery" : "Online Payment (Razorpay)"}</strong>
+            &nbsp;|&nbsp; Payment Status: <strong style={{ textTransform: "capitalize" as const }}>{o.payment_status}</strong>
+            &nbsp;|&nbsp; This is a computer-generated invoice. No physical signature required.
           </div>
 
         </div>
       </div>
     </>
-  );
-}
-
-function MetaRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div className="flex justify-end gap-6">
-      <span className="text-[#3a2a1a]">{label}</span>
-      <span className={`w-36 text-right ${bold ? "font-bold text-[#1a0a12]" : "text-[#3a2a1a]"}`}>{value}</span>
-    </div>
-  );
-}
-
-function TotalRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between items-center py-1.5 border-b border-[#e8dece]">
-      <span className="text-[#1a0a12] font-medium">{label}</span>
-      <span className="text-[#1a0a12] font-medium">{value}</span>
-    </div>
   );
 }
