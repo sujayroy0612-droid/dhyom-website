@@ -27,7 +27,7 @@ export default function ContactPage() {
         />
         <div className="max-w-2xl mx-auto relative text-center">
           <p className="font-display text-[0.58rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.50)] mb-4">
-            We're Here
+            We&apos;re Here
           </p>
           <h1
             className="font-display text-ivory"
