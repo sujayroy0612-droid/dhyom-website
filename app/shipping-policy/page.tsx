@@ -9,10 +9,7 @@ export const metadata: Metadata = {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
-      <h2
-        className="font-display text-ivory"
-        style={{ fontSize: "1rem", letterSpacing: "0.08em" }}
-      >
+      <h2 className="font-display text-ivory" style={{ fontSize: "1rem", letterSpacing: "0.08em" }}>
         {title}
       </h2>
       <div className="font-body font-light text-[rgba(245,237,224,0.55)] text-[0.95rem] leading-[1.9] flex flex-col gap-3">
@@ -26,40 +23,40 @@ const divider = <div className="h-px bg-[rgba(196,163,115,0.10)]" />;
 
 export default function ShippingPolicyPage() {
   return (
-    <PolicyLayout eyebrow="Legal" title="Shipping Policy" lastUpdated="August 2026">
+    <PolicyLayout eyebrow="Legal" title="Shipping Policy" lastUpdated="14 August 2026">
 
-      <Section title="1. Processing Time">
-        <p>[Content to be added]</p>
+      <Section title="Delivery Timeframe">
+        <p>Orders are typically dispatched within 1–2 business days of confirmation and delivered within 5–7 business days, depending on your location. Delivery times may vary during festive periods or due to courier delays beyond our control.</p>
       </Section>
 
       {divider}
 
-      <Section title="2. Delivery Timelines">
-        <p>[Content to be added]</p>
+      <Section title="Shipping Charges">
+        <p>A flat shipping fee of ₹80 applies to all orders across India.</p>
       </Section>
 
       {divider}
 
-      <Section title="3. Shipping Charges">
-        <p>[Content to be added]</p>
+      <Section title="Order Tracking">
+        <p>Once your order is shipped, you will receive tracking details via email/WhatsApp.</p>
       </Section>
 
       {divider}
 
-      <Section title="4. Tracking Your Order">
-        <p>[Content to be added]</p>
+      <Section title="Delivery Areas">
+        <p>We currently ship across India. If your pin code is not serviceable, you will be notified before payment is processed.</p>
       </Section>
 
       {divider}
 
-      <Section title="5. Undeliverable Packages">
-        <p>[Content to be added]</p>
+      <Section title="Delays">
+        <p>While we strive to meet delivery estimates, Dhyom is not liable for delays caused by the courier partner, weather, natural events, or circumstances beyond our reasonable control.</p>
       </Section>
 
       {divider}
 
-      <Section title="6. Contact Us">
-        <p>[Content to be added]</p>
+      <Section title="Contact">
+        <p>For shipping queries: <span className="text-[rgba(196,163,115,0.65)]">dhyomecom@gmail.com</span></p>
       </Section>
 
     </PolicyLayout>
