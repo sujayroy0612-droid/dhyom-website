@@ -40,6 +40,7 @@ export default function FunnelPlannerPage() {
   const [rows,    setRows]    = useState<FunnelRow[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
   const [saving,  setSaving]  = useState<Record<string, boolean>>({});
   const [toast,   setToast]   = useState("");
 
@@ -48,6 +49,16 @@ export default function FunnelPlannerPage() {
       supabase.from("funnel_settings").select("*"),
       supabase.from("products").select("id, name, category, price").eq("is_visible", true).order("category").order("name"),
     ]).then(([fRes, pRes]) => {
+      if (fRes.error) {
+        setLoadErr(`funnel_settings error: ${fRes.error.message} (code: ${fRes.error.code})`);
+        setLoading(false);
+        return;
+      }
+      if (pRes.error) {
+        setLoadErr(`products error: ${pRes.error.message} (code: ${pRes.error.code})`);
+        setLoading(false);
+        return;
+      }
       const rawRows = (fRes.data ?? []) as FunnelRow[];
       rawRows.sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category));
       setRows(rawRows);
@@ -100,7 +111,15 @@ export default function FunnelPlannerPage() {
           </div>
         )}
 
-        {rows.length === 0 ? (
+        {loadErr ? (
+          <div className="bg-[#1e0c17] border border-[rgba(200,80,80,0.28)] rounded-[6px] px-5 py-4">
+            <p className="font-display text-[0.44rem] tracking-[0.16em] uppercase text-[rgba(200,80,80,0.65)] mb-1">Supabase error</p>
+            <p className="font-mono text-[rgba(220,100,100,0.85)] text-sm">{loadErr}</p>
+            <p className="font-body font-light italic text-[rgba(245,237,224,0.30)] text-xs mt-3">
+              Run the funnel_settings SQL in Supabase, then refresh this page.
+            </p>
+          </div>
+        ) : rows.length === 0 ? (
           <div className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] px-5 py-4">
             <p className="font-body font-light italic text-[rgba(245,237,224,0.30)] text-sm">
               No rows found — run the funnel_settings SQL seed first.
