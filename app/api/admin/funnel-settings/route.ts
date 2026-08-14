@@ -16,8 +16,9 @@ function adminSupabase() {
 export async function GET() {
   const sb = adminSupabase();
 
-  let { data, error } = await sb.from("funnel_settings").select("*");
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const first = await sb.from("funnel_settings").select("*");
+  if (first.error) return NextResponse.json({ error: first.error.message }, { status: 500 });
+  let data = first.data;
 
   if (!data || data.length === 0) {
     const { error: insErr } = await sb
