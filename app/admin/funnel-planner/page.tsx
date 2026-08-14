@@ -31,59 +31,43 @@ interface ProductOption {
 }
 
 const FUNNEL_STAGES: { field: FunnelField; label: string; hint: string }[] = [
-  { field: "bump_product_id",     label: "Order Bump",        hint: "Shown in cart before checkout" },
-  { field: "oto_product_id",      label: "One-Time Offer",    hint: "Shown immediately after purchase" },
-  { field: "downsell_product_id", label: "Downsell",          hint: "Shown if OTO is declined" },
+  { field: "bump_product_id",     label: "Order Bump",     hint: "Shown in cart before checkout" },
+  { field: "oto_product_id",      label: "One-Time Offer", hint: "Shown immediately after purchase" },
+  { field: "downsell_product_id", label: "Downsell",       hint: "Shown if OTO is declined" },
 ];
 
 export default function FunnelPlannerPage() {
-  const [rows,    setRows]    = useState<FunnelRow[]>([]);
+  const [rows,     setRows]    = useState<FunnelRow[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadErr, setLoadErr] = useState<string | null>(null);
-  const [saving,  setSaving]  = useState<Record<string, boolean>>({});
-  const [toast,   setToast]   = useState("");
+  const [loading,  setLoading] = useState(true);
+  const [loadErr,  setLoadErr] = useState<string | null>(null);
+  const [saving,   setSaving]  = useState<Record<string, boolean>>({});
+  const [toast,    setToast]   = useState("");
 
   useEffect(() => {
     async function load() {
-      const [fRes, pRes] = await Promise.all([
-        supabase.from("funnel_settings").select("*"),
+      /* funnel_settings fetched via server API (bypasses RLS with service role key) */
+      const [fApiRes, pRes] = await Promise.all([
+        fetch("/api/admin/funnel-settings"),
         supabase.from("products").select("id, name, category, price").eq("is_visible", true).order("category").order("name"),
       ]);
 
-      if (fRes.error) {
-        setLoadErr(`funnel_settings error: ${fRes.error.message} (code: ${fRes.error.code})`);
+      if (!fApiRes.ok) {
+        const body = await fApiRes.json().catch(() => ({})) as { error?: string };
+        setLoadErr(body.error ?? `API error ${fApiRes.status}`);
         setLoading(false);
         return;
       }
       if (pRes.error) {
-        setLoadErr(`products error: ${pRes.error.message} (code: ${pRes.error.code})`);
+        setLoadErr(`products error: ${pRes.error.message}`);
         setLoading(false);
         return;
       }
 
-      setProducts((pRes.data ?? []) as ProductOption[]);
-
-      let rawRows = (fRes.data ?? []) as FunnelRow[];
-
-      /* Auto-seed if table exists but is empty (INSERT was skipped or RLS silent-filtered) */
-      if (rawRows.length === 0) {
-        const seed = CATEGORY_ORDER.map(c => ({ category: c }));
-        const { data: inserted, error: insErr } = await supabase
-          .from("funnel_settings")
-          .insert(seed)
-          .select("*");
-
-        if (insErr) {
-          setLoadErr(`Seed failed: ${insErr.message} (code: ${insErr.code}) — run the funnel_settings SQL in Supabase then refresh.`);
-          setLoading(false);
-          return;
-        }
-        rawRows = (inserted ?? []) as FunnelRow[];
-      }
-
+      const { rows: rawRows } = await fApiRes.json() as { rows: FunnelRow[] };
       rawRows.sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category));
       setRows(rawRows);
+      setProducts((pRes.data ?? []) as ProductOption[]);
       setLoading(false);
     }
     load();
@@ -96,10 +80,19 @@ export default function FunnelPlannerPage() {
 
   async function updateField(rowId: string, field: FunnelField, value: string | null) {
     const key = `${rowId}-${field}`;
+    /* Optimistic update */
     setRows(prev => prev.map(r => r.id === rowId ? { ...r, [field]: value } : r));
     setSaving(s => ({ ...s, [key]: true }));
-    const { error } = await supabase.from("funnel_settings").update({ [field]: value }).eq("id", rowId);
-    if (error) showToast("Error: " + error.message);
+
+    const res = await fetch("/api/admin/funnel-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: rowId, field, value }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      showToast("Error: " + (body.error ?? "unknown"));
+    }
     setSaving(s => { const n = { ...s }; delete n[key]; return n; });
   }
 
@@ -123,7 +116,7 @@ export default function FunnelPlannerPage() {
             Funnel Planner
           </h1>
           <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-sm">
-            Choose which product appears at each funnel stage for each category. Set to &ldquo;No offer&rdquo; to skip that stage.
+            Choose which product appears at each funnel stage per category. Set to &ldquo;No offer&rdquo; to skip that stage.
           </p>
         </div>
 
@@ -135,17 +128,13 @@ export default function FunnelPlannerPage() {
 
         {loadErr ? (
           <div className="bg-[#1e0c17] border border-[rgba(200,80,80,0.28)] rounded-[6px] px-5 py-4">
-            <p className="font-display text-[0.44rem] tracking-[0.16em] uppercase text-[rgba(200,80,80,0.65)] mb-1">Supabase error</p>
-            <p className="font-mono text-[rgba(220,100,100,0.85)] text-sm">{loadErr}</p>
-            <p className="font-body font-light italic text-[rgba(245,237,224,0.30)] text-xs mt-3">
-              Run the funnel_settings SQL in Supabase, then refresh this page.
-            </p>
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] px-5 py-4">
-            <p className="font-body font-light italic text-[rgba(245,237,224,0.30)] text-sm">
-              No rows found — run the funnel_settings SQL seed first.
-            </p>
+            <p className="font-display text-[0.44rem] tracking-[0.16em] uppercase text-[rgba(200,80,80,0.65)] mb-1">Error</p>
+            <p className="font-mono text-[rgba(220,100,100,0.85)] text-sm break-all">{loadErr}</p>
+            {loadErr.includes("service_role") || loadErr.includes("SUPABASE_SERVICE_ROLE_KEY") ? (
+              <p className="font-body font-light text-[rgba(245,237,224,0.35)] text-xs mt-3">
+                Add <code className="font-mono bg-[rgba(255,255,255,0.06)] px-1">SUPABASE_SERVICE_ROLE_KEY</code> to Vercel Environment Variables, then redeploy.
+              </p>
+            ) : null}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -205,10 +194,9 @@ export default function FunnelPlannerPage() {
                           </svg>
                         </div>
 
-                        {selectedName && (
+                        {selectedName ? (
                           <p className="font-display text-[0.48rem] tracking-wide text-brass truncate">{selectedName}</p>
-                        )}
-                        {!selectedName && (
+                        ) : (
                           <p className="font-display text-[0.44rem] tracking-wide text-[rgba(245,237,224,0.20)]">Skipped</p>
                         )}
                       </div>
