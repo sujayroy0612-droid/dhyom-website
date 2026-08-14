@@ -81,22 +81,25 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
       <style dangerouslySetInnerHTML={{ __html: `
         @page { size: A4; margin: 6mm; }
         @media print {
-          html, body { background: white !important; margin: 0; padding: 0; }
+          html, body { background: white !important; color: #111 !important; margin: 0; padding: 0; }
           .no-print { display: none !important; }
           .page-wrap { box-shadow: none !important; }
         }
-        body { font-family: Arial, Helvetica, sans-serif; }
+        body { font-family: Arial, Helvetica, sans-serif; background: #f5f5f5; color: #111; }
+        .page-wrap { color: #111 !important; }
         table { border-collapse: collapse; width: 100%; }
       `}} />
 
       <PrintButton orderNumber={o.order_number} />
 
-      <div className="no-print" style={{ height: "48px" }} />
+      <div className="no-print" style={{ height: "48px", background: "#f5f5f5" }} />
+      <div style={{ minHeight: "100vh", background: "#f5f5f5", paddingBottom: "40px" }}>
 
       {/* ─── A4 page wrapper ─────────────────────────────── */}
       <div className="page-wrap" style={{
         maxWidth: "794px", margin: "0 auto", background: "white",
         boxShadow: "0 0 20px rgba(0,0,0,0.15)", padding: "0",
+        color: "#111",
       }}>
 
         {/* ════════════════════════════════════════════════
@@ -330,6 +333,7 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
           </div>
 
         </div>
+      </div>
       </div>
     </>
   );
