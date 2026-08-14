@@ -184,12 +184,9 @@ export default function UploadImagesPage() {
                   {/* Image strip */}
                   <div className="flex-1 flex items-start gap-2 flex-wrap">
 
-                    {/* Primary image — entire area is a label */}
-                    <label
-                      htmlFor={`primary-${product.id}`}
-                      className={busy ? "pointer-events-none" : "cursor-pointer group/primary"}
-                    >
-                      <div className="flex flex-col items-center gap-1">
+                    {/* Primary image */}
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="relative group/primary w-20 h-20">
                         <div className={[
                           "w-20 h-20 rounded-[4px] border-[1.5px] overflow-hidden relative bg-[#270b1b] flex items-center justify-center",
                           product.image_url ? "border-brass" : "border-[rgba(196,163,115,0.20)] border-dashed",
@@ -197,38 +194,43 @@ export default function UploadImagesPage() {
                           {product.image_url ? (
                             <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="80px" />
                           ) : (
-                            <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.22)]">No image</span>
+                            <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.22)] pointer-events-none">Tap to set</span>
                           )}
-                          <span className="absolute top-1 left-1 bg-brass text-ink font-display text-[0.36rem] tracking-[0.08em] uppercase px-1 py-0.5 rounded-[2px] leading-none z-10">P</span>
-                          {/* Hover overlay */}
-                          <div className="absolute inset-0 bg-black/55 flex items-center justify-center opacity-0 group-hover/primary:opacity-100 transition-opacity duration-150 z-20">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                              <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/>
-                              <path d="M9 3 7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.17L15 3H9Zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"/>
-                            </svg>
-                          </div>
+                          <span className="absolute top-1 left-1 bg-brass text-ink font-display text-[0.36rem] tracking-[0.08em] uppercase px-1 py-0.5 rounded-[2px] leading-none z-10 pointer-events-none">P</span>
                           {/* Uploading overlay */}
                           {busy === "primary" && (
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20 pointer-events-none">
                               <div className="w-5 h-5 rounded-full border-2 border-[rgba(196,163,115,0.20)] border-t-brass animate-spin" />
                             </div>
                           )}
                         </div>
-                        <span className={[
-                          "font-display text-[0.38rem] tracking-[0.10em] uppercase transition-colors duration-150",
-                          busy === "primary"
-                            ? "text-[rgba(196,163,115,0.40)]"
-                            : "text-brass group-hover/primary:text-ivory",
-                        ].join(" ")}>
-                          {busy === "primary" ? "Uploading…" : product.image_url ? "Replace" : "Set Image"}
-                        </span>
+                        {/* Transparent file input covering the whole thumbnail */}
+                        {!busy && (
+                          <input
+                            type="file" accept="image/*"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
+                            style={{ fontSize: 0 }}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) handlePrimary(product, f); e.target.value = ""; }}
+                          />
+                        )}
+                        {/* Remove button (only when image exists) */}
+                        {product.image_url && !busy && (
+                          <button
+                            onClick={() => {
+                              supabase.from("products").update({ image_url: null }).eq("id", product.id).then(() => {
+                                setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_url: null } : p));
+                              });
+                            }}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[rgba(200,60,60,0.85)] text-white text-xs leading-none flex items-center justify-center opacity-0 group-hover/primary:opacity-100 transition-opacity hover:bg-[rgba(220,50,50,1)] z-40"
+                          >
+                            ×
+                          </button>
+                        )}
                       </div>
-                    </label>
-                    <input
-                      id={`primary-${product.id}`}
-                      type="file" accept="image/*" className="hidden"
-                      onChange={e => { const f = e.target.files?.[0]; if (f) handlePrimary(product, f); e.target.value = ""; }}
-                    />
+                      <span className="font-display text-[0.38rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.50)]">
+                        {busy === "primary" ? "Uploading…" : product.image_url ? "Click to replace" : "Click to set"}
+                      </span>
+                    </div>
 
                     {/* Gallery images */}
                     {(product.image_urls ?? []).map((url, i) => (
