@@ -3,6 +3,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default async function RootLayout({
           <Header logoUrl={logoUrl} />
           <main>{children}</main>
           <Footer logoUrl={logoUrl} />
+          <WhatsAppButton />
         </Providers>
       </body>
     </html>
