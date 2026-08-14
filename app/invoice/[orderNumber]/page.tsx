@@ -75,7 +75,6 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
   });
 
   const shippingFee  = Number(o.shipping_fee ?? 0);
-  const shippingTax  = 0; // shipping shown net, no GST
 
   return (
     <>
