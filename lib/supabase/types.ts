@@ -21,6 +21,7 @@ export interface DbProduct {
   image_url: string;
   image_urls: string[];
   is_visible: boolean;
+  is_featured: boolean;
   created_at: string;
 }
 

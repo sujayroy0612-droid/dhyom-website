@@ -7,7 +7,7 @@ import { SHOP_NAV } from "@/lib/nav";
 /* ─── Types ───────────────────────────────────────────── */
 interface CategoryRow   { category: string; is_visible: boolean; }
 interface CollectionRow { category: string; subcategory: string; is_visible: boolean; }
-interface ProductRow    { id: string; name: string; category: string; is_visible: boolean; }
+interface ProductRow    { id: string; name: string; category: string; is_visible: boolean; is_featured: boolean; }
 
 const CATEGORY_LABELS: Record<string, string> = {
   candle:             "Candles",
@@ -83,7 +83,7 @@ export default function VisibilityPage() {
     Promise.all([
       supabase.from("category_visibility").select("category, is_visible").order("category"),
       supabase.from("collection_visibility").select("category, subcategory, is_visible").order("category").order("subcategory"),
-      supabase.from("products").select("id, name, category, is_visible").order("category").order("name"),
+      supabase.from("products").select("id, name, category, is_visible, is_featured").order("category").order("name"),
     ]).then(([catRes, collRes, prodRes]) => {
       const cats = (catRes.data ?? []) as CategoryRow[];
       cats.sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category));
@@ -134,6 +134,15 @@ export default function VisibilityPage() {
     if (error) { showToast("Error: " + error.message); }
     else { setProducts((prev) => prev.map((p) => p.id === id ? { ...p, is_visible: val } : p)); }
     setSaving((p) => ({ ...p, [`prod-${id}`]: false }));
+  }
+
+  async function toggleFeatured(id: string, val: boolean) {
+    setSaving((p) => ({ ...p, [`feat-${id}`]: true }));
+    const { error } = await supabase
+      .from("products").update({ is_featured: val }).eq("id", id);
+    if (error) { showToast("Error: " + error.message); }
+    else { setProducts((prev) => prev.map((p) => p.id === id ? { ...p, is_featured: val } : p)); }
+    setSaving((p) => ({ ...p, [`feat-${id}`]: false }));
   }
 
   /* Grouping helpers */
@@ -260,7 +269,54 @@ export default function VisibilityPage() {
           )}
         </div>
 
-        {/* ── 3. Products ── */}
+        {/* ── 3. Best Seller ── */}
+        <div className="mb-10">
+          <SectionHeader label="Best Seller" />
+          <p className="font-body font-light italic text-[rgba(245,237,224,0.30)] text-sm mb-4 -mt-1">
+            Toggle on to feature a product in the homepage Best Seller section. Only visible products are shown here.
+          </p>
+          <div className="flex flex-col gap-4">
+            {CATEGORY_ORDER.map((catSlug) => {
+              const prods = (productsByCategory[catSlug] ?? []).filter((p) => p.is_visible);
+              if (!prods.length) return null;
+              return (
+                <div key={catSlug} className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] overflow-hidden">
+                  <div className="px-5 py-3 bg-[rgba(196,163,115,0.04)] border-b border-[rgba(196,163,115,0.08)]">
+                    <p className="font-display text-[0.48rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.55)]">
+                      {CATEGORY_LABELS[catSlug] ?? catSlug}
+                    </p>
+                  </div>
+                  <div className="divide-y divide-[rgba(196,163,115,0.06)]">
+                    {prods.map((prod) => (
+                      <div key={prod.id} className="flex items-center justify-between px-5 py-3.5">
+                        <p className={[
+                          "font-display text-[0.72rem] tracking-wide leading-snug",
+                          prod.is_featured
+                            ? "text-brass"
+                            : "text-[rgba(245,237,224,0.72)]",
+                        ].join(" ")}>
+                          {prod.name}
+                          {prod.is_featured && (
+                            <span className="ml-2 font-display text-[0.38rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.50)]">
+                              Featured
+                            </span>
+                          )}
+                        </p>
+                        <Toggle
+                          checked={prod.is_featured}
+                          onChange={(v) => toggleFeatured(prod.id, v)}
+                          disabled={saving[`feat-${prod.id}`]}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── 4. Products ── */}
         <div>
           <SectionHeader label="Products" />
           <div className="flex flex-col gap-4">

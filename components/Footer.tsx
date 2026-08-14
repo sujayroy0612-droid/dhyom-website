@@ -64,9 +64,15 @@ export default function Footer({ logoUrl }: { logoUrl?: string | null }) {
             href="https://instagram.com/dhyom.in"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-display text-[0.58rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.55)] hover:text-brass transition-colors duration-200"
+            aria-label="Follow Dhyom on Instagram"
+            className="flex items-center gap-2 text-[rgba(196,163,115,0.55)] hover:text-brass transition-colors duration-200"
           >
-            Instagram — @dhyom.in
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
+            </svg>
+            <span className="font-display text-[0.58rem] tracking-[0.2em] uppercase">Follow us</span>
           </a>
           <span className="hidden sm:block w-px h-3 bg-[rgba(196,163,115,0.18)]" />
           <p className="font-display text-[0.55rem] tracking-[0.18em] uppercase text-[rgba(245,237,224,0.22)]">

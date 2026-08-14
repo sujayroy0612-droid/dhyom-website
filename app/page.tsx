@@ -167,24 +167,14 @@ function Stars({ rating }: { rating: number }) {
 /* ─── Page ────────────────────────────────────────────── */
 export default async function Home() {
   const supabase = createServerClient();
-  const cols = "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,created_at";
-  const [candleRes, idolRes, braceletRes, giftRes, poojaRes, reviewsRes, assets, catVisRes] = await Promise.all([
-    supabase.from("products").select(cols).eq("category", "candle").eq("is_visible", true).limit(2),
-    supabase.from("products").select(cols).eq("category", "idol").eq("is_visible", true).limit(1),
-    supabase.from("products").select(cols).eq("category", "bracelet").eq("is_visible", true).limit(1),
-    supabase.from("products").select(cols).eq("category", "gift").eq("is_visible", true).limit(1),
-    supabase.from("products").select(cols).eq("category", "pooja-essentials").eq("is_visible", true).limit(1),
+  const cols = "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,is_featured,created_at";
+  const [featuredRes, reviewsRes, assets, catVisRes] = await Promise.all([
+    supabase.from("products").select(cols).eq("is_featured", true).eq("is_visible", true).limit(12),
     supabase.from("reviews").select("id,name,rating,body").eq("approved", true).order("created_at", { ascending: false }).limit(8),
     fetchSiteAssets().catch((): SiteAssets => ({})),
     supabase.from("category_visibility").select("category").eq("is_visible", true),
   ]);
-  const featured: DbProduct[] = [
-    ...(candleRes.data ?? []),
-    ...(idolRes.data ?? []),
-    ...(braceletRes.data ?? []),
-    ...(giftRes.data ?? []),
-    ...(poojaRes.data ?? []),
-  ] as DbProduct[];
+  const featured = (featuredRes.data ?? []) as DbProduct[];
   const reviews = (reviewsRes.data ?? []) as Review[];
   const visibleCatSlugs = new Set((catVisRes.data ?? []).map((r) => r.category as string));
   // If table is empty or missing, show all categories (fail-open)
