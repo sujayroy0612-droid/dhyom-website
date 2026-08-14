@@ -6,6 +6,7 @@ import NewsletterForm from "@/components/NewsletterForm";
 import FadeIn from "@/components/FadeIn";
 import FadeInView from "@/components/FadeInView";
 import CardGrid from "@/components/CardGrid";
+import HeroBackground from "@/components/HeroBackground";
 import { createServerClient } from "@/lib/supabase/server";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import type { DbProduct } from "@/lib/supabase/types";
@@ -187,25 +188,32 @@ export default async function Home() {
 
       {/* ══ 1. HERO ══════════════════════════════════════════ */}
       <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson overflow-hidden">
+        {/* Static image — always rendered; preloads instantly; mobile fallback */}
         {assets.hero_background && (
-          <>
-            <Image
-              src={assets.hero_background}
-              alt=""
-              fill
-              priority
-              className="object-cover"
-              sizes="100vw"
-            />
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(to bottom, rgba(61,20,40,0.78) 0%, rgba(61,20,40,0.22) 28%, rgba(61,20,40,0.10) 50%, rgba(61,20,40,0.25) 72%, rgba(61,20,40,0.72) 100%)",
-              }}
-            />
-          </>
+          <Image
+            src={assets.hero_background}
+            alt=""
+            fill
+            priority
+            className="object-cover"
+            sizes="100vw"
+          />
         )}
+
+        {/* Video overlay — desktop only; src set client-side so mobile never downloads it */}
+        <HeroBackground
+          videoSrc="/videos/hero-video.mp4"
+          posterUrl={assets.hero_background ?? undefined}
+        />
+
+        {/* Gradient overlay — sits above both image and video (DOM order) */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(61,20,40,0.78) 0%, rgba(61,20,40,0.22) 28%, rgba(61,20,40,0.10) 50%, rgba(61,20,40,0.25) 72%, rgba(61,20,40,0.72) 100%)",
+          }}
+        />
         <div
           aria-hidden="true"
           className="absolute inset-0 pointer-events-none"
