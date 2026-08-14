@@ -16,6 +16,7 @@ export interface DbProduct {
   collection: CandleCollection | null;
   fragrance: string | null;
   price: number;
+  mrp: number | null;
   stock: number;
   description: string;
   image_url: string;

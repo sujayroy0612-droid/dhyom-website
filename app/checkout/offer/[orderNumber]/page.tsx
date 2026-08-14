@@ -5,14 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
-/* Category bought → category to offer (higher-ticket complementary) */
-const OTO_MAP: Record<string, string> = {
-  candle:             "gift",
-  idol:               "gift",
-  bracelet:           "gift",
-  gift:               "candle",
-  "pooja-essentials": "candle",
-};
 
 function generateOrderNumber(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -69,18 +61,23 @@ export default function OTOPage() {
       setOrder(o as OriginalOrder);
 
       const primaryCat = ((o.items as {category?: string}[])[0]?.category) ?? "candle";
-      const offerCat   = OTO_MAP[primaryCat] ?? "gift";
+
+      const { data: fs } = await supabase
+        .from("funnel_settings")
+        .select("oto_product_id")
+        .eq("category", primaryCat)
+        .single();
+      const otoId = fs?.oto_product_id;
+      if (!otoId) { router.replace(`/checkout/downsell/${orderNumber}`); return; }
 
       const { data: p } = await supabase
         .from("products")
         .select("id,name,price,description,image_url,category")
-        .eq("category", offerCat)
+        .eq("id", otoId)
         .eq("is_visible", true)
-        .order("price", { ascending: false })
-        .limit(1)
         .single();
 
-      if (!p) { router.replace(`/order-confirmation/${orderNumber}`); return; }
+      if (!p) { router.replace(`/checkout/downsell/${orderNumber}`); return; }
       setProduct(p as OfferProduct);
       setLoading(false);
     }

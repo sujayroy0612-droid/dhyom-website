@@ -5,14 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
-/* Category bought → cheaper complementary category for downsell */
-const DOWNSELL_MAP: Record<string, string> = {
-  candle:             "pooja-essentials",
-  idol:               "pooja-essentials",
-  bracelet:           "pooja-essentials",
-  gift:               "pooja-essentials",
-  "pooja-essentials": "candle",
-};
 
 function generateOrderNumber(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -67,16 +59,21 @@ export default function DownsellPage() {
       if (oErr || !o) { router.replace(`/order-confirmation/${orderNumber}`); return; }
       setOrder(o as OriginalOrder);
 
-      const primaryCat  = ((o.items as {category?: string}[])[0]?.category) ?? "candle";
-      const downsellCat = DOWNSELL_MAP[primaryCat] ?? "pooja-essentials";
+      const primaryCat = ((o.items as {category?: string}[])[0]?.category) ?? "candle";
+
+      const { data: fs } = await supabase
+        .from("funnel_settings")
+        .select("downsell_product_id")
+        .eq("category", primaryCat)
+        .single();
+      const downsellId = fs?.downsell_product_id;
+      if (!downsellId) { router.replace(`/order-confirmation/${orderNumber}`); return; }
 
       const { data: p } = await supabase
         .from("products")
         .select("id,name,price,description,image_url,category")
-        .eq("category", downsellCat)
+        .eq("id", downsellId)
         .eq("is_visible", true)
-        .order("price", { ascending: true })   // cheapest item
-        .limit(1)
         .single();
 
       if (!p) { router.replace(`/order-confirmation/${orderNumber}`); return; }

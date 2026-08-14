@@ -6,14 +6,14 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
 const NAV = [
-  { label: "Dashboard",    href: "/admin",                     icon: "▦" },
-  { label: "Orders",       href: "/admin/orders",              icon: "≡" },
-  { label: "Inventory",    href: "/admin/inventory",           icon: "◫" },
-  { label: "Products",     href: "/admin/upload-images",       icon: "⊞" },
-  { label: "Visibility",   href: "/admin/visibility",          icon: "◉" },
-  { label: "Brand Assets", href: "/admin/upload-brand-images", icon: "◈" },
-  { label: "Coupons",      href: "/admin/coupons",             icon: "◎" },
-  { label: "Analytics",    href: "/admin/analytics",           icon: "↗" },
+  { label: "Dashboard",      href: "/admin",                     icon: "▦" },
+  { label: "Orders",         href: "/admin/orders",              icon: "≡" },
+  { label: "Products",       href: "/admin/products",            icon: "⊞" },
+  { label: "Visibility",     href: "/admin/visibility",          icon: "◉" },
+  { label: "Brand Assets",   href: "/admin/upload-brand-images", icon: "◈" },
+  { label: "Coupons",        href: "/admin/coupons",             icon: "◎" },
+  { label: "Funnel Planner", href: "/admin/funnel-planner",      icon: "◆" },
+  { label: "Analytics",      href: "/admin/analytics",           icon: "↗" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
