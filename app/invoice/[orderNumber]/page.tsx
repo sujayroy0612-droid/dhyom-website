@@ -127,22 +127,22 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
             </div>
           </div>
 
-          {/* Sold By + Ship To */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
+          {/* Ship To (large) + Sold By (small) */}
+          <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: "8px", marginBottom: "8px" }}>
+            <div style={{ border: "2px solid #1a0a12", padding: "7px 9px", fontSize: "10px", lineHeight: "1.55", background: "#fffef8" }}>
+              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase", color: "#555", marginBottom: "3px" }}>Shipping / Customer Address</div>
+              <div style={{ fontWeight: "bold", fontSize: "13px" }}>{o.first_name} {o.last_name}</div>
+              <div>{o.shipping_street}</div>
+              <div>{o.shipping_city}, {o.shipping_state}</div>
+              <div style={{ fontWeight: "bold", fontSize: "14px", marginTop: "2px" }}>PIN – {o.shipping_pincode}</div>
+              <div>Ph: {o.phone}</div>
+            </div>
             <div style={{ border: "1px solid #ccc", padding: "7px 9px", fontSize: "10px", lineHeight: "1.55" }}>
               <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase", color: "#888", marginBottom: "3px" }}>Sold By</div>
               <div style={{ fontWeight: "bold" }}>{SELLER_SHORT}</div>
               <div>Rajiv Nagar, Road No. 8A, near Ideal Public School</div>
               <div>Anand Niketan, PATNA – 800024</div>
               <div>GSTIN: {SELLER_GSTIN}</div>
-            </div>
-            <div style={{ border: "2px solid #1a0a12", padding: "7px 9px", fontSize: "10px", lineHeight: "1.55", background: "#fffef8" }}>
-              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase", color: "#555", marginBottom: "3px" }}>Shipping / Customer Address</div>
-              <div style={{ fontWeight: "bold", fontSize: "12px" }}>{o.first_name} {o.last_name}</div>
-              <div>{o.shipping_street}</div>
-              <div>{o.shipping_city}, {o.shipping_state}</div>
-              <div style={{ fontWeight: "bold", fontSize: "13px", marginTop: "2px" }}>PIN – {o.shipping_pincode}</div>
-              <div>Ph: {o.phone}</div>
             </div>
           </div>
 
@@ -207,30 +207,37 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
             </div>
           </div>
 
-          {/* Sold By | Billing | Shipping — 3 columns */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0", border: "1px solid #bbb", marginBottom: "8px", fontSize: "10px", lineHeight: "1.55" }}>
-            <div style={{ padding: "6px 8px", borderRight: "1px solid #bbb" }}>
-              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" as const, color: "#666", marginBottom: "3px" }}>Sold By</div>
-              <div style={{ fontWeight: "bold" }}>{SELLER_NAME}</div>
-              <div>{SELLER_ADDR}</div>
-              <div>State: {SELLER_STATE}</div>
-              <div>GSTIN: {SELLER_GSTIN}</div>
-            </div>
-            <div style={{ padding: "6px 8px", borderRight: "1px solid #bbb" }}>
-              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" as const, color: "#666", marginBottom: "3px" }}>Billing Address</div>
-              <div style={{ fontWeight: "bold" }}>{o.first_name} {o.last_name}</div>
+          {/* Shipping Address (large) | Sold By + Items (small) */}
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "0", border: "1px solid #bbb", marginBottom: "8px", fontSize: "10px", lineHeight: "1.55" }}>
+
+            {/* Shipping address — wide left */}
+            <div style={{ padding: "7px 10px", borderRight: "1px solid #bbb" }}>
+              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" as const, color: "#666", marginBottom: "4px" }}>Shipping / Billing Address</div>
+              <div style={{ fontWeight: "bold", fontSize: "12px" }}>{o.first_name} {o.last_name}</div>
               <div>{o.shipping_street}</div>
-              <div>{o.shipping_city}, {o.shipping_state}</div>
-              <div>{o.shipping_pincode}</div>
+              <div>{o.shipping_city}, {o.shipping_state} – {o.shipping_pincode}</div>
               {o.phone && <div>Ph: {o.phone}</div>}
             </div>
-            <div style={{ padding: "6px 8px" }}>
-              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" as const, color: "#666", marginBottom: "3px" }}>Shipping Address</div>
-              <div style={{ fontWeight: "bold" }}>{o.first_name} {o.last_name}</div>
-              <div>{o.shipping_street}</div>
-              <div>{o.shipping_city}, {o.shipping_state}</div>
-              <div>{o.shipping_pincode}</div>
+
+            {/* Sold By + items list — narrow right */}
+            <div style={{ padding: "7px 10px" }}>
+              <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" as const, color: "#666", marginBottom: "3px" }}>Sold By</div>
+              <div style={{ fontWeight: "bold" }}>{SELLER_SHORT}</div>
+              <div style={{ fontSize: "9px" }}>Patna, {SELLER_STATE}</div>
+              <div style={{ fontSize: "9px" }}>GSTIN: {SELLER_GSTIN}</div>
+
+              {/* Items list below sold by */}
+              <div style={{ borderTop: "1px solid #ddd", marginTop: "6px", paddingTop: "5px" }}>
+                <div style={{ fontSize: "8px", fontWeight: "bold", letterSpacing: "1.5px", textTransform: "uppercase" as const, color: "#666", marginBottom: "3px" }}>Items</div>
+                {lineItems.map((item, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", marginBottom: "1px", gap: "4px" }}>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{item.name}</span>
+                    <span style={{ flexShrink: 0, fontWeight: "bold" }}>×{item.quantity}</span>
+                  </div>
+                ))}
+              </div>
             </div>
+
           </div>
 
           {/* Line items GST table */}
