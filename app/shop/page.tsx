@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { fetchSiteAssets } from "@/lib/supabase/site-assets";
+import { createServerClient } from "@/lib/supabase/server";
 import CardGrid from "@/components/CardGrid";
 
 export const metadata = { title: "Shop — Dhyom" };
@@ -41,7 +42,13 @@ const CATEGORIES = [
 ];
 
 export default async function ShopPage() {
-  const assets = await fetchSiteAssets().catch(() => ({}));
+  const supabase = createServerClient();
+  const [assets, catVisRes] = await Promise.all([
+    fetchSiteAssets().catch(() => ({})),
+    supabase.from("category_visibility").select("category").eq("is_visible", true),
+  ]);
+  const visibleCatSlugs = new Set((catVisRes.data ?? []).map((r) => r.category as string));
+  const visibleCategories = CATEGORIES.filter((c) => visibleCatSlugs.has(c.slug));
 
   return (
     <div className="min-h-screen bg-black-plum">
@@ -73,7 +80,7 @@ export default async function ShopPage() {
       {/* Category tiles */}
       <section className="px-6 py-16">
         <CardGrid gridClassName="grid-cols-2 lg:grid-cols-3 gap-5" className="max-w-4xl mx-auto">
-          {CATEGORIES.map((cat) => {
+          {visibleCategories.map((cat) => {
             const imgUrl = (assets as Record<string, string | null>)[cat.assetKey] ?? null;
             return (
               <Link

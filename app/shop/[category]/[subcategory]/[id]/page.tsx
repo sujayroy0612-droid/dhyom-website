@@ -75,22 +75,30 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const supabase = createServerClient();
   const cols =
-    "id,name,type,subcategory,collection,fragrance,price,description,image_url,image_urls,category,stock,created_at";
+    "id,name,type,subcategory,collection,fragrance,price,description,image_url,image_urls,category,stock,is_visible,created_at";
 
-  const [productRes, relatedRes] = await Promise.all([
+  const [productRes, relatedRes, catVisRes] = await Promise.all([
     supabase.from("products").select(cols).eq("id", id).single(),
     supabase
       .from("products")
       .select(cols)
       .eq("category", category)
+      .eq("is_visible", true)
       .neq("id", id)
       .limit(3),
+    supabase
+      .from("category_visibility")
+      .select("is_visible")
+      .eq("category", category)
+      .single(),
   ]);
 
   if (productRes.error || !productRes.data) notFound();
 
   const product = productRes.data as DbProduct;
   if (product.category !== category) notFound();
+  if (!product.is_visible) notFound();
+  if (catVisRes.data?.is_visible === false) notFound();
 
   const related = (relatedRes.data ?? []) as DbProduct[];
   const categoryName = CATEGORY_NAMES[category] ?? category;

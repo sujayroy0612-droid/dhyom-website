@@ -119,12 +119,14 @@ export default async function SubcategoryPage({ params }: PageProps) {
         .select(cols)
         .eq("category", category)
         .eq("collection", subcategory)
+        .eq("is_visible", true)
         .order("created_at", { ascending: true })
     : await supabase
         .from("products")
         .select(cols)
         .eq("category", category)
         .eq("subcategory", subcategory)
+        .eq("is_visible", true)
         .order("created_at", { ascending: true });
 
   if (error) {

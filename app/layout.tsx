@@ -5,6 +5,8 @@ import Footer from "@/components/Footer";
 import Providers from "@/components/Providers";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
+import { fetchVisibleNavData } from "@/lib/supabase/visibility";
+import type { NavCategory } from "@/lib/nav";
 
 export const metadata: Metadata = {
   title: "Dhyom — Sacred Home & Pooja Décor",
@@ -17,7 +19,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const assets: SiteAssets = await fetchSiteAssets().catch((): SiteAssets => ({}));
+  const [assets, shopNav] = await Promise.all([
+    fetchSiteAssets().catch((): SiteAssets => ({})),
+    fetchVisibleNavData().catch((): NavCategory[] => []),
+  ]);
   const logoUrl = assets.logo ?? null;
 
   return (
@@ -37,7 +42,7 @@ export default async function RootLayout({
       </head>
       <body>
         <Providers>
-          <Header logoUrl={logoUrl} />
+          <Header logoUrl={logoUrl} shopNav={shopNav} />
           <main>{children}</main>
           <Footer logoUrl={logoUrl} />
           <WhatsAppButton />

@@ -168,14 +168,15 @@ function Stars({ rating }: { rating: number }) {
 export default async function Home() {
   const supabase = createServerClient();
   const cols = "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,created_at";
-  const [candleRes, idolRes, braceletRes, giftRes, poojaRes, reviewsRes, assets] = await Promise.all([
-    supabase.from("products").select(cols).eq("category", "candle").limit(2),
-    supabase.from("products").select(cols).eq("category", "idol").limit(1),
-    supabase.from("products").select(cols).eq("category", "bracelet").limit(1),
-    supabase.from("products").select(cols).eq("category", "gift").limit(1),
-    supabase.from("products").select(cols).eq("category", "pooja-essentials").limit(1),
+  const [candleRes, idolRes, braceletRes, giftRes, poojaRes, reviewsRes, assets, catVisRes] = await Promise.all([
+    supabase.from("products").select(cols).eq("category", "candle").eq("is_visible", true).limit(2),
+    supabase.from("products").select(cols).eq("category", "idol").eq("is_visible", true).limit(1),
+    supabase.from("products").select(cols).eq("category", "bracelet").eq("is_visible", true).limit(1),
+    supabase.from("products").select(cols).eq("category", "gift").eq("is_visible", true).limit(1),
+    supabase.from("products").select(cols).eq("category", "pooja-essentials").eq("is_visible", true).limit(1),
     supabase.from("reviews").select("id,name,rating,body").eq("approved", true).order("created_at", { ascending: false }).limit(8),
     fetchSiteAssets().catch((): SiteAssets => ({})),
+    supabase.from("category_visibility").select("category").eq("is_visible", true),
   ]);
   const featured: DbProduct[] = [
     ...(candleRes.data ?? []),
@@ -185,6 +186,8 @@ export default async function Home() {
     ...(poojaRes.data ?? []),
   ] as DbProduct[];
   const reviews = (reviewsRes.data ?? []) as Review[];
+  const visibleCatSlugs = new Set((catVisRes.data ?? []).map((r) => r.category as string));
+  const visibleCategories = categories.filter((c) => visibleCatSlugs.has(c.id));
 
   return (
     <div className="min-h-screen">
@@ -327,7 +330,7 @@ export default async function Home() {
           </FadeInView>
 
           <CardGrid gridClassName="grid-cols-2 lg:grid-cols-3 gap-7">
-            {categories.map((cat) => (
+            {visibleCategories.map((cat) => (
               <Link
                 key={cat.id}
                 href={cat.href}

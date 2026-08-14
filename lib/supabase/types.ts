@@ -20,6 +20,7 @@ export interface DbProduct {
   description: string;
   image_url: string;
   image_urls: string[];
+  is_visible: boolean;
   created_at: string;
 }
 

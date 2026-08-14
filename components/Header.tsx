@@ -5,62 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/lib/cart/CartContext";
-
-/* ─── Nav data ────────────────────────────────────────── */
-const SHOP_NAV = [
-  {
-    category: "candle",
-    title: "Candles",
-    href: "/shop/candle",
-    subcategories: [
-      { slug: "nakshatra", title: "Nakshatra Collection", href: "/shop/candle/nakshatra" },
-      { slug: "mandala",   title: "Mandala Collection",   href: "/shop/candle/mandala" },
-    ],
-  },
-  {
-    category: "idol",
-    title: "Idols",
-    href: "/shop/idol",
-    subcategories: [
-      { slug: "ganesha", title: "Ganesha", href: "/shop/idol/ganesha" },
-      { slug: "lakshmi", title: "Lakshmi", href: "/shop/idol/lakshmi" },
-    ],
-  },
-  {
-    category: "bracelet",
-    title: "Spiritual Bracelets",
-    href: "/shop/bracelet",
-    subcategories: [
-      { slug: "rudraksh",    title: "Rudraksh Mala", href: "/shop/bracelet/rudraksh" },
-      { slug: "rose-quartz", title: "Rose Quartz",   href: "/shop/bracelet/rose-quartz" },
-    ],
-  },
-  {
-    category: "gift",
-    title: "Gift Sets",
-    href: "/shop/gift",
-    subcategories: [
-      { slug: "diwali",            title: "Diwali",            href: "/shop/gift/diwali" },
-      { slug: "rakhi",             title: "Rakhi",             href: "/shop/gift/rakhi" },
-      { slug: "chhath",            title: "Chhath Puja",       href: "/shop/gift/chhath" },
-      { slug: "ganesh-chaturthi",  title: "Ganesh Chaturthi",  href: "/shop/gift/ganesh-chaturthi" },
-      { slug: "dussehra",          title: "Dussehra",          href: "/shop/gift/dussehra" },
-      { slug: "corporate",         title: "Corporate",         href: "/shop/gift/corporate" },
-      { slug: "wedding",           title: "Wedding",           href: "/shop/gift/wedding" },
-    ],
-  },
-  {
-    category: "pooja-essentials",
-    title: "Pooja Essentials",
-    href: "/shop/pooja-essentials",
-    subcategories: [
-      { slug: "incense-sticks", title: "Incense Sticks", href: "/shop/pooja-essentials/incense-sticks" },
-      { slug: "incense-cones",  title: "Incense Cones",  href: "/shop/pooja-essentials/incense-cones" },
-      { slug: "ghee-batti",     title: "Ghee Batti",     href: "/shop/pooja-essentials/ghee-batti" },
-      { slug: "camphor",        title: "Camphor",         href: "/shop/pooja-essentials/camphor" },
-    ],
-  },
-];
+import { SHOP_NAV, type NavCategory } from "@/lib/nav";
 
 /* ─── Icons ───────────────────────────────────────────── */
 function ChevronDown({ open }: { open: boolean }) {
@@ -97,7 +42,13 @@ function BagIcon() {
 }
 
 /* ─── Component ───────────────────────────────────────── */
-export default function Header({ logoUrl }: { logoUrl?: string | null }) {
+export default function Header({
+  logoUrl,
+  shopNav = SHOP_NAV,
+}: {
+  logoUrl?: string | null;
+  shopNav?: NavCategory[];
+}) {
   const pathname = usePathname();
   const { totalItems } = useCart();
 
@@ -162,7 +113,7 @@ export default function Header({ logoUrl }: { logoUrl?: string | null }) {
   const shopActive = pathname.startsWith("/shop");
   const activeSubcats =
     activeCategory
-      ? (SHOP_NAV.find((c) => c.category === activeCategory)?.subcategories ?? [])
+      ? (shopNav.find((c) => c.category === activeCategory)?.subcategories ?? [])
       : [];
 
   return (
@@ -250,7 +201,7 @@ export default function Header({ logoUrl }: { logoUrl?: string | null }) {
                   <div className="my-1.5 mx-5 h-px bg-[rgba(196,163,115,0.12)]" />
 
                   {/* Categories */}
-                  {SHOP_NAV.map((cat) => (
+                  {shopNav.map((cat) => (
                     <Link
                       key={cat.category}
                       href={cat.href}
@@ -433,7 +384,7 @@ export default function Header({ logoUrl }: { logoUrl?: string | null }) {
                   <div className="my-2 ml-4 mr-0 h-px bg-[rgba(196,163,115,0.10)]" />
 
                   {/* Categories */}
-                  {SHOP_NAV.map((cat) => {
+                  {shopNav.map((cat) => {
                     const expanded = mobileExpandedCats.has(cat.category);
                     return (
                       <div key={cat.category}>
