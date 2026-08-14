@@ -8,12 +8,19 @@ const navLinks = [
   { label: "Contact", href: "/contact" },
 ];
 
+const legalLinks = [
+  { label: "Privacy Policy",       href: "/privacy-policy" },
+  { label: "Terms & Conditions",   href: "/terms-and-conditions" },
+  { label: "Shipping Policy",      href: "/shipping-policy" },
+  { label: "Return & Refund",      href: "/return-refund-policy" },
+];
+
 export default function Footer({ logoUrl }: { logoUrl?: string | null }) {
   return (
     <footer className="bg-ink border-t border-[rgba(196,163,115,0.10)]">
       <div className="max-w-5xl mx-auto px-6 py-16 flex flex-col items-center gap-10">
 
-        {/* Logo + Tagline grouped tightly */}
+        {/* Logo + Tagline */}
         <div className="flex flex-col items-center gap-2">
           <Link href="/" className="flex flex-col items-center group">
             {logoUrl ? (
@@ -58,7 +65,23 @@ export default function Footer({ logoUrl }: { logoUrl?: string | null }) {
         {/* Brass rule */}
         <div className="w-16 h-px bg-[rgba(196,163,115,0.22)]" />
 
-        {/* Social + legal row */}
+        {/* Legal links */}
+        <nav aria-label="Legal" className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+          {legalLinks.map(({ label, href }) => (
+            <Link
+              key={href}
+              href={href}
+              className="font-display text-[0.50rem] tracking-[0.16em] uppercase text-[rgba(245,237,224,0.22)] hover:text-[rgba(245,237,224,0.48)] transition-colors duration-200"
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Thin separator */}
+        <div className="w-full max-w-xs h-px bg-[rgba(196,163,115,0.08)]" />
+
+        {/* Social + copyright */}
         <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-10 text-center">
           <a
             href="https://instagram.com/dhyom.in"

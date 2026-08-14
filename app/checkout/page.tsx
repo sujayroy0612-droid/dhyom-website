@@ -35,13 +35,13 @@ interface RzpSuccess { razorpay_payment_id: string; razorpay_order_id: string; r
 interface CheckoutForm {
   firstName: string; lastName: string; email: string; phone: string;
   street: string; city: string; state: string; pincode: string;
-  notes: string; paymentMethod: "cod" | "online";
+  notes: string;
 }
 type FormErrors = Partial<Record<keyof CheckoutForm, string>>;
 
 const BLANK: CheckoutForm = {
   firstName: "", lastName: "", email: "", phone: "",
-  street: "", city: "", state: "", pincode: "", notes: "", paymentMethod: "cod",
+  street: "", city: "", state: "", pincode: "", notes: "",
 };
 
 function generateOrderNumber(): string {
@@ -178,18 +178,9 @@ export default function CheckoutPage() {
       shipping_fee: SHIPPING,
       discount: 0,
       total,
-      payment_method: form.paymentMethod,
+      payment_method: "online",
       order_status: "pending",
     };
-
-    if (form.paymentMethod === "cod") {
-      const { error } = await supabase.from("orders").insert({ ...base, payment_status: "pending" });
-      if (error) { setPaymentError("Unable to place your order. Please try again."); setSubmitting(false); return; }
-      orderPlacedRef.current = true;
-      clearCart();
-      router.push(`/checkout/offer/${orderNumber}`);
-      return;
-    }
 
     try {
       const res = await fetch("/api/create-order", {
@@ -239,8 +230,8 @@ export default function CheckoutPage() {
       const msg = err instanceof Error ? err.message : "";
       setPaymentError(
         msg === "gateway-unavailable"
-          ? "The payment gateway is temporarily unavailable. Please choose Cash on Delivery or try again shortly."
-          : "Unable to initiate payment. Please try again or choose Cash on Delivery."
+          ? "The payment gateway is temporarily unavailable. Please try again shortly."
+          : "Unable to initiate payment. Please try again."
       );
       setSubmitting(false);
     }
@@ -387,21 +378,16 @@ export default function CheckoutPage() {
 
               {/* 3. Payment */}
               <section>
-                <StepHeader num="3" title="Payment Method" />
-                <div className="flex flex-col gap-3">
-                  {(["cod", "online"] as const).map((method) => (
-                    <button key={method} type="button" onClick={() => set("paymentMethod", method)}
-                      className={["flex items-start gap-4 w-full text-left px-5 py-4 rounded-[4px] border transition-all duration-200", form.paymentMethod === method ? "border-[rgba(196,163,115,0.55)] bg-[rgba(196,163,115,0.05)]" : "border-[rgba(196,163,115,0.16)] hover:border-[rgba(196,163,115,0.32)]"].join(" ")}
-                    >
-                      <div className="w-4 h-4 mt-0.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors duration-200" style={{ borderColor: form.paymentMethod === method ? "#C4A373" : "rgba(196,163,115,0.28)" }}>
-                        {form.paymentMethod === method && <div className="w-2 h-2 rounded-full bg-brass" />}
-                      </div>
-                      <div>
-                        <p className="font-display text-ivory" style={{ fontSize: "0.7rem", letterSpacing: "0.1em" }}>{method === "cod" ? "Cash on Delivery" : "Pay Online"}</p>
-                        <p className="font-body font-light italic text-[rgba(245,237,224,0.40)] text-[0.82rem] mt-0.5">{method === "cod" ? "Pay when your order arrives" : "UPI, cards, net banking via Razorpay"}</p>
-                      </div>
-                    </button>
-                  ))}
+                <StepHeader num="3" title="Payment" />
+                <div className="flex items-center gap-4 px-5 py-4 rounded-[4px] border border-[rgba(196,163,115,0.30)] bg-[rgba(196,163,115,0.04)]">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="text-brass flex-shrink-0">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                    <line x1="1" y1="10" x2="23" y2="10" />
+                  </svg>
+                  <div>
+                    <p className="font-display text-ivory" style={{ fontSize: "0.7rem", letterSpacing: "0.1em" }}>Razorpay — Secure Online Payment</p>
+                    <p className="font-body font-light italic text-[rgba(245,237,224,0.40)] text-[0.82rem] mt-0.5">UPI, credit / debit cards, net banking</p>
+                  </div>
                 </div>
               </section>
 
