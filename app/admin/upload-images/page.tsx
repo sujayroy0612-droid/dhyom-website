@@ -165,7 +165,7 @@ export default function UploadImagesPage() {
                   <div className="flex-1 flex items-start gap-2 flex-wrap">
 
                     {/* Primary image */}
-                    <div className="relative group">
+                    <div className="flex flex-col items-center gap-1">
                       <div className={[
                         "w-20 h-20 rounded-[4px] border-[1.5px] overflow-hidden relative bg-[#270b1b] flex items-center justify-center",
                         product.image_url ? "border-brass" : "border-[rgba(196,163,115,0.20)] border-dashed",
@@ -173,20 +173,17 @@ export default function UploadImagesPage() {
                         {product.image_url ? (
                           <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="80px" />
                         ) : (
-                          <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.22)]">Primary</span>
+                          <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.22)]">No image</span>
                         )}
-                        {/* Primary badge */}
                         <span className="absolute top-1 left-1 bg-brass text-ink font-display text-[0.36rem] tracking-[0.08em] uppercase px-1 py-0.5 rounded-[2px] leading-none">P</span>
                       </div>
-                      {/* Replace overlay */}
+                      {/* Always-visible replace/set button */}
                       <button
                         onClick={() => primaryRef.current[product.id]?.click()}
                         disabled={!!busy}
-                        className="absolute inset-0 bg-[rgba(10,3,7,0.55)] opacity-0 group-hover:opacity-100 transition-opacity rounded-[4px] flex items-center justify-center disabled:cursor-not-allowed"
+                        className="font-display text-[0.38rem] tracking-[0.10em] uppercase text-brass hover:text-ivory disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
                       >
-                        <span className="font-display text-ivory text-[0.40rem] tracking-[0.12em] uppercase">
-                          {busy === "primary" ? "…" : "Replace"}
-                        </span>
+                        {busy === "primary" ? "Uploading…" : product.image_url ? "Replace" : "Set Image"}
                       </button>
                       <input
                         ref={el => { primaryRef.current[product.id] = el; }}
