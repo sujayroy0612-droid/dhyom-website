@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
@@ -44,8 +44,6 @@ export default function UploadImagesPage() {
   const [loading,   setLoading]   = useState(true);
   const [uploading, setUploading] = useState<Record<string, string>>({}); // id → "primary"|"gallery"
   const [errors,    setErrors]    = useState<Record<string, string>>({});
-  const primaryRef = useRef<Record<string, HTMLInputElement | null>>({});
-  const galleryRef = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     supabase
@@ -177,16 +175,18 @@ export default function UploadImagesPage() {
                         )}
                         <span className="absolute top-1 left-1 bg-brass text-ink font-display text-[0.36rem] tracking-[0.08em] uppercase px-1 py-0.5 rounded-[2px] leading-none">P</span>
                       </div>
-                      {/* Always-visible replace/set button */}
-                      <button
-                        onClick={() => primaryRef.current[product.id]?.click()}
-                        disabled={!!busy}
-                        className="font-display text-[0.38rem] tracking-[0.10em] uppercase text-brass hover:text-ivory disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
+                      {/* Always-visible replace/set label */}
+                      <label
+                        htmlFor={`primary-${product.id}`}
+                        className={[
+                          "font-display text-[0.38rem] tracking-[0.10em] uppercase text-brass hover:text-ivory transition-colors duration-150",
+                          busy ? "opacity-40 pointer-events-none" : "cursor-pointer",
+                        ].join(" ")}
                       >
                         {busy === "primary" ? "Uploading…" : product.image_url ? "Replace" : "Set Image"}
-                      </button>
+                      </label>
                       <input
-                        ref={el => { primaryRef.current[product.id] = el; }}
+                        id={`primary-${product.id}`}
                         type="file" accept="image/*" className="hidden"
                         onChange={e => { const f = e.target.files?.[0]; if (f) handlePrimary(product, f); e.target.value = ""; }}
                       />
@@ -208,11 +208,13 @@ export default function UploadImagesPage() {
                       </div>
                     ))}
 
-                    {/* Add gallery image button */}
-                    <button
-                      onClick={() => galleryRef.current[product.id]?.click()}
-                      disabled={!!busy}
-                      className="w-20 h-20 rounded-[4px] border border-dashed border-[rgba(196,163,115,0.22)] hover:border-[rgba(196,163,115,0.45)] flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    {/* Add gallery image label */}
+                    <label
+                      htmlFor={`gallery-${product.id}`}
+                      className={[
+                        "w-20 h-20 rounded-[4px] border border-dashed border-[rgba(196,163,115,0.22)] hover:border-[rgba(196,163,115,0.45)] flex flex-col items-center justify-center gap-1 transition-colors",
+                        busy ? "opacity-40 pointer-events-none" : "cursor-pointer",
+                      ].join(" ")}
                     >
                       {busy === "gallery" ? (
                         <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.20)] border-t-brass animate-spin" />
@@ -222,9 +224,9 @@ export default function UploadImagesPage() {
                           <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.35)]">Add</span>
                         </>
                       )}
-                    </button>
+                    </label>
                     <input
-                      ref={el => { galleryRef.current[product.id] = el; }}
+                      id={`gallery-${product.id}`}
                       type="file" accept="image/*" className="hidden"
                       onChange={e => { const f = e.target.files?.[0]; if (f) handleGallery(product, f); e.target.value = ""; }}
                     />
