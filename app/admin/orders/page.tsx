@@ -55,6 +55,7 @@ export default function OrdersPage() {
   const [updating,      setUpdating]      = useState<Record<string, boolean>>({});
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
   const [invoiceLoading,  setInvoiceLoading]  = useState(false);
+  const [invoiceError,    setInvoiceError]    = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,8 +74,9 @@ export default function OrdersPage() {
   /* Fetch invoice whenever a different order is opened in the drawer */
   const selectedId = selected?.id;
   useEffect(() => {
-    if (!selectedId) { setSelectedInvoice(null); setInvoiceLoading(false); return; }
+    if (!selectedId) { setSelectedInvoice(null); setInvoiceLoading(false); setInvoiceError(null); return; }
     setInvoiceLoading(true);
+    setInvoiceError(null);
     supabase
       .from("invoices")
       .select("invoice_number, created_at")
@@ -85,6 +87,31 @@ export default function OrdersPage() {
         setInvoiceLoading(false);
       });
   }, [selectedId]);
+
+  async function generateInvoice(order: Order) {
+    setInvoiceLoading(true);
+    setInvoiceError(null);
+    const res = await fetch("/api/admin/generate-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        order_id:     order.id,
+        order_number: order.order_number,
+        subtotal:     order.subtotal,
+        shipping_fee: order.shipping_fee ?? 0,
+      }),
+    });
+    const body = await res.json() as { invoice_number?: string; error?: string };
+    if (!res.ok || body.error) {
+      setInvoiceError(body.error ?? `API error ${res.status}`);
+      setInvoiceLoading(false);
+      return;
+    }
+    if (body.invoice_number) {
+      setSelectedInvoice({ invoice_number: body.invoice_number, created_at: new Date().toISOString() });
+    }
+    setInvoiceLoading(false);
+  }
 
   async function updateStatus(order: Order, newStatus: string) {
     setUpdating(p => ({ ...p, [order.id]: true }));
@@ -310,7 +337,19 @@ export default function OrdersPage() {
                   Print Invoice ↗
                 </a>
               </Section>
-            ) : null}
+            ) : (
+              <Section title="Invoice">
+                <button
+                  onClick={() => generateInvoice(selected)}
+                  className="font-display text-[0.52rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.30)] hover:bg-[rgba(196,163,115,0.07)] rounded-[3px] px-3 py-2 transition-all duration-150 text-left"
+                >
+                  Generate Invoice
+                </button>
+                {invoiceError && (
+                  <p className="font-mono text-[rgba(220,80,80,0.85)] text-[0.68rem] break-all mt-1">{invoiceError}</p>
+                )}
+              </Section>
+            )}
 
             {/* Status update */}
             <Section title="Update Status">
