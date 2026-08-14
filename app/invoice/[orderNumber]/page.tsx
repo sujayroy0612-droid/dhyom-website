@@ -68,11 +68,15 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
   const oRes = await sb.from("orders").select("*").eq("order_number", orderNumber).single();
   if (!oRes.data) notFound();
 
-  const iRes = await sb.from("invoices").select("*").eq("order_id", oRes.data.id).maybeSingle();
+  const [iRes, logoRes] = await Promise.all([
+    sb.from("invoices").select("*").eq("order_id", oRes.data.id).maybeSingle(),
+    sb.from("site_assets").select("image_url").eq("key", "logo").maybeSingle(),
+  ]);
   if (!iRes.data) notFound();
 
   const order   = oRes.data as Order;
   const invoice = iRes.data as Invoice;
+  const logoUrl = logoRes.data?.image_url ?? null;
 
   const isIntraState = order.shipping_state?.toLowerCase().trim() === "bihar";
   const halfGst      = Math.round(invoice.gst_amount * 50) / 100;
@@ -101,20 +105,22 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
           {/* ── Brand header ───────────────────────────────────────── */}
           <div className="flex items-start justify-between px-10 pt-10 pb-8 border-b-2 border-[#C4A373]">
             <div>
-              <h1
-                className="text-[2.2rem] font-bold tracking-[0.28em] text-[#1a0a12]"
-                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-              >
-                DHYOM
-              </h1>
-              <p className="text-[0.6rem] tracking-[0.22em] uppercase text-[#9a7d55] mt-0.5">
-                Home &amp; Pooja Décor
-              </p>
-              <div className="mt-5 text-[0.72rem] text-[#3a2a1a] leading-relaxed">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="Dhyom" style={{ height: "60px", objectFit: "contain", objectPosition: "left" }} />
+              ) : (
+                <h1
+                  className="text-[2.2rem] font-bold tracking-[0.28em] text-[#1a0a12]"
+                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                >
+                  DHYOM
+                </h1>
+              )}
+              <div className="mt-4 text-[0.72rem] text-[#1a0a12] leading-relaxed">
                 <p className="font-semibold">{SELLER_NAME}, trading as {SELLER_TRADE}</p>
                 <p>GSTIN: {SELLER_GSTIN}</p>
-                <p className="mt-0.5 text-[#6a5040]">{SELLER_ADDRESS}</p>
-                <p className="text-[#6a5040]">State: {SELLER_STATE} &nbsp;|&nbsp; Constitution: Proprietorship</p>
+                <p className="mt-0.5">{SELLER_ADDRESS}</p>
+                <p>State: {SELLER_STATE}</p>
               </div>
             </div>
 
@@ -133,7 +139,7 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
 
           {/* ── Bill to / Ship to ──────────────────────────────────── */}
           <div className="px-10 py-6 border-b border-[#e0d5c5]">
-            <p className="text-[0.56rem] tracking-[0.22em] uppercase text-[#9a7d55] font-semibold mb-3">
+            <p className="text-[0.56rem] tracking-[0.22em] uppercase text-[#3a2a1a] font-semibold mb-3">
               Bill To / Ship To
             </p>
             <div className="bg-[#faf6f0] border border-[#e8dece] rounded px-5 py-4 text-[0.76rem] text-[#3a2a1a] leading-relaxed inline-block min-w-[260px]">
@@ -170,11 +176,11 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
               <tbody>
                 {(order.items as OrderItem[]).map((item, i) => (
                   <tr key={i} className={i % 2 === 0 ? "" : "bg-[#faf6f0]"}>
-                    <td className="px-4 py-3 text-[#9a7d55]">{i + 1}</td>
+                    <td className="px-4 py-3 text-[#3a2a1a]">{i + 1}</td>
                     <td className="px-4 py-3 text-[#1a0a12]">
                       <p className="font-medium">{item.name}</p>
                       {item.label && (
-                        <p className="text-[0.64rem] text-[#9a7d55] mt-0.5">{item.label}</p>
+                        <p className="text-[0.64rem] text-[#3a2a1a] mt-0.5">{item.label}</p>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center text-[#3a2a1a]">{item.quantity}</td>
@@ -213,23 +219,23 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
           {/* ── Payment ────────────────────────────────────────────── */}
           <div className="px-10 py-5 border-b border-[#e0d5c5] flex gap-12 text-[0.72rem]">
             <div>
-              <p className="text-[0.56rem] tracking-[0.18em] uppercase text-[#9a7d55] mb-1">Payment Method</p>
+              <p className="text-[0.56rem] tracking-[0.18em] uppercase text-[#3a2a1a] mb-1">Payment Method</p>
               <p className="font-semibold text-[#1a0a12]">
                 {order.payment_method === "cod" ? "Cash on Delivery" : "Online Payment (Razorpay)"}
               </p>
             </div>
             <div>
-              <p className="text-[0.56rem] tracking-[0.18em] uppercase text-[#9a7d55] mb-1">Payment Status</p>
+              <p className="text-[0.56rem] tracking-[0.18em] uppercase text-[#3a2a1a] mb-1">Payment Status</p>
               <p className="font-semibold text-[#1a0a12] capitalize">{order.payment_status}</p>
             </div>
           </div>
 
           {/* ── Footer ─────────────────────────────────────────────── */}
           <div className="px-10 py-6 text-center">
-            <p className="text-[0.64rem] text-[#9a7d55] tracking-[0.06em]">
+            <p className="text-[0.64rem] text-[#3a2a1a] tracking-[0.06em]">
               This is a computer-generated invoice. No physical signature is required.
             </p>
-            <p className="text-[0.58rem] text-[#b8a080] mt-1.5 tracking-wide">
+            <p className="text-[0.58rem] text-[#3a2a1a] mt-1.5 tracking-wide">
               DHYOM — Handcrafted with care. Delivered with reverence.
             </p>
           </div>
@@ -243,7 +249,7 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
 function MetaRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
     <div className="flex justify-end gap-6">
-      <span className="text-[#9a7d55]">{label}</span>
+      <span className="text-[#3a2a1a]">{label}</span>
       <span className={`w-36 text-right ${bold ? "font-bold text-[#1a0a12]" : "text-[#3a2a1a]"}`}>{value}</span>
     </div>
   );
@@ -252,8 +258,8 @@ function MetaRow({ label, value, bold }: { label: string; value: string; bold?: 
 function TotalRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center py-1.5 border-b border-[#e8dece]">
-      <span className="text-[#6a5040]">{label}</span>
-      <span className="text-[#1a0a12]">{value}</span>
+      <span className="text-[#1a0a12] font-medium">{label}</span>
+      <span className="text-[#1a0a12] font-medium">{value}</span>
     </div>
   );
 }
