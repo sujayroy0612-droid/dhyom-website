@@ -130,29 +130,26 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
             </div>
           </div>
 
-          {/* Shipping label — vertical stack: TO on top, FROM below */}
-          <div style={{ border: "2px solid #111", marginBottom: "8px", fontSize: "10px", lineHeight: "1.6" }}>
+          {/* Shipping label — compact square sticker */}
+          <div style={{ width: "260px", border: "2px solid #111", marginBottom: "8px", fontSize: "10px", lineHeight: "1.55" }}>
 
-            {/* TO — Ship To */}
-            <div style={{ padding: "8px 12px 10px", borderBottom: "1.5px solid #111" }}>
-              <div style={{ fontSize: "7.5px", fontWeight: "bold", letterSpacing: "2.5px", textTransform: "uppercase" as const, color: "#444", marginBottom: "5px" }}>
-                TO
-              </div>
-              <div style={{ fontWeight: "bold", fontSize: "16px", marginBottom: "1px" }}>{o.first_name} {o.last_name}</div>
-              <div style={{ fontSize: "11px" }}>{o.shipping_street}</div>
-              <div style={{ fontSize: "11px" }}>{o.shipping_city}, {o.shipping_state}</div>
-              <div style={{ fontWeight: "bold", fontSize: "17px", marginTop: "5px", letterSpacing: "0.5px" }}>PIN – {o.shipping_pincode}</div>
-              <div style={{ marginTop: "3px", fontSize: "10.5px" }}>Ph: <strong>{o.phone}</strong></div>
+            {/* TO */}
+            <div style={{ padding: "7px 10px 9px", borderBottom: "1.5px solid #111" }}>
+              <div style={{ fontSize: "7px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "4px" }}>To</div>
+              <div style={{ fontWeight: "bold", fontSize: "13px" }}>{o.first_name} {o.last_name}</div>
+              <div style={{ fontSize: "10px" }}>{o.shipping_street}</div>
+              <div style={{ fontSize: "10px" }}>{o.shipping_city}, {o.shipping_state}</div>
+              <div style={{ fontWeight: "bold", fontSize: "13px", marginTop: "3px" }}>PIN – {o.shipping_pincode}</div>
+              <div style={{ fontSize: "10px", marginTop: "2px" }}>Ph: {o.phone}</div>
             </div>
 
-            {/* FROM — Sold By */}
-            <div style={{ padding: "7px 12px 8px", background: "#f5f5f5" }}>
-              <div style={{ fontSize: "7.5px", fontWeight: "bold", letterSpacing: "2.5px", textTransform: "uppercase" as const, color: "#444", marginBottom: "3px" }}>
-                FROM
-              </div>
-              <div style={{ fontWeight: "bold", fontSize: "11px" }}>{SELLER_SHORT}</div>
-              <div style={{ fontSize: "10px" }}>Rajiv Nagar, Road No. 8A, near Ideal Public School, Anand Niketan, PATNA – 800024, Bihar</div>
-              <div style={{ fontSize: "9px", color: "#555", marginTop: "2px" }}>GSTIN: {SELLER_GSTIN}</div>
+            {/* FROM */}
+            <div style={{ padding: "6px 10px 7px", background: "#f5f5f5" }}>
+              <div style={{ fontSize: "7px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "3px" }}>From</div>
+              <div style={{ fontWeight: "bold", fontSize: "10px" }}>{SELLER_SHORT}</div>
+              <div style={{ fontSize: "9px" }}>Rajiv Nagar, Road No. 8A, Anand Niketan,</div>
+              <div style={{ fontSize: "9px" }}>PATNA – 800024, Bihar</div>
+              <div style={{ fontSize: "8.5px", color: "#555", marginTop: "2px" }}>GSTIN: {SELLER_GSTIN}</div>
             </div>
 
           </div>
