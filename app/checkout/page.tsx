@@ -214,6 +214,21 @@ export default function CheckoutPage() {
             setSubmitting(false);
             return;
           }
+          // Fire founder notification email — non-blocking, never delays the user
+          void fetch("/api/notify-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderNumber,
+              customerName: base.customer_name,
+              phone: base.phone,
+              email: base.email,
+              address: base.address,
+              items: base.items,
+              total: base.total,
+              paymentStatus: "Paid (Razorpay)",
+            }),
+          }).catch(() => {});
           orderPlacedRef.current = true;
           clearCart();
           router.push(`/checkout/offer/${orderNumber}`);
