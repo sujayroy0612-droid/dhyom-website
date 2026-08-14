@@ -5,7 +5,7 @@ import ProductCard from "@/components/ProductCard";
 import NewsletterForm from "@/components/NewsletterForm";
 import FadeIn from "@/components/FadeIn";
 import FadeInView from "@/components/FadeInView";
-import { StaggerGrid, StaggerItem } from "@/components/StaggerGrid";
+import CardGrid from "@/components/CardGrid";
 import { createServerClient } from "@/lib/supabase/server";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import type { DbProduct } from "@/lib/supabase/types";
@@ -248,10 +248,10 @@ export default async function Home() {
             <div className="mt-5 mx-auto w-12 h-px bg-[rgba(196,163,115,0.45)]" />
           </FadeInView>
 
-          <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
+          <CardGrid gridClassName="grid-cols-2 lg:grid-cols-3 gap-7">
             {categories.map((cat) => (
-              <StaggerItem key={cat.id}>
               <Link
+                key={cat.id}
                 href={cat.href}
                 className="bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden group hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.28)] transition-all duration-300 flex flex-col h-full"
               >
@@ -285,9 +285,8 @@ export default async function Home() {
                   </div>
                 </div>
               </Link>
-              </StaggerItem>
             ))}
-          </StaggerGrid>
+          </CardGrid>
         </div>
       </section>
 
@@ -342,22 +341,21 @@ export default async function Home() {
           </FadeInView>
 
           {featured.length > 0 ? (
-            <StaggerGrid className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <CardGrid gridClassName="grid-cols-2 lg:grid-cols-3 gap-6">
               {featured.map((product) => (
-                <StaggerItem key={product.id}>
-                  <ProductCard
-                    id={product.id}
-                    name={product.name}
-                    category={product.category}
-                    subcategorySlug={getSubcategorySlug(product)}
-                    label={buildLabel(product)}
-                    price={product.price}
-                    description={product.description || undefined}
-                    imageUrl={product.image_url || undefined}
-                  />
-                </StaggerItem>
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  category={product.category}
+                  subcategorySlug={getSubcategorySlug(product)}
+                  label={buildLabel(product)}
+                  price={product.price}
+                  description={product.description || undefined}
+                  imageUrl={product.image_url || undefined}
+                />
               ))}
-            </StaggerGrid>
+            </CardGrid>
           ) : (
             <p className="text-center font-body font-light italic text-[rgba(245,237,224,0.30)] text-base">
               The collection is being assembled. Return soon.
