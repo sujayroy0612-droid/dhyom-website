@@ -25,28 +25,36 @@ interface Order {
   created_at: string;
 }
 
-const STATUSES = ["pending", "processing", "packed", "shipped", "delivered", "cancelled"];
+interface InvoiceRecord {
+  invoice_number: string;
+  created_at: string;
+}
+
+const STATUSES = ["pending", "confirmed", "processing", "packed", "shipped", "delivered", "cancelled"];
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:    "text-[rgba(220,160,60,0.85)]  bg-[rgba(220,160,60,0.08)]",
-  processing: "text-[rgba(100,160,220,0.85)] bg-[rgba(100,160,220,0.08)]",
-  packed:     "text-[rgba(140,100,220,0.85)] bg-[rgba(140,100,220,0.08)]",
-  shipped:    "text-[rgba(60,160,220,0.85)]  bg-[rgba(60,160,220,0.08)]",
-  delivered:  "text-[rgba(80,200,120,0.85)]  bg-[rgba(80,200,120,0.08)]",
-  cancelled:  "text-[rgba(200,80,80,0.75)]   bg-[rgba(200,80,80,0.06)]",
+  pending:    "text-[rgba(220,160,60,0.85)]   bg-[rgba(220,160,60,0.08)]",
+  confirmed:  "text-[rgba(80,200,140,0.85)]   bg-[rgba(80,200,140,0.08)]",
+  processing: "text-[rgba(100,160,220,0.85)]  bg-[rgba(100,160,220,0.08)]",
+  packed:     "text-[rgba(140,100,220,0.85)]  bg-[rgba(140,100,220,0.08)]",
+  shipped:    "text-[rgba(60,160,220,0.85)]   bg-[rgba(60,160,220,0.08)]",
+  delivered:  "text-[rgba(80,200,120,0.85)]   bg-[rgba(80,200,120,0.08)]",
+  cancelled:  "text-[rgba(200,80,80,0.75)]    bg-[rgba(200,80,80,0.06)]",
 };
 
 const PAGE_SIZE = 20;
 
 export default function OrdersPage() {
-  const [orders,      setOrders]      = useState<Order[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [search,      setSearch]      = useState("");
-  const [statusFilter,setStatusFilter]= useState("");
-  const [page,        setPage]        = useState(0);
-  const [total,       setTotal]       = useState(0);
-  const [selected,    setSelected]    = useState<Order | null>(null);
-  const [updating,    setUpdating]    = useState<Record<string, boolean>>({});
+  const [orders,        setOrders]        = useState<Order[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [search,        setSearch]        = useState("");
+  const [statusFilter,  setStatusFilter]  = useState("");
+  const [page,          setPage]          = useState(0);
+  const [total,         setTotal]         = useState(0);
+  const [selected,      setSelected]      = useState<Order | null>(null);
+  const [updating,      setUpdating]      = useState<Record<string, boolean>>({});
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
+  const [invoiceLoading,  setInvoiceLoading]  = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,11 +70,48 @@ export default function OrdersPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  /* Fetch invoice whenever a different order is opened in the drawer */
+  const selectedId = selected?.id;
+  useEffect(() => {
+    if (!selectedId) { setSelectedInvoice(null); setInvoiceLoading(false); return; }
+    setInvoiceLoading(true);
+    supabase
+      .from("invoices")
+      .select("invoice_number, created_at")
+      .eq("order_id", selectedId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setSelectedInvoice((data as InvoiceRecord | null) ?? null);
+        setInvoiceLoading(false);
+      });
+  }, [selectedId]);
+
   async function updateStatus(order: Order, newStatus: string) {
     setUpdating(p => ({ ...p, [order.id]: true }));
     await supabase.from("orders").update({ order_status: newStatus }).eq("id", order.id);
     setOrders(prev => prev.map(o => o.id === order.id ? { ...o, order_status: newStatus } : o));
-    if (selected?.id === order.id) setSelected({ ...order, order_status: newStatus });
+    if (selected?.id === order.id) setSelected(s => s ? { ...s, order_status: newStatus } : null);
+
+    /* Auto-generate GST invoice when order is confirmed */
+    if (newStatus === "confirmed") {
+      const res = await fetch("/api/admin/generate-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order_id:     order.id,
+          order_number: order.order_number,
+          subtotal:     order.subtotal,
+          shipping_fee: order.shipping_fee ?? 0,
+        }),
+      });
+      if (res.ok) {
+        const body = await res.json() as { invoice_number?: string; invoice_id?: string };
+        if (body.invoice_number && selected?.id === order.id) {
+          setSelectedInvoice({ invoice_number: body.invoice_number, created_at: new Date().toISOString() });
+        }
+      }
+    }
+
     setUpdating(p => ({ ...p, [order.id]: false }));
   }
 
@@ -207,9 +252,9 @@ export default function OrdersPage() {
 
             {/* Customer */}
             <Section title="Customer">
-              <Row label="Name"    value={`${selected.first_name} ${selected.last_name}`} />
-              <Row label="Email"   value={selected.email} />
-              <Row label="Phone"   value={selected.phone} />
+              <Row label="Name"  value={`${selected.first_name} ${selected.last_name}`} />
+              <Row label="Email" value={selected.email} />
+              <Row label="Phone" value={selected.phone} />
             </Section>
 
             {/* Shipping */}
@@ -222,11 +267,11 @@ export default function OrdersPage() {
 
             {/* Payment */}
             <Section title="Payment">
-              <Row label="Method"  value={selected.payment_method === "cod" ? "Cash on Delivery" : "Online (Razorpay)"} />
-              <Row label="Status"  value={selected.payment_status} />
+              <Row label="Method"   value={selected.payment_method === "cod" ? "Cash on Delivery" : "Online (Razorpay)"} />
+              <Row label="Status"   value={selected.payment_status} />
               <Row label="Subtotal" value={`₹${selected.subtotal.toLocaleString("en-IN")}`} />
               <Row label="Shipping" value={`₹${selected.shipping_fee.toLocaleString("en-IN")}`} />
-              <Row label="Total"   value={`₹${selected.total.toLocaleString("en-IN")}`} bold />
+              <Row label="Total"    value={`₹${selected.total.toLocaleString("en-IN")}`} bold />
             </Section>
 
             {/* Items */}
@@ -242,6 +287,30 @@ export default function OrdersPage() {
                 </div>
               ))}
             </Section>
+
+            {/* Invoice */}
+            {invoiceLoading ? (
+              <div className="flex items-center gap-2 py-1">
+                <div className="w-3 h-3 rounded-full border border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" />
+                <span className="font-body font-light text-[rgba(245,237,224,0.28)] text-xs">Checking invoice…</span>
+              </div>
+            ) : selectedInvoice ? (
+              <Section title="Invoice">
+                <Row label="Invoice No." value={selectedInvoice.invoice_number} bold />
+                <Row
+                  label="Generated"
+                  value={new Date(selectedInvoice.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                />
+                <a
+                  href={`/invoice/${selected.order_number}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-2 font-display text-[0.52rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.30)] hover:bg-[rgba(196,163,115,0.07)] hover:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 transition-all duration-150"
+                >
+                  Print Invoice ↗
+                </a>
+              </Section>
+            ) : null}
 
             {/* Status update */}
             <Section title="Update Status">
