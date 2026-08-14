@@ -130,7 +130,7 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
             </div>
           </div>
 
-          {/* Shipping label — compact square sticker */}
+          {/* Shipping label sticker — compact square, all-in-one */}
           <div style={{ width: "260px", border: "2px solid #111", marginBottom: "8px", fontSize: "10px", lineHeight: "1.55" }}>
 
             {/* TO */}
@@ -144,7 +144,7 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
             </div>
 
             {/* FROM */}
-            <div style={{ padding: "6px 10px 7px", background: "#f5f5f5" }}>
+            <div style={{ padding: "6px 10px 7px", borderBottom: "1.5px solid #111", background: "#f5f5f5" }}>
               <div style={{ fontSize: "7px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "3px" }}>From</div>
               <div style={{ fontWeight: "bold", fontSize: "10px" }}>{SELLER_SHORT}</div>
               <div style={{ fontSize: "9px" }}>Rajiv Nagar, Road No. 8A, Anand Niketan,</div>
@@ -152,37 +152,36 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
               <div style={{ fontSize: "8.5px", color: "#555", marginTop: "2px" }}>GSTIN: {SELLER_GSTIN}</div>
             </div>
 
-          </div>
+            {/* Items */}
+            <div style={{ padding: "6px 10px 7px" }}>
+              <div style={{ fontSize: "7px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "4px" }}>Description</div>
+              <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...th, textAlign: "left", fontSize: "8px" }}>Item</th>
+                    <th style={{ ...th, width: "28px", fontSize: "8px" }}>Qty</th>
+                    <th style={{ ...th, width: "50px", fontSize: "8px" }}>Amt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.map((item, i) => (
+                    <tr key={i}>
+                      <td style={{ ...td, fontSize: "8.5px" }}>
+                        <span style={{ fontWeight: "bold" }}>{item.name}</span>
+                        {item.label && <div style={{ color: "#666", fontSize: "8px" }}>{item.label}</div>}
+                      </td>
+                      <td style={{ ...td, textAlign: "center", fontSize: "8.5px" }}>{item.quantity}</td>
+                      <td style={{ ...td, textAlign: "right", fontSize: "8.5px" }}>₹{inr(item.gross)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5px", color: "#888", marginTop: "5px" }}>
+                <span>Not for resale.</span>
+                <span>Printed {printedAt}</span>
+              </div>
+            </div>
 
-          {/* SKU / Items table */}
-          <table style={{ borderCollapse: "collapse", width: "100%", marginBottom: "6px" }}>
-            <thead>
-              <tr>
-                <th style={{ ...th, width: "30px", textAlign: "left" }}>#</th>
-                <th style={{ ...th, textAlign: "left" }}>Description</th>
-                <th style={{ ...th, width: "40px" }}>QTY</th>
-                <th style={{ ...th, width: "70px" }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineItems.map((item, i) => (
-                <tr key={i}>
-                  <td style={{ ...td }}>{i + 1}</td>
-                  <td style={{ ...td }}>
-                    <span style={{ fontWeight: "bold" }}>{item.name}</span>
-                    {item.label && <span style={{ color: "#666", fontSize: "9px" }}> | {item.label}</span>}
-                  </td>
-                  <td style={{ ...td, textAlign: "center" }}>{item.quantity}</td>
-                  <td style={{ ...td, textAlign: "right" }}>₹{inr(item.gross)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Label footer */}
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "8px", color: "#888", marginTop: "2px" }}>
-            <span>Not for resale.</span>
-            <span>Printed at {printedAt}</span>
           </div>
         </div>
 
