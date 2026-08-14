@@ -11,25 +11,21 @@ export default function HeroBackground({ videoSrc, posterUrl }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    // Skip on mobile — static image underneath handles that
-    if (window.matchMedia("(max-width: 767px)").matches) return;
-
     const video = videoRef.current;
     if (!video) return;
-
-    // React's `muted` JSX prop is unreliable — set it directly on the DOM node
-    // so Chrome's autoplay policy (which requires muted) is satisfied
+    // React's `muted` JSX prop is unreliable on both Chrome and iOS Safari.
+    // Setting it directly on the DOM node is required for autoplay to work.
     video.muted = true;
-    video.src = videoSrc;
-    video.load();
     video.play().catch(() => {
-      // Autoplay still blocked — poster / static image shows as fallback
+      // Autoplay still blocked — poster stays visible as fallback
     });
-  }, [videoSrc]);
+  }, []);
 
   return (
     <video
       ref={videoRef}
+      src={videoSrc}
+      autoPlay
       loop
       muted
       playsInline
