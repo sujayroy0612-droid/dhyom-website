@@ -1,6 +1,14 @@
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import { PrintButton } from "./PrintButton";
+
+function adminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false }, global: { fetch: (u, o) => fetch(u, { ...o, cache: "no-store" }) } }
+  );
+}
 
 interface OrderItem {
   id: string;
@@ -55,7 +63,7 @@ function fmtDate(s: string) {
 
 export default async function InvoicePage({ params }: { params: { orderNumber: string } }) {
   const { orderNumber } = params;
-  const sb = createServerClient();
+  const sb = adminClient();
 
   const oRes = await sb.from("orders").select("*").eq("order_number", orderNumber).single();
   if (!oRes.data) notFound();
