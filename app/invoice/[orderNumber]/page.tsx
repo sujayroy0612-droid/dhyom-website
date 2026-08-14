@@ -57,12 +57,10 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
   const { orderNumber } = params;
   const sb = createServerClient();
 
-  const [oRes, iRes] = await Promise.all([
-    sb.from("orders").select("*").eq("order_number", orderNumber).single(),
-    sb.from("invoices").select("*").eq("order_number", orderNumber).single(),
-  ]);
-
+  const oRes = await sb.from("orders").select("*").eq("order_number", orderNumber).single();
   if (!oRes.data) notFound();
+
+  const iRes = await sb.from("invoices").select("*").eq("order_id", oRes.data.id).maybeSingle();
   if (!iRes.data) notFound();
 
   const order   = oRes.data as Order;
