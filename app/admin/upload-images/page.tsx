@@ -12,8 +12,8 @@ interface Product {
   image_urls: string[];
 }
 
-const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
-const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
+const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
 const CATEGORY_LABELS: Record<string, string> = {
   candle: "Candle",
@@ -24,6 +24,11 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 async function uploadToCloudinary(file: File, publicId: string): Promise<string> {
+  if (!CLOUD_NAME || !UPLOAD_PRESET) {
+    throw new Error(
+      "Cloudinary not configured. Add NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET to Vercel environment variables, then redeploy."
+    );
+  }
   const fd = new FormData();
   fd.append("file", file);
   fd.append("upload_preset", UPLOAD_PRESET);
@@ -42,8 +47,8 @@ async function uploadToCloudinary(file: File, publicId: string): Promise<string>
 export default function UploadImagesPage() {
   const [products,  setProducts]  = useState<Product[]>([]);
   const [loading,   setLoading]   = useState(true);
-  const [uploading, setUploading] = useState<Record<string, string>>({}); // id → "primary"|"gallery"
-  const [errors,    setErrors]    = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState<Record<string, string>>({});
+  const [toast,     setToast]     = useState<string>("");
 
   useEffect(() => {
     supabase
@@ -59,9 +64,9 @@ export default function UploadImagesPage() {
       });
   }, []);
 
-  function setErr(id: string, msg: string) {
-    setErrors(p => ({ ...p, [id]: msg }));
-    setTimeout(() => setErrors(p => ({ ...p, [id]: "" })), 5000);
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 8000);
   }
 
   /* ── Upload primary image ── */
@@ -72,7 +77,7 @@ export default function UploadImagesPage() {
       await supabase.from("products").update({ image_url: url }).eq("id", product.id);
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_url: url } : p));
     } catch (err) {
-      setErr(product.id, err instanceof Error ? err.message : "Upload failed");
+      showToast(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(p => ({ ...p, [product.id]: "" }));
     }
@@ -88,7 +93,7 @@ export default function UploadImagesPage() {
       await supabase.from("products").update({ image_urls: newUrls }).eq("id", product.id);
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_urls: newUrls } : p));
     } catch (err) {
-      setErr(product.id, err instanceof Error ? err.message : "Upload failed");
+      showToast(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(p => ({ ...p, [product.id]: "" }));
     }
@@ -114,21 +119,42 @@ export default function UploadImagesPage() {
     <div className="min-h-screen bg-[#12060e] pt-8 pb-16 px-8">
       <div className="max-w-5xl mx-auto">
 
+        {/* Toast error banner */}
+        {toast && (
+          <div className="mb-6 bg-[rgba(200,60,60,0.15)] border border-[rgba(200,60,60,0.35)] rounded-[6px] px-5 py-4 flex items-start gap-3">
+            <span className="text-[rgba(220,80,80,0.90)] text-lg leading-none mt-0.5">!</span>
+            <p className="font-body font-light text-[rgba(220,80,80,0.90)] text-sm leading-relaxed flex-1">{toast}</p>
+            <button onClick={() => setToast("")} className="text-[rgba(220,80,80,0.60)] hover:text-[rgba(220,80,80,0.90)] text-lg leading-none">×</button>
+          </div>
+        )}
+
+        {/* Cloudinary config warning */}
+        {(!CLOUD_NAME || !UPLOAD_PRESET) && (
+          <div className="mb-6 bg-[rgba(200,140,40,0.12)] border border-[rgba(200,140,40,0.30)] rounded-[6px] px-5 py-4">
+            <p className="font-body font-light text-[rgba(220,160,60,0.90)] text-sm leading-relaxed">
+              <strong className="font-normal">Cloudinary not configured.</strong> Add{" "}
+              <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code> and{" "}
+              <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET</code>{" "}
+              to Vercel Environment Variables, then redeploy.
+            </p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <p className="font-display text-[0.44rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.35)] mb-1">Admin · Internal Tool</p>
           <h1 className="font-display text-ivory mb-1" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Product Images</h1>
           <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-sm">
-            Each product can have one primary image plus multiple gallery images.
+            Click any image thumbnail or the label below it to replace it.
           </p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
-            { label: "Products",        value: products.length,  color: "text-ivory" },
-            { label: "Have Primary",    value: withPrimary,      color: "text-brass" },
-            { label: "Total Images",    value: totalImages,      color: "text-[rgba(80,200,120,0.80)]" },
+            { label: "Products",     value: products.length, color: "text-ivory" },
+            { label: "Have Primary", value: withPrimary,     color: "text-brass" },
+            { label: "Total Images", value: totalImages,     color: "text-[rgba(80,200,120,0.80)]" },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] px-4 py-4">
               <p className="font-display text-[0.42rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.38)] mb-1.5">{label}</p>
@@ -141,7 +167,6 @@ export default function UploadImagesPage() {
         <div className="flex flex-col gap-3">
           {products.map(product => {
             const busy = uploading[product.id];
-            const errMsg = errors[product.id];
             const allImages = [product.image_url, ...(product.image_urls ?? [])].filter(Boolean) as string[];
 
             return (
@@ -154,65 +179,77 @@ export default function UploadImagesPage() {
                     <p className="font-display text-[0.42rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.40)] mt-0.5">
                       {CATEGORY_LABELS[product.category] ?? product.category}
                     </p>
-                    {errMsg && (
-                      <p className="font-body font-light text-[rgba(200,80,80,0.75)] text-[0.68rem] mt-1.5 leading-snug">{errMsg}</p>
-                    )}
                   </div>
 
                   {/* Image strip */}
                   <div className="flex-1 flex items-start gap-2 flex-wrap">
 
-                    {/* Primary image */}
-                    <div className="flex flex-col items-center gap-1">
-                      <div className={[
-                        "w-20 h-20 rounded-[4px] border-[1.5px] overflow-hidden relative bg-[#270b1b] flex items-center justify-center",
-                        product.image_url ? "border-brass" : "border-[rgba(196,163,115,0.20)] border-dashed",
-                      ].join(" ")}>
-                        {product.image_url ? (
-                          <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="80px" />
-                        ) : (
-                          <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.22)]">No image</span>
-                        )}
-                        <span className="absolute top-1 left-1 bg-brass text-ink font-display text-[0.36rem] tracking-[0.08em] uppercase px-1 py-0.5 rounded-[2px] leading-none">P</span>
+                    {/* Primary image — entire area is a label */}
+                    <label
+                      htmlFor={`primary-${product.id}`}
+                      className={busy ? "pointer-events-none" : "cursor-pointer group/primary"}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <div className={[
+                          "w-20 h-20 rounded-[4px] border-[1.5px] overflow-hidden relative bg-[#270b1b] flex items-center justify-center",
+                          product.image_url ? "border-brass" : "border-[rgba(196,163,115,0.20)] border-dashed",
+                        ].join(" ")}>
+                          {product.image_url ? (
+                            <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="80px" />
+                          ) : (
+                            <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.22)]">No image</span>
+                          )}
+                          <span className="absolute top-1 left-1 bg-brass text-ink font-display text-[0.36rem] tracking-[0.08em] uppercase px-1 py-0.5 rounded-[2px] leading-none z-10">P</span>
+                          {/* Hover overlay */}
+                          <div className="absolute inset-0 bg-black/55 flex items-center justify-center opacity-0 group-hover/primary:opacity-100 transition-opacity duration-150 z-20">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                              <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/>
+                              <path d="M9 3 7.17 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.17L15 3H9Zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z"/>
+                            </svg>
+                          </div>
+                          {/* Uploading overlay */}
+                          {busy === "primary" && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
+                              <div className="w-5 h-5 rounded-full border-2 border-[rgba(196,163,115,0.20)] border-t-brass animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                        <span className={[
+                          "font-display text-[0.38rem] tracking-[0.10em] uppercase transition-colors duration-150",
+                          busy === "primary"
+                            ? "text-[rgba(196,163,115,0.40)]"
+                            : "text-brass group-hover/primary:text-ivory",
+                        ].join(" ")}>
+                          {busy === "primary" ? "Uploading…" : product.image_url ? "Replace" : "Set Image"}
+                        </span>
                       </div>
-                      {/* Always-visible replace/set label */}
-                      <label
-                        htmlFor={`primary-${product.id}`}
-                        className={[
-                          "font-display text-[0.38rem] tracking-[0.10em] uppercase text-brass hover:text-ivory transition-colors duration-150",
-                          busy ? "opacity-40 pointer-events-none" : "cursor-pointer",
-                        ].join(" ")}
-                      >
-                        {busy === "primary" ? "Uploading…" : product.image_url ? "Replace" : "Set Image"}
-                      </label>
-                      <input
-                        id={`primary-${product.id}`}
-                        type="file" accept="image/*" className="hidden"
-                        onChange={e => { const f = e.target.files?.[0]; if (f) handlePrimary(product, f); e.target.value = ""; }}
-                      />
-                    </div>
+                    </label>
+                    <input
+                      id={`primary-${product.id}`}
+                      type="file" accept="image/*" className="hidden"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handlePrimary(product, f); e.target.value = ""; }}
+                    />
 
                     {/* Gallery images */}
                     {(product.image_urls ?? []).map((url, i) => (
-                      <div key={url} className="relative group">
+                      <div key={url} className="relative group/gallery">
                         <div className="w-20 h-20 rounded-[4px] border border-[rgba(196,163,115,0.20)] overflow-hidden relative bg-[#270b1b]">
                           <Image src={url} alt={`${product.name} gallery ${i + 1}`} fill className="object-cover" sizes="80px" />
                         </div>
-                        {/* Remove button */}
                         <button
                           onClick={() => removeGallery(product, url)}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[rgba(200,60,60,0.85)] text-white text-xs leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[rgba(220,50,50,1)]"
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[rgba(200,60,60,0.85)] text-white text-xs leading-none flex items-center justify-center opacity-0 group-hover/gallery:opacity-100 transition-opacity hover:bg-[rgba(220,50,50,1)]"
                         >
                           ×
                         </button>
                       </div>
                     ))}
 
-                    {/* Add gallery image label */}
+                    {/* Add gallery image */}
                     <label
                       htmlFor={`gallery-${product.id}`}
                       className={[
-                        "w-20 h-20 rounded-[4px] border border-dashed border-[rgba(196,163,115,0.22)] hover:border-[rgba(196,163,115,0.45)] flex flex-col items-center justify-center gap-1 transition-colors",
+                        "w-20 h-20 rounded-[4px] border border-dashed border-[rgba(196,163,115,0.22)] hover:border-[rgba(196,163,115,0.50)] flex flex-col items-center justify-center gap-1 transition-colors",
                         busy ? "opacity-40 pointer-events-none" : "cursor-pointer",
                       ].join(" ")}
                     >
@@ -220,8 +257,8 @@ export default function UploadImagesPage() {
                         <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.20)] border-t-brass animate-spin" />
                       ) : (
                         <>
-                          <span className="text-[rgba(196,163,115,0.45)] text-lg leading-none">+</span>
-                          <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.35)]">Add</span>
+                          <span className="text-[rgba(196,163,115,0.50)] text-lg leading-none">+</span>
+                          <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.40)]">Add</span>
                         </>
                       )}
                     </label>
