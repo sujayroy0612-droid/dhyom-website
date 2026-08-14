@@ -249,28 +249,6 @@ export default function Header({
             )}
           </div>
 
-          {/* About */}
-          <Link
-            href="/about"
-            className={[
-              "flex items-center font-display text-[0.62rem] tracking-[0.2em] uppercase transition-colors duration-200",
-              pathname.startsWith("/about") ? "text-brass" : "text-[rgba(245,237,224,0.50)] hover:text-ivory",
-            ].join(" ")}
-          >
-            About
-          </Link>
-
-          {/* Contact */}
-          <Link
-            href="/contact"
-            className={[
-              "flex items-center font-display text-[0.62rem] tracking-[0.2em] uppercase transition-colors duration-200",
-              pathname.startsWith("/contact") ? "text-brass" : "text-[rgba(245,237,224,0.50)] hover:text-ivory",
-            ].join(" ")}
-          >
-            Contact
-          </Link>
-
           {/* Cart */}
           <Link
             href="/cart"
@@ -427,29 +405,6 @@ export default function Header({
               )}
             </div>
 
-            {/* About */}
-            <Link
-              href="/about"
-              onClick={closeAll}
-              className={[
-                "py-3.5 font-display text-[0.62rem] tracking-[0.2em] uppercase border-b border-[rgba(196,163,115,0.08)] transition-colors duration-200",
-                pathname.startsWith("/about") ? "text-brass" : "text-[rgba(245,237,224,0.50)]",
-              ].join(" ")}
-            >
-              About
-            </Link>
-
-            {/* Contact */}
-            <Link
-              href="/contact"
-              onClick={closeAll}
-              className={[
-                "py-3.5 font-display text-[0.62rem] tracking-[0.2em] uppercase transition-colors duration-200",
-                pathname.startsWith("/contact") ? "text-brass" : "text-[rgba(245,237,224,0.50)]",
-              ].join(" ")}
-            >
-              Contact
-            </Link>
 
           </div>
         </div>
