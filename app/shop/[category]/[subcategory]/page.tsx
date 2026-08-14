@@ -107,10 +107,18 @@ export default async function SubcategoryPage({ params }: PageProps) {
   const subcategoryName = SUBCATEGORY_NAMES[subcategory] ?? subcategory;
   const subcategoryDescription = SUBCATEGORY_DESCRIPTIONS[subcategory];
 
-  /* ── Fetch products ── */
+  /* ── Fetch products + visibility ── */
   const supabase = createServerClient();
   const cols =
     "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,created_at";
+
+  /* Check category and collection visibility in parallel with products */
+  const [catVisRes, collVisRes] = await Promise.all([
+    supabase.from("category_visibility").select("is_visible").eq("category", category).single(),
+    supabase.from("collection_visibility").select("is_visible").eq("category", category).eq("subcategory", subcategory).single(),
+  ]);
+  if (catVisRes.data?.is_visible === false) notFound();
+  if (collVisRes.data?.is_visible === false) notFound();
 
   const isCandle = category === "candle";
   const { data, error } = isCandle

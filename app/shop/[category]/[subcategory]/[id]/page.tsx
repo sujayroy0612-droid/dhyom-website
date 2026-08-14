@@ -77,7 +77,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const cols =
     "id,name,type,subcategory,collection,fragrance,price,description,image_url,image_urls,category,stock,is_visible,created_at";
 
-  const [productRes, relatedRes, catVisRes] = await Promise.all([
+  const [productRes, relatedRes, catVisRes, collVisRes] = await Promise.all([
     supabase.from("products").select(cols).eq("id", id).single(),
     supabase
       .from("products")
@@ -91,6 +91,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
       .select("is_visible")
       .eq("category", category)
       .single(),
+    supabase
+      .from("collection_visibility")
+      .select("is_visible")
+      .eq("category", category)
+      .eq("subcategory", subcategory)
+      .single(),
   ]);
 
   if (productRes.error || !productRes.data) notFound();
@@ -99,6 +105,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   if (product.category !== category) notFound();
   if (!product.is_visible) notFound();
   if (catVisRes.data?.is_visible === false) notFound();
+  if (collVisRes.data?.is_visible === false) notFound();
 
   const related = (relatedRes.data ?? []) as DbProduct[];
   const categoryName = CATEGORY_NAMES[category] ?? category;
