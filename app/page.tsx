@@ -134,16 +134,32 @@ function getSubcategorySlug(p: DbProduct): string {
   return p.collection ?? p.subcategory ?? "";
 }
 
+/* ─── Types ───────────────────────────────────────────── */
+interface Review { id: string; name: string; rating: number; body: string; }
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <svg key={i} width="13" height="13" viewBox="0 0 12 12" fill={i <= rating ? "#C4A373" : "none"} stroke="#C4A373" strokeWidth="1" aria-hidden="true">
+          <path d="M6 1l1.4 3h3.1L8 6l1 3L6 7.5 3 9l1-3-2.5-2h3.1L6 1z" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
 /* ─── Page ────────────────────────────────────────────── */
 export default async function Home() {
   const supabase = createServerClient();
   const cols = "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,created_at";
-  const [candleRes, idolRes, braceletRes, giftRes, poojaRes, assets] = await Promise.all([
+  const [candleRes, idolRes, braceletRes, giftRes, poojaRes, reviewsRes, assets] = await Promise.all([
     supabase.from("products").select(cols).eq("category", "candle").limit(2),
     supabase.from("products").select(cols).eq("category", "idol").limit(1),
     supabase.from("products").select(cols).eq("category", "bracelet").limit(1),
     supabase.from("products").select(cols).eq("category", "gift").limit(1),
     supabase.from("products").select(cols).eq("category", "pooja-essentials").limit(1),
+    supabase.from("reviews").select("id,name,rating,body").eq("approved", true).order("created_at", { ascending: false }).limit(8),
     fetchSiteAssets().catch((): SiteAssets => ({})),
   ]);
   const featured: DbProduct[] = [
@@ -153,11 +169,12 @@ export default async function Home() {
     ...(giftRes.data ?? []),
     ...(poojaRes.data ?? []),
   ] as DbProduct[];
+  const reviews = (reviewsRes.data ?? []) as Review[];
 
   return (
     <div className="min-h-screen">
 
-      {/* ══ HERO — Damson (30%) ══════════════════════════════ */}
+      {/* ══ 1. HERO ══════════════════════════════════════════ */}
       <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson overflow-hidden">
         {assets.hero_background && (
           <>
@@ -169,7 +186,6 @@ export default async function Home() {
               className="object-cover"
               sizes="100vw"
             />
-            {/* Gradient overlay: opaque at top/bottom (text legibility), transparent in centre (photo shows through) */}
             <div
               className="absolute inset-0"
               style={{
@@ -232,18 +248,65 @@ export default async function Home() {
       </section>
 
 
-      {/* ══ CATEGORY GRID — Ivory (60%) · Damson cards (30%) ══ */}
+      {/* ══ 2. BEST SELLING ══════════════════════════════════ */}
+      <section className="bg-black-plum py-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <FadeInView className="text-center mb-14">
+            <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.45)] mb-4">
+              Handpicked
+            </p>
+            <h2
+              className="font-display text-ivory"
+              style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", letterSpacing: "0.05em" }}
+            >
+              Best Selling
+            </h2>
+            <div className="mt-5 mx-auto w-12 h-px bg-[rgba(196,163,115,0.35)]" />
+          </FadeInView>
+
+          {featured.length > 0 ? (
+            <CardGrid gridClassName="grid-cols-2 lg:grid-cols-3 gap-6">
+              {featured.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  category={product.category}
+                  subcategorySlug={getSubcategorySlug(product)}
+                  label={buildLabel(product)}
+                  price={product.price}
+                  description={product.description || undefined}
+                  imageUrl={product.image_url || undefined}
+                />
+              ))}
+            </CardGrid>
+          ) : (
+            <p className="text-center font-body font-light italic text-[rgba(245,237,224,0.30)] text-base">
+              The collection is being assembled. Return soon.
+            </p>
+          )}
+
+          <div className="text-center mt-12">
+            <Link href="/shop/candle">
+              <Button variant="secondary" size="md">View All Products</Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+
+      {/* ══ 3. OUR COLLECTION — category grid ════════════════ */}
       <section className="bg-[#F5EDE0] py-28 px-6">
         <div className="max-w-6xl mx-auto">
           <FadeInView className="text-center mb-16">
             <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(61,20,40,0.45)] mb-4">
-              Our Collections
+              Browse by Category
             </p>
             <h2
               className="font-display text-damson"
               style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", letterSpacing: "0.05em" }}
             >
-              The Dhyom Collection
+              Our Collection
             </h2>
             <div className="mt-5 mx-auto w-12 h-px bg-[rgba(196,163,115,0.45)]" />
           </FadeInView>
@@ -291,92 +354,11 @@ export default async function Home() {
       </section>
 
 
-      {/* ══ FEATURE STRIP — Ink bg ══════════════════════════ */}
-      <FadeInView>
-      <section className="bg-ink border-y border-[rgba(196,163,115,0.10)] py-0">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 lg:grid-cols-5">
-            {features.map((f, i) => (
-              <div
-                key={i}
-                className={[
-                  "flex flex-col items-center text-center gap-3 px-6 py-8",
-                  "border-[rgba(196,163,115,0.10)]",
-                  i < features.length - 1 ? "border-b lg:border-b-0 lg:border-r" : "",
-                  // last item (5th) spans 2 cols on mobile so it's centred in its row
-                  i === 4 ? "col-span-2 lg:col-span-1" : "",
-                ].join(" ")}
-              >
-                <span className="text-brass opacity-70">{f.icon}</span>
-                <div>
-                  <p className="font-display text-[0.62rem] tracking-[0.12em] uppercase text-ivory leading-snug">
-                    {f.title}
-                  </p>
-                  <p className="font-body font-light italic text-[rgba(245,237,224,0.38)] text-xs mt-1">
-                    {f.subtitle}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      </FadeInView>
-
-
-      {/* ══ FEATURED PRODUCTS — Black Plum · Damson cards ══ */}
-      <section className="bg-black-plum py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <FadeInView className="text-center mb-14">
-            <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.45)] mb-4">
-              Handpicked
-            </p>
-            <h2
-              className="font-display text-ivory"
-              style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", letterSpacing: "0.05em" }}
-            >
-              The Collection
-            </h2>
-            <div className="mt-5 mx-auto w-12 h-px bg-[rgba(196,163,115,0.35)]" />
-          </FadeInView>
-
-          {featured.length > 0 ? (
-            <CardGrid gridClassName="grid-cols-2 lg:grid-cols-3 gap-6">
-              {featured.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  category={product.category}
-                  subcategorySlug={getSubcategorySlug(product)}
-                  label={buildLabel(product)}
-                  price={product.price}
-                  description={product.description || undefined}
-                  imageUrl={product.image_url || undefined}
-                />
-              ))}
-            </CardGrid>
-          ) : (
-            <p className="text-center font-body font-light italic text-[rgba(245,237,224,0.30)] text-base">
-              The collection is being assembled. Return soon.
-            </p>
-          )}
-
-          <div className="text-center mt-12">
-            <Link href="/shop/candle">
-              <Button variant="secondary" size="md">View All Products</Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-
-      {/* ══ SEASONAL SPOTLIGHT — Damson · split layout ══════ */}
+      {/* ══ 4. FESTIVAL CAMPAIGN — seasonal spotlight ════════ */}
       <FadeInView>
       <section className="bg-damson py-0 overflow-hidden">
         <div className="max-w-6xl mx-auto flex flex-col lg:flex-row">
 
-          {/* Image area */}
           <div className="lg:w-3/5 aspect-[4/3] lg:aspect-auto lg:min-h-[520px] bg-[#270b1b] relative overflow-hidden flex-shrink-0">
             {assets.seasonal_banner ? (
               <Image
@@ -402,7 +384,6 @@ export default async function Home() {
             )}
           </div>
 
-          {/* Text */}
           <div className="lg:w-2/5 flex flex-col justify-center px-10 py-16 lg:py-20">
             <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.55)] mb-5">
               Season of Light
@@ -433,7 +414,125 @@ export default async function Home() {
       </FadeInView>
 
 
-      {/* ══ NEWSLETTER CAPTURE — Damson ══════════════════════ */}
+      {/* ══ 5a. WHY CHOOSE DHYOM — trust strip ══════════════ */}
+      <FadeInView>
+      <section className="bg-ink border-y border-[rgba(196,163,115,0.10)] py-0">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-5">
+            {features.map((f, i) => (
+              <div
+                key={i}
+                className={[
+                  "flex flex-col items-center text-center gap-3 px-6 py-8",
+                  "border-[rgba(196,163,115,0.10)]",
+                  i < features.length - 1 ? "border-b lg:border-b-0 lg:border-r" : "",
+                  i === 4 ? "col-span-2 lg:col-span-1" : "",
+                ].join(" ")}
+              >
+                <span className="text-brass opacity-70">{f.icon}</span>
+                <div>
+                  <p className="font-display text-[0.62rem] tracking-[0.12em] uppercase text-ivory leading-snug">
+                    {f.title}
+                  </p>
+                  <p className="font-body font-light italic text-[rgba(245,237,224,0.38)] text-xs mt-1">
+                    {f.subtitle}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      </FadeInView>
+
+      {/* ══ 5b. OUR PURPOSE — story narrative ═══════════════ */}
+      <FadeInView>
+      <section className="relative bg-black-plum py-32 px-6 overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
+        >
+          <span
+            className="text-ivory"
+            style={{
+              fontFamily: "Georgia, serif",
+              fontSize: "clamp(18rem, 45vw, 30rem)",
+              opacity: 0.05,
+              lineHeight: 1,
+              userSelect: "none",
+            }}
+          >
+            ॐ
+          </span>
+        </div>
+
+        <div className="relative max-w-xl mx-auto text-center">
+          <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.55)] mb-5">
+            Our Purpose
+          </p>
+          <h2
+            className="font-display text-ivory mb-6"
+            style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "0.05em" }}
+          >
+            Rooted in Ritual
+          </h2>
+          <div className="w-10 h-px bg-[rgba(196,163,115,0.35)] mx-auto mb-10" />
+          <p className="font-body font-light text-[rgba(245,237,224,0.68)] text-lg leading-[1.95] mb-6">
+            Dhyom was born from a simple belief — that the rituals we inherit
+            deserve the finest materials the earth can offer. Every piece in
+            our collection is crafted by skilled artisans using sustainable,
+            ethically sourced materials, honouring both the sacred traditions
+            of India and the world we share.
+          </p>
+          <p className="font-body font-light italic text-[rgba(245,237,224,0.40)] text-base leading-relaxed mb-12">
+            We exist so that your home may hold a little more intention,
+            a little more stillness.
+          </p>
+          <Button variant="secondary" size="md">Read Our Story</Button>
+        </div>
+      </section>
+      </FadeInView>
+
+
+      {/* ══ 6. TESTIMONIALS — only if approved reviews exist ═ */}
+      {reviews.length > 0 && (
+        <section className="bg-damson py-24 px-6">
+          <div className="max-w-6xl mx-auto">
+            <FadeInView className="text-center mb-14">
+              <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.45)] mb-4">
+                Customer Stories
+              </p>
+              <h2
+                className="font-display text-ivory"
+                style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", letterSpacing: "0.05em" }}
+              >
+                What Our Customers Say
+              </h2>
+              <div className="mt-5 mx-auto w-12 h-px bg-[rgba(196,163,115,0.35)]" />
+            </FadeInView>
+
+            <CardGrid gridClassName="grid-cols-2 lg:grid-cols-3 gap-6">
+              {reviews.map((review) => (
+                <div
+                  key={review.id}
+                  className="bg-[#2a0c1c] border border-[rgba(196,163,115,0.15)] rounded-[6px] p-7 flex flex-col gap-4 h-full"
+                >
+                  <Stars rating={review.rating} />
+                  <p className="font-body font-light italic text-[rgba(245,237,224,0.70)] text-[0.95rem] leading-relaxed flex-1">
+                    &ldquo;{review.body}&rdquo;
+                  </p>
+                  <p className="font-display text-[0.58rem] tracking-[0.18em] uppercase text-brass">
+                    — {review.name}
+                  </p>
+                </div>
+              ))}
+            </CardGrid>
+          </div>
+        </section>
+      )}
+
+
+      {/* ══ 7. DISCOVER YOUR RITUAL — newsletter ═════════════ */}
       <FadeInView>
       <section className="bg-damson border-t border-[rgba(196,163,115,0.14)] py-24 px-6">
         <div className="max-w-xl mx-auto text-center">
@@ -461,55 +560,6 @@ export default async function Home() {
           <p className="font-body text-[0.72rem] text-[rgba(245,237,224,0.25)] mt-5 leading-relaxed">
             No spam. Unsubscribe at any time.
           </p>
-        </div>
-      </section>
-      </FadeInView>
-
-
-      {/* ══ OUR STORY — Black Plum · Om watermark ══════════ */}
-      <FadeInView>
-      <section className="relative bg-black-plum py-32 px-6 overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center pointer-events-none select-none"
-        >
-          <span
-            className="text-ivory"
-            style={{
-              fontFamily: "Georgia, serif",
-              fontSize: "clamp(18rem, 45vw, 30rem)",
-              opacity: 0.05,
-              lineHeight: 1,
-              userSelect: "none",
-            }}
-          >
-            ॐ
-          </span>
-        </div>
-
-        <div className="relative max-w-xl mx-auto text-center">
-          <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.55)] mb-5">
-            Our Story
-          </p>
-          <h2
-            className="font-display text-ivory mb-6"
-            style={{ fontSize: "clamp(1.8rem, 3.5vw, 2.6rem)", letterSpacing: "0.05em" }}
-          >
-            Rooted in Ritual
-          </h2>
-          <div className="w-10 h-px bg-[rgba(196,163,115,0.35)] mx-auto mb-10" />
-          <p className="font-body font-light text-[rgba(245,237,224,0.68)] text-lg leading-[1.95] mb-6">
-            Dhyom was born from a simple belief — that the rituals we inherit
-            deserve the finest materials the earth can offer. Every piece in
-            our collection is crafted by skilled artisans using sustainable,
-            ethically sourced materials, honouring both the sacred traditions
-            of India and the world we share.
-          </p>
-          <p className="font-body font-light italic text-[rgba(245,237,224,0.40)] text-base leading-relaxed mb-12">
-            We exist so that your home may hold a little more intention,
-            a little more stillness.
-          </p>
-          <Button variant="secondary" size="md">Read Our Story</Button>
         </div>
       </section>
       </FadeInView>
