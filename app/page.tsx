@@ -6,7 +6,6 @@ import NewsletterForm from "@/components/NewsletterForm";
 import FadeIn from "@/components/FadeIn";
 import FadeInView from "@/components/FadeInView";
 import CardGrid from "@/components/CardGrid";
-import HeroBackground from "@/components/HeroBackground";
 import { createServerClient } from "@/lib/supabase/server";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import type { DbProduct } from "@/lib/supabase/types";
@@ -188,7 +187,6 @@ export default async function Home() {
 
       {/* ══ 1. HERO ══════════════════════════════════════════ */}
       <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson overflow-hidden">
-        {/* Static image — always rendered; preloads instantly; mobile fallback */}
         {assets.hero_background && (
           <Image
             src={assets.hero_background}
@@ -200,13 +198,7 @@ export default async function Home() {
           />
         )}
 
-        {/* Video overlay — desktop only; src set client-side so mobile never downloads it */}
-        <HeroBackground
-          videoSrc="/videos/hero-video.mp4"
-          posterUrl={assets.hero_background ?? undefined}
-        />
-
-        {/* Gradient overlay — sits above both image and video (DOM order) */}
+        {/* Gradient overlay */}
         <div
           className="absolute inset-0"
           style={{
