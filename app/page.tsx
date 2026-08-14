@@ -386,21 +386,21 @@ export default async function Home() {
 
           <div className="lg:w-2/5 flex flex-col justify-center px-10 py-16 lg:py-20">
             <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.55)] mb-5">
-              Season of Light
+              Raksha Bandhan
             </p>
             <h2
               className="font-display text-ivory mb-5"
               style={{ fontSize: "clamp(1.8rem, 3vw, 2.6rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
             >
-              The Diwali
+              The Rakhi
               <br />
               <span className="text-brass">Collection</span>
             </h2>
             <div className="w-8 h-px bg-[rgba(196,163,115,0.35)] mb-7" />
             <p className="font-body font-light italic text-[rgba(245,237,224,0.55)] text-base leading-relaxed mb-10">
-              Every home deserves to greet Diwali with something sacred.
-              Candles, incense, and intention — assembled for the festival
-              of lights and the season of giving.
+              A gift she will light every morning. A ritual that begins
+              because of you. Candles, incense, and intention — assembled
+              for the bond you cherish most.
             </p>
             <div>
               <Link href="/shop/gift">
