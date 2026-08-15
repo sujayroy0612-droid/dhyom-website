@@ -187,18 +187,17 @@ export default async function Home() {
     <div className="min-h-screen">
 
       {/* ══ 1. HERO ══════════════════════════════════════════ */}
-      <section className="relative w-full bg-damson overflow-hidden" style={{ minHeight: "50vw" }}>
-        {/* Desktop: natural-size image — section height adapts, no crop */}
+      <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson overflow-hidden">
+        {/* Desktop: static image */}
         {assets.hero_background && (
           <Image
             src={assets.hero_background.replace("/upload/", "/upload/c_limit,w_2400,q_auto:best,f_auto/")}
             alt=""
-            width={0}
-            height={0}
+            fill
             priority
             quality={90}
-            className="hidden md:block w-full h-auto"
-            sizes="100vw"
+            className="object-cover"
+            sizes="(max-width: 767px) 0px, 100vw"
           />
         )}
 
@@ -208,55 +207,52 @@ export default async function Home() {
           posterUrl={assets.hero_background ?? undefined}
         />
 
-        {/* All content overlaid absolutely */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-          {/* Gradient overlay */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(to bottom, rgba(61,20,40,0.78) 0%, rgba(61,20,40,0.22) 28%, rgba(61,20,40,0.10) 50%, rgba(61,20,40,0.25) 72%, rgba(61,20,40,0.72) 100%)",
-            }}
-          />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                "radial-gradient(ellipse 70% 55% at 50% 38%, rgba(107,42,72,0.38) 0%, transparent 70%)",
-            }}
-          />
+        {/* Gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(61,20,40,0.78) 0%, rgba(61,20,40,0.22) 28%, rgba(61,20,40,0.10) 50%, rgba(61,20,40,0.25) 72%, rgba(61,20,40,0.72) 100%)",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 55% at 50% 38%, rgba(107,42,72,0.38) 0%, transparent 70%)",
+          }}
+        />
 
-          <FadeIn delay={0} className="relative">
-            <p className="font-display text-[0.62rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.60)] mb-7">
-              Sacred · Sustainable · Indian
-            </p>
-          </FadeIn>
+        <FadeIn delay={0} className="relative">
+          <p className="font-display text-[0.62rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.60)] mb-7">
+            Sacred · Sustainable · Indian
+          </p>
+        </FadeIn>
 
-          <FadeIn delay={0.14} className="relative">
-            <h1
-              className="font-display text-ivory mb-10 max-w-3xl"
-              style={{ fontSize: "clamp(2.6rem, 6vw, 4.8rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
-            >
-              Bring the Sacred
-              <br />
-              <span className="text-brass">Home</span>
-            </h1>
-          </FadeIn>
+        <FadeIn delay={0.14} className="relative">
+          <h1
+            className="font-display text-ivory mb-10 max-w-3xl"
+            style={{ fontSize: "clamp(2.6rem, 6vw, 4.8rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
+          >
+            Bring the Sacred
+            <br />
+            <span className="text-brass">Home</span>
+          </h1>
+        </FadeIn>
 
-          <FadeIn delay={0.30} className="relative">
-            <Link
-              href="/shop"
-              className="inline-flex items-center justify-center font-display uppercase tracking-[0.22em] rounded-full transition-colors duration-200 active:scale-[0.98] px-8 py-2.5 text-[0.65rem] bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383]"
-            >
-              Explore the Collection
-            </Link>
-          </FadeIn>
+        <FadeIn delay={0.30} className="relative">
+          <Link
+            href="/shop"
+            className="inline-flex items-center justify-center font-display uppercase tracking-[0.22em] rounded-full transition-colors duration-200 active:scale-[0.98] px-8 py-2.5 text-[0.65rem] bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383]"
+          >
+            Explore the Collection
+          </Link>
+        </FadeIn>
 
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[rgba(196,163,115,0.35)]">
-            <span className="font-display text-[0.55rem] tracking-[0.28em] uppercase">Scroll</span>
-            <div className="w-px h-8 bg-gradient-to-b from-[rgba(196,163,115,0.35)] to-transparent" />
-          </div>
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[rgba(196,163,115,0.35)]">
+          <span className="font-display text-[0.55rem] tracking-[0.28em] uppercase">Scroll</span>
+          <div className="w-px h-8 bg-gradient-to-b from-[rgba(196,163,115,0.35)] to-transparent" />
         </div>
       </section>
 
