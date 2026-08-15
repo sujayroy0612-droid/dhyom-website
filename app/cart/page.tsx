@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart, CartItem } from "@/lib/cart/CartContext";
-import { supabase } from "@/lib/supabase/client";
 
 const SHIPPING = 80;
 
@@ -81,30 +80,17 @@ export default function CartPage() {
   const [bumpProduct, setBumpProduct] = useState<BumpProduct | null>(null);
   const [bumpChecked, setBumpChecked] = useState(false);
 
-  /* ── Fetch bump product from funnel_settings ── */
+  /* ── Fetch bump product via server API (bypasses RLS) ── */
   useEffect(() => {
     setBumpChecked(false);
     if (items.length === 0) { setBumpProduct(null); return; }
     const primaryCat = items[0]?.category;
     if (!primaryCat) { setBumpProduct(null); return; }
 
-    async function fetchBump() {
-      const { data: fs } = await supabase
-        .from("funnel_settings")
-        .select("bump_product_id")
-        .eq("category", primaryCat)
-        .single();
-      const bumpId = fs?.bump_product_id;
-      if (!bumpId) { setBumpProduct(null); return; }
-      const { data: p } = await supabase
-        .from("products")
-        .select("id,name,price,image_url,category,subcategory,collection,type,fragrance")
-        .eq("id", bumpId)
-        .eq("is_visible", true)
-        .single();
-      setBumpProduct(p ? (p as BumpProduct) : null);
-    }
-    fetchBump();
+    fetch(`/api/funnel-bump?category=${encodeURIComponent(primaryCat)}`)
+      .then((r) => r.json())
+      .then(({ product }) => setBumpProduct(product ?? null))
+      .catch(() => setBumpProduct(null));
   }, [items]);
 
   const couponMeta = coupon.status === "applied" ? coupon.meta : null;
