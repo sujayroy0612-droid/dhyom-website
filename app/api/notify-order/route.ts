@@ -1,7 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { createClient } from "@supabase/supabase-js";
 
 const FOUNDER_EMAIL = "dhyomecom@gmail.com";
+
+function adminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
+
+async function tagAsBuyer(email: string) {
+  try {
+    const sb = adminClient();
+    const { data: updated, error: updateErr } = await sb
+      .from("contacts")
+      .update({ tag: "buyer" })
+      .eq("email", email)
+      .select("id");
+    if (updateErr) {
+      console.error("[notify-order] buyer tag UPDATE error:", updateErr);
+      return;
+    }
+    if (!updated || updated.length === 0) {
+      const { error: insertErr } = await sb
+        .from("contacts")
+        .insert({ email, tag: "buyer" });
+      if (insertErr) {
+        console.error("[notify-order] buyer tag INSERT error:", insertErr);
+      }
+    }
+  } catch (err) {
+    console.error("[notify-order] tagAsBuyer error:", err);
+  }
+}
 
 interface OrderItem {
   name: string;
@@ -100,12 +134,6 @@ function buildHtml(data: {
 
 export async function POST(req: NextRequest) {
   try {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      console.warn("[notify-order] RESEND_API_KEY not set — skipping email");
-      return NextResponse.json({ ok: true, skipped: true });
-    }
-
     const body = await req.json();
     const { orderNumber, customerName, phone, email, address, items, total, paymentStatus } = body;
 
@@ -113,8 +141,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "orderNumber required" }, { status: 400 });
     }
 
-    const resend = new Resend(apiKey);
+    // Tag buyer in contacts — errors are caught inside tagAsBuyer and logged, never surface here
+    if (email) await tagAsBuyer(email);
 
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.warn("[notify-order] RESEND_API_KEY not set — skipping email");
+      return NextResponse.json({ ok: true, skipped: true });
+    }
+
+    const resend = new Resend(apiKey);
     const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
 
     const { error } = await resend.emails.send({
