@@ -5,14 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
-
-function generateOrderNumber(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let s = "";
-  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return `DHYOM-${s}`;
-}
-
 interface OriginalOrder {
   order_number: string;
   first_name: string;
@@ -74,31 +66,12 @@ export default function DownsellPage() {
   async function handleAccept() {
     if (!order || !product) return;
     setAccepting(true);
-    const newNum = generateOrderNumber();
-    const { error: insertErr } = await supabase.from("orders").insert({
-      order_number:        newNum,
-      parent_order_number: order.order_number,
-      customer_id:         null,
-      customer_name:       order.customer_name,
-      first_name:          order.first_name,
-      last_name:           order.last_name,
-      email:               order.email,
-      phone:               order.phone,
-      address:             order.address,
-      shipping_street:     order.shipping_street,
-      shipping_city:       order.shipping_city,
-      shipping_state:      order.shipping_state,
-      shipping_pincode:    order.shipping_pincode,
-      items: [{ id: product.id, name: product.name, price: product.price, quantity: 1, label: "", imageUrl: product.image_url ?? "", category: product.category }],
-      subtotal:       product.price,
-      shipping_fee:   0,
-      discount:       0,
-      total:          product.price,
-      payment_method:  order.payment_method,
-      payment_status:  "pending",
-      order_status:    "pending",
+    const res = await fetch("/api/create-upsell-order", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ order, product }),
     });
-    if (insertErr) { setErr("Something went wrong. Please continue to your order."); setAccepting(false); return; }
+    if (!res.ok) { setErr("Something went wrong. Please continue to your order."); setAccepting(false); return; }
     router.push(`/order-confirmation/${order.order_number}`);
   }
 
