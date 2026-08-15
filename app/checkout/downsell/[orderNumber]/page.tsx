@@ -19,6 +19,9 @@ interface OriginalOrder {
   shipping_pincode: string;
   items: Array<{ id: string; name: string; price: number; quantity: number; category?: string; label: string; imageUrl: string }>;
   payment_method: "cod" | "online";
+  subtotal: number;
+  total: number;
+  shipping_fee: number;
 }
 
 interface OfferProduct {
@@ -44,7 +47,7 @@ export default function DownsellPage() {
     async function load() {
       const { data: o, error: oErr } = await supabase
         .from("orders")
-        .select("order_number,first_name,last_name,customer_name,email,phone,address,shipping_street,shipping_city,shipping_state,shipping_pincode,items,payment_method")
+        .select("order_number,first_name,last_name,customer_name,email,phone,address,shipping_street,shipping_city,shipping_state,shipping_pincode,items,payment_method,subtotal,total,shipping_fee")
         .eq("order_number", orderNumber)
         .single();
 
