@@ -85,10 +85,10 @@ export default function CartPage() {
   useEffect(() => {
     setBumpChecked(false);
     if (items.length === 0) { setBumpProduct(null); return; }
-    const primaryCat = items[0]?.category;
-    if (!primaryCat) { setBumpProduct(null); return; }
+    const primaryId = items[0]?.id;
+    if (!primaryId) { setBumpProduct(null); return; }
 
-    fetch(`/api/funnel-bump?category=${encodeURIComponent(primaryCat)}`)
+    fetch(`/api/funnel-bump?stage=bump&productId=${encodeURIComponent(primaryId)}`)
       .then((r) => r.json())
       .then(({ product }) => setBumpProduct(product ?? null))
       .catch(() => setBumpProduct(null));

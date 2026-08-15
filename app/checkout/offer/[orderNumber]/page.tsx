@@ -60,9 +60,10 @@ export default function OTOPage() {
       if (oErr || !o) { router.replace(`/order-confirmation/${orderNumber}`); return; }
       setOrder(o as OriginalOrder);
 
-      const primaryCat = ((o.items as {category?: string}[])[0]?.category) ?? "candle";
+      const primaryProductId = ((o.items as {id?: string}[])[0]?.id) ?? "";
+      if (!primaryProductId) { router.replace(`/checkout/downsell/${orderNumber}`); return; }
 
-      const funnelRes = await fetch(`/api/funnel-bump?stage=oto&category=${encodeURIComponent(primaryCat)}`);
+      const funnelRes = await fetch(`/api/funnel-bump?stage=oto&productId=${encodeURIComponent(primaryProductId)}`);
       const { product: p } = await funnelRes.json();
       if (!p) { router.replace(`/checkout/downsell/${orderNumber}`); return; }
       setProduct(p as OfferProduct);

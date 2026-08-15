@@ -16,27 +16,27 @@ function adminSupabase() {
 }
 
 export async function GET(req: NextRequest) {
-  const category = req.nextUrl.searchParams.get("category");
-  const stage    = req.nextUrl.searchParams.get("stage") ?? "bump";
-  const field    = STAGE_FIELD[stage];
+  const productId = req.nextUrl.searchParams.get("productId");
+  const stage     = req.nextUrl.searchParams.get("stage") ?? "bump";
+  const field     = STAGE_FIELD[stage];
 
-  if (!category || !field) return NextResponse.json({ product: null });
+  if (!productId || !field) return NextResponse.json({ product: null });
 
   const sb = adminSupabase();
 
   const { data: fs } = await sb
-    .from("funnel_settings")
+    .from("product_funnel_settings")
     .select(field)
-    .eq("category", category)
+    .eq("product_id", productId)
     .single();
 
-  const productId = fs ? (fs as unknown as Record<string, string | null>)[field] : null;
-  if (!productId) return NextResponse.json({ product: null });
+  const offerId = fs ? (fs as unknown as Record<string, string | null>)[field] : null;
+  if (!offerId) return NextResponse.json({ product: null });
 
   const { data: product } = await sb
     .from("products")
     .select("id,name,price,description,image_url,category,subcategory,collection,type,fragrance")
-    .eq("id", productId)
+    .eq("id", offerId)
     .eq("is_visible", true)
     .single();
 
