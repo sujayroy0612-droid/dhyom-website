@@ -188,7 +188,7 @@ export default async function Home() {
 
       {/* ══ 1. HERO ══════════════════════════════════════════ */}
       <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson overflow-hidden">
-        {/* Desktop: static image */}
+        {/* Desktop only: static image — explicitly hidden on mobile so video shows unobstructed */}
         {assets.hero_background && (
           <Image
             src={assets.hero_background.replace("/upload/", "/upload/c_limit,w_2400,q_auto:best,f_auto/")}
@@ -196,8 +196,8 @@ export default async function Home() {
             fill
             priority
             quality={90}
-            className="object-cover"
-            sizes="(max-width: 767px) 0px, 100vw"
+            className="hidden md:block object-cover"
+            sizes="100vw"
           />
         )}
 
