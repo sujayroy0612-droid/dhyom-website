@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ConditionalShell from "@/components/ConditionalShell";
 import Providers from "@/components/Providers";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
@@ -42,10 +43,10 @@ export default async function RootLayout({
       </head>
       <body>
         <Providers>
-          <Header logoUrl={logoUrl} shopNav={shopNav} />
+          <ConditionalShell><Header logoUrl={logoUrl} shopNav={shopNav} /></ConditionalShell>
           <main>{children}</main>
-          <Footer logoUrl={logoUrl} />
-          <WhatsAppButton />
+          <ConditionalShell><Footer logoUrl={logoUrl} /></ConditionalShell>
+          <ConditionalShell><WhatsAppButton /></ConditionalShell>
         </Providers>
       </body>
     </html>
