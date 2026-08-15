@@ -102,11 +102,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    const fromAddr = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
     const { data: resendData, error: resendErr } = await new Resend(apiKey).emails.send({
-      from: process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev",
+      from: `Dhyom <${fromAddr}>`,
       to: trimmed,
-      subject: "Your Dhyom Fragrance Personalities",
+      subject: "Your Dhyom Fragrance Personalities Guide",
       html: buildGuideHtml(),
+      text: "Your Dhyom Fragrance Personalities guide is attached. Visit dhyom.in to explore our collection.\n\nTo unsubscribe, reply with 'unsubscribe' in the subject.",
+      headers: {
+        "List-Unsubscribe": `<mailto:${fromAddr}?subject=unsubscribe>`,
+      },
       ...(pdfBase64 && {
         attachments: [{ filename: "Dhyom_Fragrance_Personalities.pdf", content: pdfBase64 }],
       }),
