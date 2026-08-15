@@ -188,15 +188,16 @@ export default async function Home() {
 
       {/* ══ 1. HERO ══════════════════════════════════════════ */}
       <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson overflow-hidden">
-        {/* Desktop: static image */}
+        {/* Desktop: static image — insert Cloudinary transforms to override any preset resize */}
         {assets.hero_background && (
           <Image
-            src={assets.hero_background}
+            src={assets.hero_background.replace("/upload/", "/upload/c_limit,w_2400,q_auto:best,f_auto/")}
             alt=""
             fill
             priority
+            quality={90}
             className="object-cover"
-            sizes="100vw"
+            sizes="(max-width: 767px) 0px, 100vw"
           />
         )}
 
