@@ -30,6 +30,9 @@
   --transition-slow: 400ms ease;
 }
 
+/* ── Horizontal scroll strip (no visible scrollbar) ── */
+.scroll-strip::-webkit-scrollbar { display: none; }
+
 /* ── Reset & base ── */
 *, *::before, *::after { box-sizing: border-box; }
 

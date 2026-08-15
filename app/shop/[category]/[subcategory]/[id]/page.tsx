@@ -231,19 +231,23 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <div className="mt-4 mx-auto w-8 h-px bg-[rgba(196,163,115,0.28)]" />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div
+              className="scroll-strip flex gap-5 overflow-x-auto pb-4 -mx-6 px-6"
+              style={{ scrollbarWidth: "none" }}
+            >
               {related.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  id={p.id}
-                  name={p.name}
-                  category={p.category}
-                  subcategorySlug={getSubcategorySlug(p)}
-                  label={buildCardLabel(p)}
-                  price={p.price}
-                  description={p.description || undefined}
-                  imageUrl={p.image_url || undefined}
-                />
+                <div key={p.id} className="flex-shrink-0 w-64 md:w-72">
+                  <ProductCard
+                    id={p.id}
+                    name={p.name}
+                    category={p.category}
+                    subcategorySlug={getSubcategorySlug(p)}
+                    label={buildCardLabel(p)}
+                    price={p.price}
+                    description={p.description || undefined}
+                    imageUrl={p.image_url || undefined}
+                  />
+                </div>
               ))}
             </div>
 

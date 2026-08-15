@@ -171,12 +171,15 @@ export default function CategoryPage({ params }: PageProps) {
 
       {/* Subcategory tiles */}
       <section className="px-6 py-16">
-        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div
+          className="scroll-strip flex gap-5 overflow-x-auto pb-4 -mx-6 px-6"
+          style={{ scrollbarWidth: "none" }}
+        >
           {subcategories.map((sub) => (
             <Link
               key={sub.slug}
               href={`/shop/${category}/${sub.slug}`}
-              className="group bg-damson border border-[rgba(196,163,115,0.14)] rounded-[6px] flex flex-col justify-between p-8 min-h-[180px] hover:border-[rgba(196,163,115,0.50)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.40)] hover:-translate-y-0.5 transition-all duration-300"
+              className="flex-shrink-0 w-72 group bg-damson border border-[rgba(196,163,115,0.14)] rounded-[6px] flex flex-col justify-between p-8 min-h-[180px] hover:border-[rgba(196,163,115,0.50)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.40)] hover:-translate-y-0.5 transition-all duration-300"
             >
               <div className="flex flex-col gap-3">
                 <h2

@@ -230,19 +230,23 @@ export default async function SubcategoryPage({ params }: PageProps) {
           )}
 
           {!error && products.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div
+              className="scroll-strip flex gap-5 overflow-x-auto pb-4 -mx-6 px-6"
+              style={{ scrollbarWidth: "none" }}
+            >
               {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  category={product.category}
-                  subcategorySlug={getSubcategorySlug(product)}
-                  label={buildLabel(product)}
-                  price={product.price}
-                  description={product.description || undefined}
-                  imageUrl={product.image_url || undefined}
-                />
+                <div key={product.id} className="flex-shrink-0 w-64 md:w-72">
+                  <ProductCard
+                    id={product.id}
+                    name={product.name}
+                    category={product.category}
+                    subcategorySlug={getSubcategorySlug(product)}
+                    label={buildLabel(product)}
+                    price={product.price}
+                    description={product.description || undefined}
+                    imageUrl={product.image_url || undefined}
+                  />
+                </div>
               ))}
             </div>
           )}
