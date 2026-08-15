@@ -49,9 +49,9 @@ export default async function FragranceGuidePage() {
           <Image
             src={logoUrl}
             alt="Dhyom"
-            width={160}
-            height={64}
-            className="h-14 w-auto object-contain"
+            width={240}
+            height={96}
+            className="h-24 w-auto object-contain"
             priority
           />
         ) : (
