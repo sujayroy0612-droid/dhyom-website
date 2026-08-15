@@ -61,21 +61,8 @@ export default function DownsellPage() {
 
       const primaryCat = ((o.items as {category?: string}[])[0]?.category) ?? "candle";
 
-      const { data: fs } = await supabase
-        .from("funnel_settings")
-        .select("downsell_product_id")
-        .eq("category", primaryCat)
-        .single();
-      const downsellId = fs?.downsell_product_id;
-      if (!downsellId) { router.replace(`/order-confirmation/${orderNumber}`); return; }
-
-      const { data: p } = await supabase
-        .from("products")
-        .select("id,name,price,description,image_url,category")
-        .eq("id", downsellId)
-        .eq("is_visible", true)
-        .single();
-
+      const funnelRes = await fetch(`/api/funnel-bump?stage=downsell&category=${encodeURIComponent(primaryCat)}`);
+      const { product: p } = await funnelRes.json();
       if (!p) { router.replace(`/order-confirmation/${orderNumber}`); return; }
       setProduct(p as OfferProduct);
       setLoading(false);

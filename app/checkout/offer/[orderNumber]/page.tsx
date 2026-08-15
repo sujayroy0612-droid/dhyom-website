@@ -62,21 +62,8 @@ export default function OTOPage() {
 
       const primaryCat = ((o.items as {category?: string}[])[0]?.category) ?? "candle";
 
-      const { data: fs } = await supabase
-        .from("funnel_settings")
-        .select("oto_product_id")
-        .eq("category", primaryCat)
-        .single();
-      const otoId = fs?.oto_product_id;
-      if (!otoId) { router.replace(`/checkout/downsell/${orderNumber}`); return; }
-
-      const { data: p } = await supabase
-        .from("products")
-        .select("id,name,price,description,image_url,category")
-        .eq("id", otoId)
-        .eq("is_visible", true)
-        .single();
-
+      const funnelRes = await fetch(`/api/funnel-bump?stage=oto&category=${encodeURIComponent(primaryCat)}`);
+      const { product: p } = await funnelRes.json();
       if (!p) { router.replace(`/checkout/downsell/${orderNumber}`); return; }
       setProduct(p as OfferProduct);
       setLoading(false);
