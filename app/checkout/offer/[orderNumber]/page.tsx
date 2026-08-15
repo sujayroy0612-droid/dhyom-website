@@ -5,6 +5,20 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
+declare global { interface Window { Razorpay: new (o: RzpOpts) => { open(): void } } }
+interface RzpOpts { key: string; amount: number; currency: string; name: string; description: string; order_id: string; prefill: { name: string; email: string; contact: string }; theme: { color: string }; handler(r: { razorpay_payment_id: string }): void; modal: { ondismiss(): void } }
+
+function loadRazorpay(): Promise<boolean> {
+  return new Promise(resolve => {
+    if (typeof window !== "undefined" && window.Razorpay) { resolve(true); return; }
+    const s = document.createElement("script");
+    s.src = "https://checkout.razorpay.com/v1/checkout.js";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
+
 interface OriginalOrder {
   order_number: string;
   first_name: string;
@@ -69,13 +83,57 @@ export default function OTOPage() {
   async function handleAccept() {
     if (!order || !product) return;
     setAccepting(true);
-    const res = await fetch("/api/create-upsell-order", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ order, product }),
-    });
-    if (!res.ok) { setErr("Something went wrong. Please continue to your order."); setAccepting(false); return; }
-    router.push(`/order-confirmation/${order.order_number}`);
+    setErr(null);
+
+    try {
+      // Create Razorpay payment order for OTO amount
+      const orderRes = await fetch("/api/create-order", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ amount: product.price, orderNumber: order.order_number }),
+      });
+      if (!orderRes.ok) throw new Error("payment-init");
+      const { razorpayOrderId } = await orderRes.json();
+
+      const loaded = await loadRazorpay();
+      if (!loaded) throw new Error("gateway-unavailable");
+
+      const rzp = new window.Razorpay({
+        key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+        amount:      Math.round(product.price * 100),
+        currency:    "INR",
+        name:        "Dhyom",
+        description: product.name,
+        order_id:    razorpayOrderId,
+        prefill:     { name: order.customer_name, email: order.email, contact: order.phone },
+        theme:       { color: "#3D1428" },
+        handler: async (response) => {
+          // Payment succeeded — add OTO item to existing order
+          const addRes = await fetch("/api/create-upsell-order", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ order, product, razorpay_payment_id: response.razorpay_payment_id }),
+          });
+          if (!addRes.ok) {
+            setErr(`Payment received (ID: ${response.razorpay_payment_id}) but order update failed. Please contact us.`);
+            setAccepting(false);
+            return;
+          }
+          router.push(`/order-confirmation/${order.order_number}`);
+        },
+        modal: {
+          ondismiss: () => {
+            // Payment dismissed — treat as decline, go to downsell
+            setAccepting(false);
+            router.push(`/checkout/downsell/${order.order_number}`);
+          },
+        },
+      });
+      rzp.open();
+    } catch {
+      setErr("Unable to open payment. Please try again.");
+      setAccepting(false);
+    }
   }
 
   function handleDecline() {
@@ -137,7 +195,7 @@ export default function OTOPage() {
             disabled={accepting}
             className="w-full flex items-center justify-center gap-2.5 font-display text-[0.65rem] tracking-[0.22em] uppercase bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383] rounded-[3px] py-4 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {accepting ? "Adding to your order..." : "Add to My Order"}
+            {accepting ? "Opening payment…" : `Yes — Add for ₹${product.price.toLocaleString("en-IN")}`}
           </button>
           <button
             type="button"
