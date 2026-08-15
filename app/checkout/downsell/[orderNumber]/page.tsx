@@ -5,8 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
-declare global { interface Window { Razorpay: new (o: RzpOptsDn) => { open(): void } } }
 interface RzpOptsDn { key: string; amount: number; currency: string; name: string; description: string; order_id: string; prefill: { name: string; email: string; contact: string }; theme: { color: string }; handler(r: { razorpay_payment_id: string }): void; modal: { ondismiss(): void } }
+type RzpConstructorDn = new (o: RzpOptsDn) => { open(): void };
 
 function loadRazorpay(): Promise<boolean> {
   return new Promise(resolve => {
@@ -97,7 +97,7 @@ export default function DownsellPage() {
       const loaded = await loadRazorpay();
       if (!loaded) throw new Error("gateway-unavailable");
 
-      const rzp = new window.Razorpay({
+      const rzp = new (window.Razorpay as unknown as RzpConstructorDn)({
         key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
         amount:      Math.round(product.price * 100),
         currency:    "INR",
