@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     .eq("category", category)
     .single();
 
-  const productId = fs?.[field];
+  const productId = fs ? (fs as unknown as Record<string, string | null>)[field] : null;
   if (!productId) return NextResponse.json({ product: null });
 
   const { data: product } = await sb
