@@ -196,7 +196,7 @@ export default async function Home() {
             fill
             priority
             quality={90}
-            className="object-contain"
+            className="object-cover"
             sizes="(max-width: 767px) 0px, 100vw"
           />
         )}
