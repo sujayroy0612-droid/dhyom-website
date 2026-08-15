@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 export default function NewsletterForm() {
   const [email, setEmail] = useState("");
@@ -8,14 +9,14 @@ export default function NewsletterForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("loading");
-    try {
-      // TODO: wire to Supabase contacts table INSERT
-      await new Promise((r) => setTimeout(r, 600)); // placeholder delay
-      setStatus("done");
-    } catch {
+    const trimmed = email.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       setStatus("error");
+      return;
     }
+    setStatus("loading");
+    const { error } = await supabase.from("contacts").insert({ email: trimmed, tag: "newsletter" });
+    setStatus(error ? "error" : "done");
   }
 
   if (status === "done") {
