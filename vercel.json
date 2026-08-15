@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/soap-opera",
+      "schedule": "0 5 * * *"
+    }
+  ]
+}
