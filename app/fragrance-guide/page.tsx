@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { fetchSiteAssets } from "@/lib/supabase/site-assets";
 import FragranceForm from "./FragranceForm";
 
@@ -23,6 +24,24 @@ export default async function FragranceGuidePage() {
         }}
       />
 
+      {/* Minimal nav — Home + Shop only */}
+      <nav className="absolute top-0 left-0 right-0 flex items-center justify-center gap-10 px-8 py-6">
+        <Link
+          href="/"
+          className="font-display text-[rgba(196,163,115,0.55)] hover:text-brass transition-colors duration-200"
+          style={{ fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase" }}
+        >
+          Home
+        </Link>
+        <Link
+          href="/shop"
+          className="font-display text-[rgba(196,163,115,0.55)] hover:text-brass transition-colors duration-200"
+          style={{ fontSize: "0.55rem", letterSpacing: "0.22em", textTransform: "uppercase" }}
+        >
+          Shop
+        </Link>
+      </nav>
+
       <div className="relative w-full max-w-lg mx-auto flex flex-col items-center text-center gap-7">
 
         {/* Logo */}
@@ -30,9 +49,9 @@ export default async function FragranceGuidePage() {
           <Image
             src={logoUrl}
             alt="Dhyom"
-            width={110}
-            height={44}
-            className="h-9 w-auto object-contain"
+            width={160}
+            height={64}
+            className="h-14 w-auto object-contain"
             priority
           />
         ) : (
