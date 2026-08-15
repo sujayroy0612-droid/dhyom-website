@@ -72,14 +72,27 @@ export async function POST(req: NextRequest) {
       console.error("[fragrance-guide] contacts exception:", ex);
     }
 
-    // 3. Read PDF from /public — graceful if not yet placed
-    let pdfBuffer: Buffer | undefined;
+    // 3. Read PDF — try filesystem first, fall back to CDN fetch
+    let pdfBase64: string | undefined;
     try {
-      pdfBuffer = await readFile(
+      const buf = await readFile(
         join(process.cwd(), "public", "Dhyom_Fragrance_Personalities.pdf")
       );
+      pdfBase64 = buf.toString("base64");
+      console.log("[fragrance-guide] PDF loaded from filesystem, size:", buf.length);
     } catch {
-      console.warn("[fragrance-guide] PDF not found at public/Dhyom_Fragrance_Personalities.pdf — sending without attachment");
+      console.warn("[fragrance-guide] Filesystem read failed — trying CDN fetch");
+      try {
+        const res = await fetch("https://dhyom.in/Dhyom_Fragrance_Personalities.pdf");
+        if (res.ok) {
+          pdfBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
+          console.log("[fragrance-guide] PDF loaded via CDN fetch");
+        } else {
+          console.warn("[fragrance-guide] CDN fetch returned", res.status);
+        }
+      } catch (fetchEx) {
+        console.warn("[fragrance-guide] PDF unavailable — sending without attachment:", fetchEx);
+      }
     }
 
     // 4. Send via Resend
@@ -89,19 +102,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    const { error: resendErr } = await new Resend(apiKey).emails.send({
+    const { data: resendData, error: resendErr } = await new Resend(apiKey).emails.send({
       from: process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev",
       to: trimmed,
       subject: "Your Dhyom Fragrance Personalities",
       html: buildGuideHtml(),
-      ...(pdfBuffer && {
-        attachments: [{ filename: "Dhyom_Fragrance_Personalities.pdf", content: pdfBuffer }],
+      ...(pdfBase64 && {
+        attachments: [{ filename: "Dhyom_Fragrance_Personalities.pdf", content: pdfBase64 }],
       }),
     });
 
     if (resendErr) {
-      // Contact already saved — log but don't alarm the user
-      console.error("[fragrance-guide] Resend error:", resendErr);
+      console.error("[fragrance-guide] Resend error:", JSON.stringify(resendErr));
+    } else {
+      console.log("[fragrance-guide] Email sent, id:", resendData?.id);
     }
 
     return NextResponse.json({ ok: true });
