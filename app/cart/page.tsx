@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart, CartItem } from "@/lib/cart/CartContext";
+import { supabase } from "@/lib/supabase/client";
 
 const SHIPPING = 80;
 
