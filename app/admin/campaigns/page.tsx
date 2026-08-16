@@ -171,9 +171,10 @@ export default function CampaignsPage() {
       fd.append("file",           file);
       fd.append("upload_preset",  UPLOAD_PRESET);
       fd.append("public_id",      publicId);
+      fd.append("resource_type",  "raw");
 
       const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`,
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`,
         { method: "POST", body: fd }
       );
       if (!res.ok) {
