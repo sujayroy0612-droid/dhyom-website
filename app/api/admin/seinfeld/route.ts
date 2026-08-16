@@ -159,9 +159,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ sent: 0, errors: [], recipient_count: 0 });
     }
 
-    const BATCH_SIZE = 50;
-    let   sent       = 0;
-    const errors: string[] = [];
+    const sb = adminClient();
+
+    // Insert broadcast as draft first — need the ID for broadcast_recipients FK
+    const { data: broadcastRow, error: insertErr } = await sb
+      .from("broadcasts")
+      .insert({
+        subject,
+        preview_text: preview_text ?? "",
+        body_html,
+        audience,
+        recipient_count: 0,
+        status: "draft",
+      })
+      .select("id")
+      .single();
+
+    if (insertErr || !broadcastRow) {
+      console.error("[seinfeld] broadcasts INSERT error:", insertErr);
+      return NextResponse.json({ error: "Failed to create broadcast record" }, { status: 500 });
+    }
+
+    const broadcastId = broadcastRow.id as string;
+
+    const BATCH_SIZE  = 50;
+    const sentEmails: string[] = [];
+    const errors: string[]     = [];
 
     for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
       const batch  = recipients.slice(i, i + BATCH_SIZE);
@@ -186,30 +209,39 @@ export async function POST(req: NextRequest) {
           console.error(`[seinfeld] batch ${Math.floor(i / BATCH_SIZE) + 1} error:`, batchErr);
           errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${JSON.stringify(batchErr)}`);
         } else {
-          sent += batch.length;
+          sentEmails.push(...batch.map(r => r.email));
         }
       } catch (err) {
         console.error(`[seinfeld] batch ${Math.floor(i / BATCH_SIZE) + 1} exception:`, err);
         errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${String(err)}`);
       }
 
-      // Rate-limit gap between batches
       if (i + BATCH_SIZE < recipients.length) await sleep(500);
     }
 
-    // Record broadcast
-    const { error: dbErr } = await adminClient().from("broadcasts").insert({
-      subject,
-      preview_text: preview_text ?? "",
-      body_html,
-      audience,
-      recipient_count: sent,
-      status:   "sent",
-      sent_at:  new Date().toISOString(),
-    });
-    if (dbErr) console.error("[seinfeld] broadcasts INSERT error:", dbErr);
+    const now = new Date().toISOString();
 
-    return NextResponse.json({ sent, errors, recipient_count: recipients.length });
+    // Write per-contact send log — one row per unique email actually sent
+    if (sentEmails.length > 0) {
+      const { error: recipErr } = await sb.from("broadcast_recipients").insert(
+        sentEmails.map(email => ({
+          broadcast_id:  broadcastId,
+          contact_email: email,
+          sent_at:       now,
+        }))
+      );
+      if (recipErr) console.error("[seinfeld] broadcast_recipients INSERT error:", recipErr);
+    }
+
+    // Finalize broadcast record
+    const { error: updateErr } = await sb.from("broadcasts").update({
+      status:          "sent",
+      recipient_count: sentEmails.length,
+      sent_at:         now,
+    }).eq("id", broadcastId);
+    if (updateErr) console.error("[seinfeld] broadcasts UPDATE error:", updateErr);
+
+    return NextResponse.json({ sent: sentEmails.length, errors, recipient_count: recipients.length });
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });

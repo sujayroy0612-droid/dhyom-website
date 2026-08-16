@@ -14,6 +14,8 @@ type Lead = {
   unsubscribed: boolean;
   campaign_id: string | null;
   campaigns: { title: string } | null;
+  seinfeld_count: number;
+  seinfeld_last_sent: string | null;
 };
 
 type Stats = {
@@ -46,6 +48,11 @@ const TAG_FG: Record<string, string> = {
 function fmt(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" });
+}
+
+function fmtShort(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 }
 
 export default function LeadsPage() {
@@ -106,7 +113,7 @@ export default function LeadsPage() {
   }
 
   function exportCSV() {
-    const headers = ["Email", "Name", "Tag", "Campaign", "Captured", "Soap Day", "Last Email", "Unsubscribed"];
+    const headers = ["Email", "Name", "Tag", "Campaign", "Captured", "Soap Day", "Last Email", "Unsubscribed", "Seinfeld Sends", "Seinfeld Last Sent"];
     const rows = leads.map(l => [
       l.email,
       l.name ?? "",
@@ -116,6 +123,8 @@ export default function LeadsPage() {
       String(l.sequence_day_sent),
       fmt(l.last_email_sent_at),
       l.unsubscribed ? "Yes" : "No",
+      String(l.seinfeld_count),
+      fmtShort(l.seinfeld_last_sent),
     ]);
     const csv  = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -232,10 +241,10 @@ export default function LeadsPage() {
             <table className="w-full text-[0.82rem]">
               <thead>
                 <tr className="border-b border-[rgba(196,163,115,0.10)] bg-[rgba(196,163,115,0.04)]">
-                  {["Email", "Tag", "Campaign", "Captured", "Soap Day", ""].map((h, i) => (
+                  {["Email", "Tag", "Campaign", "Captured", "Soap Day", "Seinfeld", ""].map((h, i) => (
                     <th
                       key={i}
-                      className={`px-4 py-3 font-display text-[0.38rem] tracking-[0.15em] uppercase text-[rgba(196,163,115,0.45)] ${i === 0 ? "text-left" : i === 5 ? "text-right" : "text-left"}`}
+                      className={`px-4 py-3 font-display text-[0.38rem] tracking-[0.15em] uppercase text-[rgba(196,163,115,0.45)] ${i === 0 ? "text-left" : i === 6 ? "text-right" : "text-left"}`}
                     >
                       {h}
                     </th>
@@ -245,13 +254,13 @@ export default function LeadsPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-14 text-center text-[rgba(245,237,224,0.22)] italic text-[0.85rem]">
+                    <td colSpan={7} className="px-4 py-14 text-center text-[rgba(245,237,224,0.22)] italic text-[0.85rem]">
                       Loading…
                     </td>
                   </tr>
                 ) : leads.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-14 text-center text-[rgba(245,237,224,0.22)] italic text-[0.85rem]">
+                    <td colSpan={7} className="px-4 py-14 text-center text-[rgba(245,237,224,0.22)] italic text-[0.85rem]">
                       No leads found.
                     </td>
                   </tr>
@@ -314,6 +323,14 @@ export default function LeadsPage() {
                             {lead.sequence_day_sent}/5
                           </span>
                         </div>
+                      </td>
+
+                      {/* Seinfeld */}
+                      <td className="px-4 py-3 whitespace-nowrap text-[rgba(245,237,224,0.38)] text-[0.78rem]">
+                        {lead.seinfeld_count > 0
+                          ? `${lead.seinfeld_count} · last ${fmtShort(lead.seinfeld_last_sent)}`
+                          : "—"
+                        }
                       </td>
 
                       {/* Delete */}

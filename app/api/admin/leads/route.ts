@@ -31,17 +31,20 @@ export async function GET(req: NextRequest) {
 
   const sb = adminClient();
 
-  // Stats via parallel count queries
-  const [total, buyer, reelLead, newsletter, checkoutLead, inquiry, unsubscribed] =
-    await Promise.all([
-      sb.from("contacts").select("*", { count: "exact", head: true }),
-      sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "buyer"),
-      sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "reel_lead"),
-      sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "newsletter"),
-      sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "checkout_lead"),
-      sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "inquiry"),
-      sb.from("contacts").select("*", { count: "exact", head: true }).eq("unsubscribed", true),
-    ]);
+  // Stats counts + broadcast_recipient_stats in parallel
+  const [
+    total, buyer, reelLead, newsletter, checkoutLead, inquiry, unsubscribed,
+    broadcastStats,
+  ] = await Promise.all([
+    sb.from("contacts").select("*", { count: "exact", head: true }),
+    sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "buyer"),
+    sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "reel_lead"),
+    sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "newsletter"),
+    sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "checkout_lead"),
+    sb.from("contacts").select("*", { count: "exact", head: true }).eq("tag", "inquiry"),
+    sb.from("contacts").select("*", { count: "exact", head: true }).eq("unsubscribed", true),
+    sb.from("broadcast_recipient_stats").select("contact_email, seinfeld_count, seinfeld_last_sent"),
+  ]);
 
   const stats = {
     total:         total.count         ?? 0,
@@ -52,6 +55,13 @@ export async function GET(req: NextRequest) {
     inquiry:       inquiry.count       ?? 0,
     unsubscribed:  unsubscribed.count  ?? 0,
   };
+
+  // Build per-email Seinfeld stats map from the aggregate view
+  type BroadcastStatRow = { contact_email: string; seinfeld_count: number; seinfeld_last_sent: string | null };
+  const seinfeldMap = new Map<string, { count: number; last_sent: string | null }>();
+  for (const row of (broadcastStats.data ?? []) as BroadcastStatRow[]) {
+    seinfeldMap.set(row.contact_email, { count: row.seinfeld_count, last_sent: row.seinfeld_last_sent });
+  }
 
   // Leads query
   let query = sb
@@ -70,7 +80,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ leads, total: count, stats });
+  // Attach seinfeld_count + seinfeld_last_sent to each lead
+  const enrichedLeads = (leads ?? []).map(l => {
+    const sf = seinfeldMap.get(l.email);
+    return {
+      ...l,
+      seinfeld_count:     sf?.count     ?? 0,
+      seinfeld_last_sent: sf?.last_sent ?? null,
+    };
+  });
+
+  return NextResponse.json({ leads: enrichedLeads, total: count, stats });
 }
 
 export async function DELETE(req: NextRequest) {
