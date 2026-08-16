@@ -120,7 +120,7 @@ export default function FunnelPlannerPage() {
         {/* Header */}
         <div className="mb-6">
           <p className="font-display text-[0.44rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.35)] mb-1">Admin · Settings</p>
-          <h1 className="font-display text-ivory mb-1" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Funnel Planner</h1>
+          <h1 className="font-display text-ivory mb-1" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Upsells & Offers</h1>
           <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-sm">
             Per-product Order Bump / OTO / Downsell. Each product has its own settings. Group headers are collapsible.
           </p>

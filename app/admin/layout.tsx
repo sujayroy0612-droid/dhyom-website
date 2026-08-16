@@ -16,7 +16,7 @@ const NAV_MAIN = [
 
 const NAV_ADS = [
   { label: "Coupons",        href: "/admin/coupons",        icon: "◎" },
-  { label: "Funnel Planner", href: "/admin/funnel-planner", icon: "◆" },
+  { label: "Upsells & Offers", href: "/admin/funnel-planner", icon: "◆" },
   { label: "Leads",          href: "/admin/leads",          icon: "⊹" },
 ];
 
