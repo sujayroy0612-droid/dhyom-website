@@ -82,3 +82,15 @@ h1, h2, h3, h4, h5, h6 {
   from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Announcement bar marquee — double-render technique for seamless loop */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee-scroll linear infinite;
+}
+.animate-marquee-paused {
+  animation-play-state: paused;
+}

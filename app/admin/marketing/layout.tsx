@@ -4,13 +4,14 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 
 const NAV = [
-  { label: "Overview",         href: "/admin/marketing",            icon: "▦" },
-  { label: "Leads",            href: "/admin/marketing/leads",      icon: "⊹" },
-  { label: "Lead Magnets",     href: "/admin/marketing/campaigns",  icon: "◫" },
-  { label: "Soap Opera",       href: "/admin/marketing/soap-opera", icon: "◌" },
-  { label: "Seinfeld",         href: "/admin/marketing/seinfeld",   icon: "◩" },
-  { label: "Coupons",          href: "/admin/marketing/coupons",    icon: "◎" },
-  { label: "Upsells & Offers", href: "/admin/marketing/upsells",    icon: "◆" },
+  { label: "Overview",          href: "/admin/marketing",                 icon: "▦" },
+  { label: "Leads",             href: "/admin/marketing/leads",           icon: "⊹" },
+  { label: "Lead Magnets",      href: "/admin/marketing/campaigns",       icon: "◫" },
+  { label: "Soap Opera",        href: "/admin/marketing/soap-opera",      icon: "◌" },
+  { label: "Seinfeld",          href: "/admin/marketing/seinfeld",        icon: "◩" },
+  { label: "Announcement Bar",  href: "/admin/marketing/announcement",    icon: "◈" },
+  { label: "Coupons",           href: "/admin/marketing/coupons",         icon: "◎" },
+  { label: "Upsells & Offers",  href: "/admin/marketing/upsells",         icon: "◆" },
 ];
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
