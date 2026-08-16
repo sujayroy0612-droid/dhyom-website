@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { emailWrapper, renderEmail } from "@/lib/email/soap-opera";
+import { renderEmail } from "@/lib/email/soap-opera";
 
 function adminClient() {
   return createClient(
