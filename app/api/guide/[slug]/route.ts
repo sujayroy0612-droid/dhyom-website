@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 function adminClient() {
   return createClient(
@@ -81,19 +83,28 @@ export async function POST(
       console.error(`[guide/${slug}] contacts exception:`, ex);
     }
 
-    // 4. Fetch PDF from Cloudinary URL
+    // 4. Fetch PDF — filesystem first, Cloudinary fallback
     let pdfBase64: string | undefined;
-    if (campaign.pdf_url) {
-      try {
-        const pdfRes = await fetch(campaign.pdf_url);
-        if (pdfRes.ok) {
-          pdfBase64 = Buffer.from(await pdfRes.arrayBuffer()).toString("base64");
-          console.log(`[guide/${slug}] PDF loaded, size:`, pdfBase64.length);
-        } else {
-          console.warn(`[guide/${slug}] PDF fetch returned`, pdfRes.status);
+
+    // Try local public/{slug}.pdf (most reliable on Vercel)
+    try {
+      const buf = await readFile(join(process.cwd(), "public", `${slug}.pdf`));
+      pdfBase64 = buf.toString("base64");
+      console.log(`[guide/${slug}] PDF loaded from filesystem, size:`, buf.length);
+    } catch {
+      // Not on filesystem — try Cloudinary URL
+      if (campaign.pdf_url) {
+        try {
+          const pdfRes = await fetch(campaign.pdf_url);
+          if (pdfRes.ok) {
+            pdfBase64 = Buffer.from(await pdfRes.arrayBuffer()).toString("base64");
+            console.log(`[guide/${slug}] PDF loaded from Cloudinary, size:`, pdfBase64.length);
+          } else {
+            console.warn(`[guide/${slug}] Cloudinary fetch returned`, pdfRes.status);
+          }
+        } catch (fetchErr) {
+          console.warn(`[guide/${slug}] Cloudinary fetch failed:`, fetchErr);
         }
-      } catch (fetchErr) {
-        console.warn(`[guide/${slug}] PDF fetch failed:`, fetchErr);
       }
     }
 
