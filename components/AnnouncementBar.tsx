@@ -98,7 +98,7 @@ export default function AnnouncementBar() {
         display: "flex",
         alignItems: "center",
         position: "relative",
-        zIndex: 50,
+        zIndex: 40,
       }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
