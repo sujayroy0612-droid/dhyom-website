@@ -19,6 +19,8 @@ const AUDIENCE_LABELS: Record<string, string> = {
   buyers:     "Buyers only",
 };
 
+const BODY_DEFAULT = "Hi {{name}},\n\nYour story here...\n\n— Sujay";
+
 const inputCls =
   "w-full bg-[#1e0c17] border border-[rgba(196,163,115,0.18)] rounded-[4px] px-4 py-3 font-body font-light text-ivory text-sm placeholder:text-[rgba(245,237,224,0.20)] focus:outline-none focus:border-[rgba(196,163,115,0.50)] transition-colors";
 
@@ -27,10 +29,24 @@ function fmt(iso: string | null) {
   return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" });
 }
 
+// Converts plain text (blank line = new paragraph) into on-brand HTML paragraphs.
+// Single newlines within a paragraph become <br/>.
+function plainTextToHtml(text: string): string {
+  return text
+    .split(/\n{2,}/)
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => {
+      const inner = p.replace(/\n/g, "<br/>");
+      return `<p style="margin:0 0 18px;font-style:italic;font-size:17px;line-height:1.85;color:rgba(245,237,224,0.78);font-weight:300;">${inner}</p>`;
+    })
+    .join("");
+}
+
 export default function SeinfeldPage() {
   const [subject,      setSubject]      = useState("");
   const [previewText,  setPreviewText]  = useState("");
-  const [bodyHtml,     setBodyHtml]     = useState("");
+  const [bodyText,     setBodyText]     = useState(BODY_DEFAULT);
   const [audience,     setAudience]     = useState("all_warm");
   const [count,        setCount]        = useState<number | null>(null);
   const [countLoading, setCountLoading] = useState(false);
@@ -79,7 +95,13 @@ export default function SeinfeldPage() {
     const res  = await fetch("/api/admin/seinfeld", {
       method:  "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-      body:    JSON.stringify({ action: "test", subject, preview_text: previewText, body_html: bodyHtml, test_email: testEmail }),
+      body:    JSON.stringify({
+        action:       "test",
+        subject,
+        preview_text: previewText,
+        body_html:    plainTextToHtml(bodyText),
+        test_email:   testEmail,
+      }),
     });
     const data = await res.json();
     setTestResult({ ok: res.ok, msg: res.ok ? "Sent!" : (data.error ?? "Failed") });
@@ -95,24 +117,32 @@ export default function SeinfeldPage() {
     const res  = await fetch("/api/admin/seinfeld", {
       method:  "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-      body:    JSON.stringify({ action: "broadcast", subject, preview_text: previewText, body_html: bodyHtml, audience }),
+      body:    JSON.stringify({
+        action:       "broadcast",
+        subject,
+        preview_text: previewText,
+        body_html:    plainTextToHtml(bodyText),
+        audience,
+      }),
     });
     const data = await res.json();
     setSending(false);
     setConfirming(false);
     setSendResult({ sent: data.sent ?? 0, errors: data.errors ?? [] });
     if (res.ok) {
-      // Refresh list
       fetch("/api/admin/seinfeld", { headers: { Authorization: `Bearer ${session.access_token}` } })
         .then(r => r.json()).then(d => setBroadcasts(d.broadcasts ?? []));
-      // Clear form on clean send
       if (!(data.errors ?? []).length) {
-        setSubject(""); setPreviewText(""); setBodyHtml("");
+        setSubject(""); setPreviewText(""); setBodyText(BODY_DEFAULT);
       }
     }
   }
 
-  const canSend = subject.trim() && bodyHtml.trim() && !sending;
+  // Enabled when subject + body filled, count loaded and > 0, not currently sending
+  const canSend = subject.trim() !== "" && bodyText.trim() !== "" && !sending && (count ?? 0) > 0;
+
+  // Send Test enabled when subject + body + test-email all filled
+  const canTest = !testing && testEmail.trim() !== "" && subject.trim() !== "" && bodyText.trim() !== "";
 
   return (
     <div className="p-8 min-h-screen" style={{ color: "rgba(245,237,224,0.85)" }}>
@@ -170,21 +200,23 @@ export default function SeinfeldPage() {
               />
             </div>
 
-            {/* Body HTML */}
+            {/* Body — plain text */}
             <div>
               <label className="block font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.45)] mb-1.5">
-                Body HTML
+                Body
                 <span className="ml-2 normal-case tracking-normal font-body text-[rgba(245,237,224,0.22)]">
-                  inner content only · {"{{"} name {"}}"}  → recipient name, falls back to &ldquo;there&rdquo;
+                  plain text · blank line = new paragraph · {"{{"} name {"}}"}  → recipient name
                 </span>
               </label>
               <textarea
-                value={bodyHtml}
-                onChange={e => setBodyHtml(e.target.value)}
-                rows={16}
-                placeholder={`<p style="margin:0 0 18px;font-style:italic;font-size:17px;line-height:1.85;color:rgba(245,237,224,0.78);font-weight:300;">Hi {{name}},</p>\n<p style="margin:0 0 18px;font-style:italic;font-size:17px;line-height:1.85;color:rgba(245,237,224,0.78);font-weight:300;">Your story here...</p>`}
-                className={inputCls + " resize-y font-mono text-xs leading-relaxed"}
+                value={bodyText}
+                onChange={e => setBodyText(e.target.value)}
+                rows={14}
+                className={inputCls + " resize-y leading-relaxed"}
               />
+              <p className="mt-1.5 font-body text-[0.70rem] text-[rgba(196,163,115,0.35)] italic">
+                Styled automatically into the Dhyom email template — no HTML needed.
+              </p>
             </div>
 
             {/* Audience + live count */}
@@ -231,7 +263,7 @@ export default function SeinfeldPage() {
                 />
                 <button
                   onClick={sendTest}
-                  disabled={testing || !testEmail.trim() || !subject.trim() || !bodyHtml.trim()}
+                  disabled={!canTest}
                   className="font-display text-[0.50rem] tracking-[0.16em] uppercase px-5 py-2.5 rounded-[3px] border border-[rgba(196,163,115,0.22)] text-[rgba(196,163,115,0.55)] hover:border-[rgba(196,163,115,0.45)] hover:text-brass transition-all duration-150 disabled:opacity-30 whitespace-nowrap"
                 >
                   {testing ? "Sending…" : "Send Test"}
