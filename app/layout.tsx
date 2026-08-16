@@ -46,7 +46,7 @@ export default async function RootLayout({
         <Providers>
           <AnnouncementBar />
           <ConditionalShell><Header logoUrl={logoUrl} shopNav={shopNav} /></ConditionalShell>
-          <main>{children}</main>
+          <main style={{ paddingTop: "var(--bar-height, 0px)" }}>{children}</main>
           <ConditionalShell><Footer logoUrl={logoUrl} /></ConditionalShell>
           <ConditionalShell><WhatsAppButton /></ConditionalShell>
         </Providers>

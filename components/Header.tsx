@@ -117,7 +117,7 @@ export default function Header({
       : [];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[rgba(26,10,20,0.92)] backdrop-blur-md border-b border-[rgba(196,163,115,0.14)]">
+    <header className="fixed left-0 right-0 z-50 bg-[rgba(26,10,20,0.92)] backdrop-blur-md border-b border-[rgba(196,163,115,0.14)]" style={{ top: "var(--bar-height, 0px)" }}>
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
 
         {/* ── Logo ── */}
@@ -254,7 +254,7 @@ export default function Header({
             href="/cart"
             aria-label={totalItems > 0 ? `Shopping bag — ${totalItems} item${totalItems === 1 ? "" : "s"}` : "Shopping bag"}
             className={[
-              "relative flex items-center transition-colors duration-200",
+              "relative flex items-center self-center transition-colors duration-200",
               pathname.startsWith("/cart") ? "text-brass" : "text-[rgba(245,237,224,0.50)] hover:text-ivory",
             ].join(" ")}
           >

@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root {
+  --bar-height: 0px;   /* updated at runtime by AnnouncementBar */
+
   /* ── Brand palette: Divine Damson & Champagne Brass ── */
   --color-ink:          #0F0508;
   --color-black-plum:   #1A0A14;

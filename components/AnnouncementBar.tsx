@@ -50,7 +50,10 @@ export default function AnnouncementBar() {
   const [paused,  setPaused] = useState(false);
 
   useEffect(() => {
-    if (pathname.startsWith("/admin") || pathname.startsWith("/fragrance-guide")) return;
+    if (pathname.startsWith("/admin") || pathname.startsWith("/fragrance-guide")) {
+      document.documentElement.style.setProperty("--bar-height", "0px");
+      return;
+    }
 
     const sb = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -63,7 +66,10 @@ export default function AnnouncementBar() {
         .select("enabled, speed")
         .single();
 
-      if (!settings?.enabled) return;
+      if (!settings?.enabled) {
+        document.documentElement.style.setProperty("--bar-height", "0px");
+        return;
+      }
 
       const { data: messages } = await sb
         .from("announcement_messages")
@@ -73,8 +79,15 @@ export default function AnnouncementBar() {
 
       if (messages?.length) {
         setData({ speed: settings.speed ?? 30, messages });
+        document.documentElement.style.setProperty("--bar-height", "36px");
+      } else {
+        document.documentElement.style.setProperty("--bar-height", "0px");
       }
     })();
+
+    return () => {
+      document.documentElement.style.setProperty("--bar-height", "0px");
+    };
   }, [pathname]);
 
   if (!data) return null;
@@ -91,14 +104,17 @@ export default function AnnouncementBar() {
   return (
     <div
       style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
         height: "36px",
         background: "#1A0A14",
         borderBottom: "1px solid rgba(196,163,115,0.12)",
         overflow: "hidden",
         display: "flex",
         alignItems: "center",
-        position: "relative",
-        zIndex: 40,
+        zIndex: 51,
       }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
