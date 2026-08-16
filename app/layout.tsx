@@ -8,7 +8,6 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import { fetchVisibleNavData } from "@/lib/supabase/visibility";
-import { fetchAnnouncementBar } from "@/lib/supabase/announcement";
 import type { NavCategory } from "@/lib/nav";
 
 export const metadata: Metadata = {
@@ -22,10 +21,9 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [assets, shopNav, announcement] = await Promise.all([
+  const [assets, shopNav] = await Promise.all([
     fetchSiteAssets().catch((): SiteAssets => ({})),
     fetchVisibleNavData().catch((): NavCategory[] => []),
-    fetchAnnouncementBar().catch(() => null),
   ]);
   const logoUrl = assets.logo ?? null;
 
@@ -46,7 +44,7 @@ export default async function RootLayout({
       </head>
       <body>
         <Providers>
-          <AnnouncementBar data={announcement} />
+          <AnnouncementBar />
           <ConditionalShell><Header logoUrl={logoUrl} shopNav={shopNav} /></ConditionalShell>
           <main>{children}</main>
           <ConditionalShell><Footer logoUrl={logoUrl} /></ConditionalShell>

@@ -1,9 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import type { AnnouncementData } from "@/lib/supabase/announcement";
+import { createClient } from "@supabase/supabase-js";
+
+type Message = { id: string; text: string; link_url: string | null };
+type BarData = { speed: number; messages: Message[] } | null;
 
 const DOT = (
   <span
@@ -33,10 +36,7 @@ function MessageItem({ text, link_url }: { text: string; link_url: string | null
 
   if (link_url) {
     return (
-      <Link
-        href={link_url}
-        style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-      >
+      <Link href={link_url} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
         {inner}
       </Link>
     );
@@ -44,18 +44,43 @@ function MessageItem({ text, link_url }: { text: string; link_url: string | null
   return <span style={{ display: "inline-flex", alignItems: "center" }}>{inner}</span>;
 }
 
-export default function AnnouncementBar({ data }: { data: AnnouncementData | null }) {
-  const pathname = usePathname();
-  const [paused, setPaused] = useState(false);
+export default function AnnouncementBar() {
+  const pathname  = usePathname();
+  const [data,    setData]   = useState<BarData>(null);
+  const [paused,  setPaused] = useState(false);
 
-  // Hide on admin pages and landing pages
-  if (!data || pathname.startsWith("/admin") || pathname.startsWith("/fragrance-guide")) {
-    return null;
-  }
+  useEffect(() => {
+    if (pathname.startsWith("/admin") || pathname.startsWith("/fragrance-guide")) return;
+
+    const sb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    (async () => {
+      const { data: settings } = await sb
+        .from("announcement_bar")
+        .select("enabled, speed")
+        .single();
+
+      if (!settings?.enabled) return;
+
+      const { data: messages } = await sb
+        .from("announcement_messages")
+        .select("id, text, link_url, sort_order")
+        .eq("active", true)
+        .order("sort_order");
+
+      if (messages?.length) {
+        setData({ speed: settings.speed ?? 30, messages });
+      }
+    })();
+  }, [pathname]);
+
+  if (!data) return null;
 
   const { speed, messages } = data;
 
-  // Build a single row of messages with dot separators
   const strip = messages.map((m) => (
     <span key={m.id} style={{ display: "inline-flex", alignItems: "center" }}>
       <MessageItem text={m.text} link_url={m.link_url} />
@@ -78,24 +103,12 @@ export default function AnnouncementBar({ data }: { data: AnnouncementData | nul
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Double-render for seamless loop: animation shifts -50% then resets */}
       <div
         className={`animate-marquee${paused ? " animate-marquee-paused" : ""}`}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          animationDuration: `${speed}s`,
-          willChange: "transform",
-        }}
+        style={{ display: "inline-flex", alignItems: "center", animationDuration: `${speed}s`, willChange: "transform" }}
       >
-        {/* Copy 1 */}
-        <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: "2rem" }}>
-          {strip}
-        </span>
-        {/* Copy 2 — identical, sits immediately after copy 1 */}
-        <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: "2rem" }}>
-          {strip}
-        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: "2rem" }}>{strip}</span>
+        <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: "2rem" }}>{strip}</span>
       </div>
     </div>
   );
