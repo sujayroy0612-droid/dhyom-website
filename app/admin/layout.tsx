@@ -14,34 +14,14 @@ const NAV_MAIN = [
   { label: "Analytics",    href: "/admin/analytics",           icon: "↗" },
 ];
 
-const NAV_ADS = [
-  { label: "Coupons",        href: "/admin/coupons",        icon: "◎" },
-  { label: "Upsells & Offers", href: "/admin/funnel-planner", icon: "◆" },
-  { label: "Leads",          href: "/admin/leads",          icon: "⊹" },
-];
-
-const NAV_EMAIL = [
-  { label: "Lead Magnets", href: "/admin/campaigns",   icon: "◫" },
-  { label: "Soap Opera",   href: "/admin/soap-opera",  icon: "◌" },
-  { label: "Seinfeld",     href: "/admin/seinfeld",    icon: "◩" },
-];
-
-const EMAIL_HREFS = NAV_EMAIL.map(n => n.href);
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
   const isLogin  = pathname === "/admin/login";
 
-  const [checking,          setChecking]          = useState(!isLogin);
-  const [authed,            setAuthed]            = useState(false);
-  const [adsOpen,           setAdsOpen]           = useState(true);
-  const [emailCampaignOpen, setEmailCampaignOpen] = useState(true);
-
-  const isEmailActive = EMAIL_HREFS.some(h => pathname.startsWith(h));
-  const isAdsActive   = NAV_ADS.some(({ href }) => pathname.startsWith(href)) || isEmailActive;
-  const adsExpanded   = adsOpen || isAdsActive;
-  const emailExpanded = emailCampaignOpen || isEmailActive;
+  const [checking, setChecking] = useState(!isLogin);
+  const [authed,   setAuthed]   = useState(false);
 
   useEffect(() => {
     if (isLogin) return;
@@ -80,6 +60,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   if (!authed) return null;
+
+  // Marketing area provides its own layout/sidebar — pass through after auth
+  if (pathname.startsWith("/admin/marketing")) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-[#12060e] flex">
@@ -122,95 +107,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             );
           })}
 
-          {/* Advertisement — collapsible group */}
-          <button
-            onClick={() => setAdsOpen(o => !o)}
+          {/* Marketing command centre */}
+          <Link
+            href="/admin/marketing"
             className={[
-              "mt-2 w-full flex items-center gap-3 px-3 py-2.5 rounded-[4px] transition-all duration-150",
-              isAdsActive
-                ? "text-brass"
+              "mt-2 flex items-center gap-3 px-3 py-2.5 rounded-[4px] transition-all duration-150",
+              pathname.startsWith("/admin/marketing")
+                ? "bg-[rgba(196,163,115,0.12)] text-brass"
                 : "text-[rgba(245,237,224,0.38)] hover:bg-[rgba(196,163,115,0.06)] hover:text-[rgba(245,237,224,0.70)]",
             ].join(" ")}
           >
             <span className="text-[0.75rem] w-4 text-center opacity-70">◈</span>
-            <span className="font-display text-[0.52rem] tracking-[0.14em] uppercase flex-1 text-left">
-              Advertisement
+            <span className="font-display text-[0.52rem] tracking-[0.14em] uppercase flex-1">
+              Marketing
             </span>
-            <span
-              className="text-[0.55rem] opacity-40 transition-transform duration-200"
-              style={{ transform: adsExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
-            >
-              ▾
-            </span>
-          </button>
-
-          {adsExpanded && (
-            <>
-              {NAV_ADS.map(({ label, href, icon }) => {
-                const active = pathname.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={[
-                      "flex items-center gap-2.5 pl-8 pr-3 py-2 rounded-[4px] transition-all duration-150",
-                      active
-                        ? "bg-[rgba(196,163,115,0.10)] text-brass"
-                        : "text-[rgba(245,237,224,0.30)] hover:bg-[rgba(196,163,115,0.05)] hover:text-[rgba(245,237,224,0.65)]",
-                    ].join(" ")}
-                  >
-                    <span className="text-[0.65rem] w-3.5 text-center opacity-55">{icon}</span>
-                    <span className="font-display text-[0.48rem] tracking-[0.13em] uppercase">
-                      {label}
-                    </span>
-                  </Link>
-                );
-              })}
-
-              {/* Email Campaign — collapsible sub-parent */}
-              <button
-                onClick={() => setEmailCampaignOpen(o => !o)}
-                className={[
-                  "flex items-center gap-2.5 pl-8 pr-3 py-2 rounded-[4px] transition-all duration-150 w-full",
-                  isEmailActive
-                    ? "text-brass"
-                    : "text-[rgba(245,237,224,0.30)] hover:bg-[rgba(196,163,115,0.05)] hover:text-[rgba(245,237,224,0.65)]",
-                ].join(" ")}
-              >
-                <span className="text-[0.65rem] w-3.5 text-center opacity-55">◫</span>
-                <span className="font-display text-[0.48rem] tracking-[0.13em] uppercase flex-1 text-left">
-                  Email Campaign
-                </span>
-                <span
-                  className="text-[0.45rem] opacity-35 transition-transform duration-200"
-                  style={{ transform: emailExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
-                >
-                  ▾
-                </span>
-              </button>
-
-              {emailExpanded && NAV_EMAIL.map(({ label, href, icon }) => {
-                const active = pathname.startsWith(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={[
-                      "flex items-center gap-2 pl-12 pr-3 py-1.5 rounded-[4px] transition-all duration-150",
-                      active
-                        ? "bg-[rgba(196,163,115,0.09)] text-brass"
-                        : "text-[rgba(245,237,224,0.24)] hover:bg-[rgba(196,163,115,0.04)] hover:text-[rgba(245,237,224,0.60)]",
-                    ].join(" ")}
-                  >
-                    <span className="text-[0.58rem] w-3 text-center opacity-50">{icon}</span>
-                    <span className="font-display text-[0.44rem] tracking-[0.12em] uppercase">
-                      {label}
-                    </span>
-                  </Link>
-                );
-              })}
-            </>
-          )}
+            <span className="text-[0.55rem] opacity-35">→</span>
+          </Link>
         </nav>
 
         {/* Logout */}
