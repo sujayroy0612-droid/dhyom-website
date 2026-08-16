@@ -271,10 +271,10 @@ export default function CampaignsPage() {
               onClick={() => setView("list")}
               className="font-display text-[0.44rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.35)] hover:text-brass mb-5 flex items-center gap-2 transition-colors"
             >
-              ← Back to Email Campaign
+              ← Back to Lead Magnets
             </button>
             <p className="font-display text-[0.52rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.40)] mb-2">
-              Admin · Email Campaign
+              Admin · Lead Magnets
             </p>
             <h1
               className="font-display text-ivory"
@@ -497,7 +497,7 @@ export default function CampaignsPage() {
               className="font-display text-ivory mb-2"
               style={{ fontSize: "clamp(1.5rem, 3vw, 2.2rem)", letterSpacing: "0.05em" }}
             >
-              Campaign Manager
+              Lead Magnets
             </h1>
             <p className="font-body font-light italic text-[rgba(245,237,224,0.38)] text-sm leading-relaxed max-w-lg">
               Each campaign is a landing page at{" "}
