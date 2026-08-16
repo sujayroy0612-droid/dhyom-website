@@ -59,19 +59,6 @@ function Field({
   );
 }
 
-// ── Blank form ────────────────────────────────────────────────────────────────
-
-const BLANK: Omit<Campaign, "id" | "created_at"> = {
-  slug: "",
-  title: "",
-  headline: "",
-  subheadline: null,
-  body_copy: null,
-  pdf_url: null,
-  tag: "reel_lead",
-  dm_copy: null,
-  active: true,
-};
 
 type FormState = {
   title: string;
@@ -634,7 +621,7 @@ export default function CampaignsPage() {
         <p className="font-body font-light italic text-[rgba(245,237,224,0.18)] text-[0.72rem] text-center mt-10 leading-relaxed">
           Landing pages live at{" "}
           <span className="text-[rgba(196,163,115,0.30)]">dhyom.in/guide/[slug]</span>.
-          Inactive campaigns return a "no longer available" message.
+          Inactive campaigns return a &ldquo;no longer available&rdquo; message.
         </p>
 
       </div>
