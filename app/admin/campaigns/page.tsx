@@ -271,10 +271,10 @@ export default function CampaignsPage() {
               onClick={() => setView("list")}
               className="font-display text-[0.44rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.35)] hover:text-brass mb-5 flex items-center gap-2 transition-colors"
             >
-              ← Back to Campaigns
+              ← Back to Email Campaign
             </button>
             <p className="font-display text-[0.52rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.40)] mb-2">
-              Admin · Campaigns
+              Admin · Email Campaign
             </p>
             <h1
               className="font-display text-ivory"

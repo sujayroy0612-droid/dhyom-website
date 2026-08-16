@@ -5,17 +5,20 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
-const NAV = [
-  { label: "Dashboard",      href: "/admin",                     icon: "▦" },
-  { label: "Orders",         href: "/admin/orders",              icon: "≡" },
-  { label: "Products",       href: "/admin/products",            icon: "⊞" },
-  { label: "Visibility",     href: "/admin/visibility",          icon: "◉" },
-  { label: "Brand Assets",   href: "/admin/upload-brand-images", icon: "◈" },
-  { label: "Coupons",        href: "/admin/coupons",             icon: "◎" },
-  { label: "Funnel Planner", href: "/admin/funnel-planner",      icon: "◆" },
-  { label: "Analytics",      href: "/admin/analytics",           icon: "↗" },
-  { label: "Campaigns",      href: "/admin/campaigns",           icon: "◫" },
-  { label: "Leads",          href: "/admin/leads",               icon: "⊹" },
+const NAV_MAIN = [
+  { label: "Dashboard",    href: "/admin",                     icon: "▦" },
+  { label: "Orders",       href: "/admin/orders",              icon: "≡" },
+  { label: "Products",     href: "/admin/products",            icon: "⊞" },
+  { label: "Visibility",   href: "/admin/visibility",          icon: "◉" },
+  { label: "Brand Assets", href: "/admin/upload-brand-images", icon: "◈" },
+  { label: "Analytics",    href: "/admin/analytics",           icon: "↗" },
+];
+
+const NAV_ADS = [
+  { label: "Coupons",         href: "/admin/coupons",        icon: "◎" },
+  { label: "Funnel Planner",  href: "/admin/funnel-planner", icon: "◆" },
+  { label: "Email Campaign",  href: "/admin/campaigns",      icon: "◫" },
+  { label: "Leads",           href: "/admin/leads",          icon: "⊹" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -82,10 +85,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto">
-          {NAV.map(({ label, href, icon }) => {
+          {NAV_MAIN.map(({ label, href, icon }) => {
             const active = href === "/admin"
               ? pathname === "/admin"
               : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={[
+                  "flex items-center gap-3 px-3 py-2.5 rounded-[4px] transition-all duration-150",
+                  active
+                    ? "bg-[rgba(196,163,115,0.12)] text-brass"
+                    : "text-[rgba(245,237,224,0.38)] hover:bg-[rgba(196,163,115,0.06)] hover:text-[rgba(245,237,224,0.70)]",
+                ].join(" ")}
+              >
+                <span className="text-[0.75rem] w-4 text-center opacity-70">{icon}</span>
+                <span className="font-display text-[0.52rem] tracking-[0.14em] uppercase">
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
+
+          {/* Advertisement section */}
+          <div className="mt-4 mb-1 px-3">
+            <p className="font-display text-[0.36rem] tracking-[0.20em] uppercase text-[rgba(196,163,115,0.28)]">
+              Advertisement
+            </p>
+          </div>
+          {NAV_ADS.map(({ label, href, icon }) => {
+            const active = pathname.startsWith(href);
             return (
               <Link
                 key={href}

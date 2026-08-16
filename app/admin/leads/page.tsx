@@ -139,12 +139,6 @@ export default function LeadsPage() {
             <p className="font-display text-[0.44rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Admin</p>
             <h1 className="font-display text-[1.4rem] tracking-[0.08em] text-brass">Leads</h1>
           </div>
-          <button
-            onClick={exportCSV}
-            className="font-display text-[0.50rem] tracking-[0.16em] uppercase px-5 py-2.5 rounded-[3px] border border-[rgba(196,163,115,0.28)] text-[rgba(196,163,115,0.65)] hover:border-brass hover:text-brass transition-all duration-150"
-          >
-            Export CSV
-          </button>
         </div>
 
         {/* Stats */}
@@ -197,7 +191,7 @@ export default function LeadsPage() {
           </div>
         )}
 
-        {/* Filters */}
+        {/* Filters + Download */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <input
             type="text"
@@ -224,6 +218,12 @@ export default function LeadsPage() {
               Clear filters
             </button>
           )}
+          <button
+            onClick={exportCSV}
+            className="ml-auto font-display text-[0.50rem] tracking-[0.16em] uppercase px-5 py-2 rounded-[3px] border border-[rgba(196,163,115,0.28)] text-[rgba(196,163,115,0.65)] hover:border-brass hover:text-brass transition-all duration-150"
+          >
+            Download CSV
+          </button>
         </div>
 
         {/* Table */}
