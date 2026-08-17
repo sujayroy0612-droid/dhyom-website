@@ -15,20 +15,34 @@ export default function AmazonBadge() {
       className="fixed left-4 z-[999] flex flex-col items-center justify-center rounded-full
                  w-[44px] h-[44px] md:w-[52px] md:h-[52px]"
       style={{
-        // 64px header + var(--bar-height) announcement bar + 8px gap
         top: "calc(var(--bar-height, 0px) + 72px)",
         background: "#C4A373",
-        boxShadow: "0 4px 14px rgba(0,0,0,0.6)",
+        border: "2px solid rgba(196,163,115,0.55)",
+        outline: "2px solid rgba(26,10,20,0.18)",
+        outlineOffset: "2px",
         gap: "2px",
         textDecoration: "none",
         color: "inherit",
+      }}
+      /* Pulsing ring — identical rhythm to WhatsApp button */
+      animate={{
+        boxShadow: [
+          "0 4px 14px rgba(0,0,0,0.60), 0 0 0 0px rgba(196,163,115,0.50)",
+          "0 4px 14px rgba(0,0,0,0.60), 0 0 0 10px rgba(196,163,115,0.00)",
+          "0 4px 14px rgba(0,0,0,0.60), 0 0 0 0px rgba(196,163,115,0.00)",
+        ],
+      }}
+      transition={{
+        duration: 1.6,
+        repeat: Infinity,
+        repeatDelay: 4.5,
+        ease: "easeOut",
       }}
       whileHover={{
         y: -2,
         boxShadow: "0 8px 22px rgba(0,0,0,0.70)",
       }}
       whileTap={{ scale: 0.93 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
       <span style={{ color: "#1A0A14", fontWeight: 800, fontSize: "11px", letterSpacing: "-0.5px", lineHeight: 1 }}
             className="md:text-[13px]">
