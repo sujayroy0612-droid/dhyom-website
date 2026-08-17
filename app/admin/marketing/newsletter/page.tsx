@@ -62,8 +62,6 @@ export default function NewsletterSettingsPage() {
       const fd = new FormData();
       fd.append("file",          file);
       fd.append("upload_preset", UPLOAD_PRESET);
-      fd.append("public_id",     "newsletter/welcome-guide");
-      fd.append("resource_type", "raw");
 
       const res = await fetch(
         `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`,
