@@ -12,7 +12,7 @@ export default function AmazonBadge() {
       target="_blank"
       rel="noopener"
       aria-label="Shop Dhyom on Amazon — 4.8 stars"
-      className="fixed left-4 z-[999] flex flex-col items-center justify-center rounded-full w-14 h-14"
+      className="fixed left-4 z-[999] flex flex-col items-center justify-center rounded-full w-10 h-10 md:w-14 md:h-14"
       style={{
         top: "calc(var(--bar-height, 0px) + 96px)",
         background: "#C4A373",
@@ -43,17 +43,17 @@ export default function AmazonBadge() {
       }}
       whileTap={{ scale: 0.93 }}
     >
-      <span style={{ color: "#1A0A14", fontWeight: 800, fontSize: "11px", letterSpacing: "-0.5px", lineHeight: 1 }}
-            className="md:text-[13px]">
+      <span style={{ color: "#1A0A14", fontWeight: 800, letterSpacing: "-0.5px", lineHeight: 1 }}
+            className="text-[8px] md:text-[13px]">
         amazon
       </span>
       <span aria-hidden
-            style={{ color: "#1A0A14", fontSize: "8px", opacity: 0.85, lineHeight: 1 }}
-            className="md:text-[9px]">
+            style={{ color: "#1A0A14", opacity: 0.85, lineHeight: 1 }}
+            className="text-[6px] md:text-[9px]">
         ★★★★★
       </span>
-      <span style={{ color: "#1A0A14", fontWeight: 700, fontSize: "10px", lineHeight: 1 }}
-            className="md:text-[11px]">
+      <span style={{ color: "#1A0A14", fontWeight: 700, lineHeight: 1 }}
+            className="text-[7px] md:text-[11px]">
         4.8
       </span>
     </motion.a>
