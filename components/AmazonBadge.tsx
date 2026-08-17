@@ -14,7 +14,7 @@ export default function AmazonBadge() {
       aria-label="Shop Dhyom on Amazon — 4.8 stars"
       className="fixed left-4 z-[999] flex flex-col items-center justify-center rounded-full w-14 h-14"
       style={{
-        top: "calc(var(--bar-height, 0px) + 72px)",
+        top: "calc(var(--bar-height, 0px) + 96px)",
         background: "#C4A373",
         border: "2px solid rgba(196,163,115,0.55)",
         outline: "2px solid rgba(26,10,20,0.18)",
