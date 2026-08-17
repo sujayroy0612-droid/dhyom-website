@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { emailWrapper } from "@/lib/email/soap-opera";
 
 function adminClient() {
   return createClient(
@@ -10,21 +11,54 @@ function adminClient() {
   );
 }
 
-async function fetchSettings(): Promise<{ subject: string; pdf_url: string | null }> {
+type Settings = { subject: string; body_text: string | null; pdf_url: string | null };
+
+async function fetchSettings(): Promise<Settings> {
   try {
     const { data } = await adminClient()
       .from("newsletter_settings")
-      .select("subject, pdf_url")
+      .select("subject, body_text, pdf_url")
       .eq("id", 1)
       .single();
     return {
-      subject: data?.subject ?? "Welcome to Dhyom",
-      pdf_url: data?.pdf_url ?? null,
+      subject:   data?.subject   ?? "Welcome to Dhyom",
+      body_text: data?.body_text ?? null,
+      pdf_url:   data?.pdf_url   ?? null,
     };
   } catch {
-    return { subject: "Welcome to Dhyom", pdf_url: null };
+    return { subject: "Welcome to Dhyom", body_text: null, pdf_url: null };
   }
 }
+
+// Converts plain text body (operator-written) → on-brand HTML paragraphs.
+// Blank line = new <p>. Single newline within a paragraph → <br/>.
+// {{name}} replaced before conversion.
+function bodyToHtml(text: string, name: string): string {
+  const display = name || "there";
+  return text
+    .replace(/\{\{name\}\}/g, display)
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => {
+      const inner = p.replace(/\n/g, "<br/>");
+      return `<p style="margin:0 0 18px;font-size:15px;line-height:1.85;color:rgba(245,237,224,0.72);font-weight:300;">${inner}</p>`;
+    })
+    .join("");
+}
+
+const FALLBACK_BODY_TEXT = `Hi {{name}},
+
+Welcome to the Dhyom inner circle. I'm so glad you're here.
+
+As promised, your Ritual Guide is attached to this email — a quiet introduction to building a sacred space at home. Five simple rituals for the ordinary hours of your day.
+
+Take a moment with it when the day slows down. Start with just one.
+
+Over the coming days, I'll share a little of why Dhyom exists — the story isn't what most people expect. Keep an eye on your inbox.
+
+— Sujay
+Founder, Dhyom`;
 
 async function fetchPdfAsBase64(url: string): Promise<string | null> {
   try {
@@ -37,67 +71,9 @@ async function fetchPdfAsBase64(url: string): Promise<string | null> {
   }
 }
 
-function buildWelcomeHtml(): string {
-  return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#1A0A14;font-family:Georgia,serif;">
-  <div style="max-width:480px;margin:40px auto;background:#3D1428;border-radius:4px;overflow:hidden;">
-
-    <div style="padding:36px 36px 0;">
-      <p style="margin:0 0 6px;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#C4A373;">
-        Dhyom
-      </p>
-      <div style="width:28px;height:1px;background:rgba(196,163,115,0.35);margin-bottom:28px;"></div>
-    </div>
-
-    <div style="padding:0 36px 36px;">
-      <p style="margin:0 0 18px;font-style:italic;font-size:17px;line-height:1.85;color:rgba(245,237,224,0.78);font-weight:300;">
-        Welcome to the inner circle.
-      </p>
-      <p style="margin:0 0 18px;font-size:14px;line-height:1.85;color:rgba(245,237,224,0.65);font-weight:300;">
-        You've joined a community that believes a home holds space for both the everyday and the sacred.
-        Over the coming days, we'll share rituals, stories, and drops — curated with care.
-      </p>
-      <p style="margin:0 0 32px;font-size:14px;line-height:1.85;color:rgba(245,237,224,0.65);font-weight:300;">
-        In the meantime, explore our collection and find the piece that speaks to your space.
-      </p>
-
-      <a href="https://dhyom.in/shop"
-        style="display:inline-block;background:#C4A373;color:#1A0A14;font-size:10px;letter-spacing:3px;text-transform:uppercase;text-decoration:none;padding:14px 32px;border-radius:3px;font-weight:600;">
-        Explore the Collection
-      </a>
-
-      <p style="margin:32px 0 0;font-size:13px;letter-spacing:2px;color:#C4A373;">— Dhyom</p>
-
-      <div style="border-top:1px solid rgba(196,163,115,0.18);padding-top:24px;margin-top:28px;">
-        <a href="https://dhyom.in"
-          style="font-size:10px;letter-spacing:3px;text-transform:uppercase;color:rgba(196,163,115,0.50);text-decoration:none;">
-          dhyom.in
-        </a>
-      </div>
-    </div>
-
-  </div>
-</body>
-</html>`;
-}
-
-function buildWelcomeText(): string {
-  return `Welcome to the Dhyom inner circle.
-
-You've joined a community that believes a home holds space for both the everyday and the sacred. Over the coming days, we'll share rituals, stories, and drops — curated with care.
-
-In the meantime, explore our collection: https://dhyom.in/shop
-
-— Dhyom
-
-To unsubscribe, reply with 'unsubscribe' in the subject.`;
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json();
+    const { email, name } = await req.json();
     const trimmed = (email ?? "").trim();
 
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
@@ -114,35 +90,45 @@ export async function POST(req: NextRequest) {
       console.error("[newsletter] contacts exception:", ex);
     }
 
-    // Send welcome email
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       console.warn("[newsletter] RESEND_API_KEY not set — skipping email");
       return NextResponse.json({ ok: true });
     }
 
-    // Fetch settings (subject + optional PDF URL)
+    // Fetch settings
     const settings = await fetchSettings();
-    const fromAddr = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
+    const fromAddr  = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
+    const firstName = (name ?? "").trim().split(" ")[0] || "";
+    const unsubUrl  = `mailto:${fromAddr}?subject=unsubscribe`;
 
-    // Build attachments if PDF is configured
+    // Build body from stored plain text (or fallback)
+    const rawBody = settings.body_text?.trim() || FALLBACK_BODY_TEXT;
+    const bodyHtml = bodyToHtml(rawBody, firstName);
+    const previewText = `Welcome to Dhyom, ${firstName || "there"}.`;
+
+    const html = emailWrapper(previewText, bodyHtml, unsubUrl);
+    const text = rawBody.replace(/\{\{name\}\}/g, firstName || "there");
+
+    // Build attachments if PDF configured
     type Attachment = { filename: string; content: string };
     const attachments: Attachment[] = [];
     if (settings.pdf_url) {
       const b64 = await fetchPdfAsBase64(settings.pdf_url);
       if (b64) {
-        const filename = settings.pdf_url.split("/").pop()?.replace(/[?#].*$/, "") ?? "dhyom-guide.pdf";
+        const filename =
+          settings.pdf_url.split("/").pop()?.replace(/[?#].*$/, "") ?? "dhyom-guide.pdf";
         attachments.push({ filename, content: b64 });
       }
     }
 
     const { error: resendErr } = await new Resend(apiKey).emails.send({
-      from:        `Dhyom <${fromAddr}>`,
-      to:          trimmed,
-      replyTo:     "dhyomecom@gmail.com",
-      subject:     settings.subject,
-      html:        buildWelcomeHtml(),
-      text:        buildWelcomeText(),
+      from:    `Dhyom <${fromAddr}>`,
+      to:      trimmed,
+      replyTo: "dhyomecom@gmail.com",
+      subject: settings.subject,
+      html,
+      text,
       ...(attachments.length > 0 && { attachments }),
       headers: {
         "List-Unsubscribe": `<mailto:${fromAddr}?subject=unsubscribe>`,

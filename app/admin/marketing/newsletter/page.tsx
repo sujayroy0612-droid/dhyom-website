@@ -1,9 +1,23 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
+
+const DEFAULT_BODY = `Hi {{name}},
+
+Welcome to the Dhyom inner circle. I'm so glad you're here.
+
+As promised, your Ritual Guide is attached to this email — a quiet introduction to building a sacred space at home. Five simple rituals for the ordinary hours of your day.
+
+Take a moment with it when the day slows down. Start with just one.
+
+Over the coming days, I'll share a little of why Dhyom exists — the story isn't what most people expect. Keep an eye on your inbox.
+
+— Sujay
+Founder, Dhyom`;
 
 type PdfStatus = "idle" | "uploading" | "done" | "error";
 
@@ -29,7 +43,9 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 export default function NewsletterSettingsPage() {
+  const [token,     setToken]     = useState("");
   const [subject,   setSubject]   = useState("Welcome to Dhyom");
+  const [bodyText,  setBodyText]  = useState(DEFAULT_BODY);
   const [pdfUrl,    setPdfUrl]    = useState("");
   const [pdfStatus, setPdfStatus] = useState<PdfStatus>("idle");
   const [pdfError,  setPdfError]  = useState("");
@@ -40,13 +56,21 @@ export default function NewsletterSettingsPage() {
   const pdfRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    fetch("/api/admin/newsletter-settings")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.subject) setSubject(data.subject);
-        if (data.pdf_url) setPdfUrl(data.pdf_url);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { setLoading(false); return; }
+      const tk = session.access_token;
+      setToken(tk);
+      fetch("/api/admin/newsletter-settings", {
+        headers: { Authorization: `Bearer ${tk}` },
       })
-      .finally(() => setLoading(false));
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.subject)   setSubject(data.subject);
+          if (data.body_text) setBodyText(data.body_text);
+          if (data.pdf_url)   setPdfUrl(data.pdf_url);
+        })
+        .finally(() => setLoading(false));
+    });
   }, []);
 
   async function handlePdfFile(file: File) {
@@ -85,8 +109,15 @@ export default function NewsletterSettingsPage() {
 
     const res = await fetch("/api/admin/newsletter-settings", {
       method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ subject: subject.trim(), pdf_url: pdfUrl.trim() || null }),
+      headers: {
+        "Content-Type":  "application/json",
+        Authorization:   `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        subject:   subject.trim(),
+        pdf_url:   pdfUrl.trim() || null,
+        body_text: bodyText.trim() || null,
+      }),
     });
     const json = await res.json();
 
@@ -123,7 +154,7 @@ export default function NewsletterSettingsPage() {
             Newsletter
           </h1>
           <p className="font-body font-light italic text-[rgba(245,237,224,0.38)] text-sm leading-relaxed max-w-lg">
-            Configure the welcome email sent to every new subscriber. Upload a PDF here and it will be attached to every signup confirmation.
+            Configure the welcome email sent to every new subscriber. Write in plain text — it is automatically rendered into the on-brand Dhyom email template.
           </p>
           <div className="mt-6 w-10 h-px bg-[rgba(196,163,115,0.22)]" />
         </div>
@@ -141,10 +172,28 @@ export default function NewsletterSettingsPage() {
             />
           </Field>
 
+          {/* Body */}
+          <Field
+            label="Email Body"
+            hint="Plain text — blank line = new paragraph. {{name}} is replaced with subscriber's first name (falls back to 'there')."
+          >
+            <textarea
+              value={bodyText}
+              onChange={(e) => setBodyText(e.target.value)}
+              rows={16}
+              placeholder={DEFAULT_BODY}
+              className={inputCls + " resize-y leading-relaxed"}
+              style={{ fontFamily: "monospace", fontSize: "0.78rem" }}
+            />
+            <p className="font-body font-light italic text-[rgba(245,237,224,0.22)] text-[0.68rem] mt-1">
+              The Dhyom header, brass rule, and unsubscribe footer are added automatically. You only write the body copy.
+            </p>
+          </Field>
+
           {/* PDF */}
           <Field
-            label="Welcome PDF"
-            hint="Attached to every newsletter signup confirmation"
+            label="Attached PDF"
+            hint="Attached to every welcome email"
           >
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-3 flex-wrap">
@@ -212,7 +261,7 @@ export default function NewsletterSettingsPage() {
 
               {!pdfUrl && (
                 <p className="font-body font-light italic text-[rgba(245,237,224,0.22)] text-[0.70rem]">
-                  No PDF set — subscribers will receive a welcome email with no attachment.
+                  No PDF — subscribers receive the welcome email with no attachment.
                 </p>
               )}
             </div>
@@ -252,15 +301,15 @@ export default function NewsletterSettingsPage() {
           <ul className="font-body font-light text-[rgba(245,237,224,0.38)] text-[0.75rem] leading-relaxed flex flex-col gap-1.5 list-none">
             <li>· Subscriber enters email in the homepage newsletter form</li>
             <li>· Email is saved to Leads with tag <span className="text-[rgba(196,163,115,0.45)]">newsletter</span></li>
-            <li>· Welcome email is sent immediately via Resend with the subject set above</li>
+            <li>· Welcome email is sent immediately via Resend using the subject and body above</li>
             {pdfUrl
-              ? <li>· PDF <span className="text-[rgba(196,163,115,0.45)]">{pdfUrl.split("/").pop()}</span> is attached to every welcome email</li>
-              : <li>· No PDF attached — upload one above to include it in every welcome email</li>
+              ? <li>· PDF <span className="text-[rgba(196,163,115,0.45)]">{pdfUrl.split("/").pop()}</span> is attached</li>
+              : <li>· No PDF attached — upload one above to include it</li>
             }
           </ul>
         </div>
 
-        {/* SQL reminder */}
+        {/* SQL setup note */}
         <div className="mt-6 bg-[rgba(196,163,115,0.03)] border border-[rgba(196,163,115,0.08)] rounded-[5px] px-6 py-4">
           <p className="font-display text-[0.40rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.30)] mb-3">
             First-time setup — run once in Supabase SQL editor
@@ -268,12 +317,16 @@ export default function NewsletterSettingsPage() {
           <pre className="font-mono text-[0.60rem] text-[rgba(196,163,115,0.40)] whitespace-pre-wrap leading-relaxed">{`create table if not exists newsletter_settings (
   id int primary key default 1,
   subject text not null default 'Welcome to Dhyom',
+  body_text text,
   pdf_url text,
   updated_at timestamptz default now()
 );
-insert into newsletter_settings (id)
-values (1)
-on conflict (id) do nothing;`}</pre>
+insert into newsletter_settings (id) values (1)
+on conflict (id) do nothing;
+
+-- if table already exists, add body_text column:
+alter table newsletter_settings
+  add column if not exists body_text text;`}</pre>
         </div>
 
       </div>
