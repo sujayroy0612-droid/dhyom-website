@@ -16,7 +16,7 @@ export default function GuideForm({ slug }: { slug: string }) {
     setStatus("follow");
   }
 
-  async function handleFollowing() {
+  async function sendGuide() {
     setStatus("sending");
     setErrorMsg("");
     try {
@@ -36,6 +36,11 @@ export default function GuideForm({ slug }: { slug: string }) {
       setErrorMsg("Something went wrong. Please try again.");
       setStatus("error");
     }
+  }
+
+  function handleFollowClick() {
+    window.open("https://instagram.com/dhyom.in", "_blank", "noopener,noreferrer");
+    sendGuide();
   }
 
   if (status === "done") {
@@ -63,27 +68,29 @@ export default function GuideForm({ slug }: { slug: string }) {
           </p>
         </div>
 
-        <a
-          href="https://instagram.com/dhyom.in"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2.5 bg-brass text-ink font-display text-[0.65rem] tracking-[0.22em] uppercase rounded-[3px] px-7 py-3 hover:bg-[#d4b383] transition-colors duration-200"
+        <button
+          onClick={handleFollowClick}
+          disabled={status === "sending"}
+          className="inline-flex items-center gap-2.5 bg-brass text-ink font-display text-[0.65rem] tracking-[0.22em] uppercase rounded-[3px] px-7 py-3 hover:bg-[#d4b383] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
             <circle cx="12" cy="12" r="4" />
             <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
           </svg>
-          Follow @dhyom.in
-        </a>
-
-        <button
-          onClick={handleFollowing}
-          disabled={status === "sending"}
-          className="font-display text-[0.62rem] tracking-[0.20em] uppercase text-[rgba(196,163,115,0.70)] hover:text-brass border border-[rgba(196,163,115,0.30)] hover:border-[rgba(196,163,115,0.60)] rounded-[3px] px-7 py-3 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {status === "sending" ? "···" : "I'm following ✓"}
+          {status === "sending" ? "Sending your guide···" : "Follow @dhyom.in"}
         </button>
+
+        <p className="font-body text-[0.75rem] text-[rgba(245,237,224,0.25)]">
+          Already following?{" "}
+          <button
+            onClick={sendGuide}
+            disabled={status === "sending"}
+            className="underline text-[rgba(196,163,115,0.55)] hover:text-brass transition-colors duration-150 disabled:opacity-50"
+          >
+            Send me the guide
+          </button>
+        </p>
 
         {errorMsg && (
           <p className="font-body font-light italic text-[rgba(205,75,75,0.68)] text-[0.82rem]">
