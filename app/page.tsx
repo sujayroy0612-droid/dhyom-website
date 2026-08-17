@@ -185,7 +185,19 @@ export default async function Home() {
     ? categories.filter((c) => visibleCatSlugs.has(c.id))
     : categories;
 
+  // Cloudinary-optimized poster for mobile hero video — c_limit keeps aspect ratio, w_828
+  // covers 2x retina iPhones (414px logical), f_auto picks WebP/AVIF, q_auto:good balances
+  // quality vs size. Raw poster was the LCP bottleneck at 15.5s on mobile.
+  const mobilePosterUrl = assets.hero_background
+    ? assets.hero_background.replace("/upload/", "/upload/c_limit,w_828,q_auto:good,f_auto/")
+    : undefined;
+
   return (
+    <>
+    {/* Preload the optimized mobile poster so it doesn't block LCP */}
+    {mobilePosterUrl && (
+      <link rel="preload" as="image" href={mobilePosterUrl} media="(max-width: 767px)" />
+    )}
     <div className="min-h-screen">
 
       {/* ══ 1. HERO ══════════════════════════════════════════ */}
@@ -203,10 +215,10 @@ export default async function Home() {
           />
         )}
 
-        {/* Mobile only: portrait video */}
+        {/* Mobile only: portrait video — optimized poster reduces LCP */}
         <HeroBackground
           videoSrc="/videos/hero-video.mp4"
-          posterUrl={assets.hero_background ?? undefined}
+          posterUrl={mobilePosterUrl}
         />
 
         {/* Gradient overlay */}
@@ -606,5 +618,6 @@ export default async function Home() {
       </FadeInView>
 
     </div>
+    </>
   );
 }
