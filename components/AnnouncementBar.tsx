@@ -94,12 +94,16 @@ export default function AnnouncementBar() {
 
   const { speed, messages } = data;
 
-  const strip = messages.map((m) => (
-    <span key={m.id} style={{ display: "inline-flex", alignItems: "center" }}>
-      <MessageItem text={m.text} link_url={m.link_url} />
-      {DOT}
-    </span>
-  ));
+  // Repeat each message 10× per half so the strip is always wider than the viewport,
+  // ensuring the translateX(-50%) marquee has no visible gap even with a single short message.
+  const loopItems = Array.from({ length: 10 }, (_, rep) =>
+    messages.map((m) => (
+      <span key={`${rep}-${m.id}`} style={{ display: "inline-flex", alignItems: "center" }}>
+        <MessageItem text={m.text} link_url={m.link_url} />
+        {DOT}
+      </span>
+    ))
+  ).flat();
 
   return (
     <div
@@ -123,8 +127,8 @@ export default function AnnouncementBar() {
         className={`animate-marquee${paused ? " animate-marquee-paused" : ""}`}
         style={{ display: "inline-flex", alignItems: "center", animationDuration: `${speed}s`, willChange: "transform" }}
       >
-        <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: "2rem" }}>{strip}</span>
-        <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: "2rem" }}>{strip}</span>
+        <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: "2rem" }}>{loopItems}</span>
+        <span style={{ display: "inline-flex", alignItems: "center", paddingLeft: "2rem" }}>{loopItems}</span>
       </div>
     </div>
   );
