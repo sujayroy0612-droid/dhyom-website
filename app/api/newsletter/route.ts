@@ -10,6 +10,33 @@ function adminClient() {
   );
 }
 
+async function fetchSettings(): Promise<{ subject: string; pdf_url: string | null }> {
+  try {
+    const { data } = await adminClient()
+      .from("newsletter_settings")
+      .select("subject, pdf_url")
+      .eq("id", 1)
+      .single();
+    return {
+      subject: data?.subject ?? "Welcome to Dhyom",
+      pdf_url: data?.pdf_url ?? null,
+    };
+  } catch {
+    return { subject: "Welcome to Dhyom", pdf_url: null };
+  }
+}
+
+async function fetchPdfAsBase64(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    return Buffer.from(buf).toString("base64");
+  } catch {
+    return null;
+  }
+}
+
 function buildWelcomeHtml(): string {
   return `<!DOCTYPE html>
 <html>
@@ -94,14 +121,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    // Fetch settings (subject + optional PDF URL)
+    const settings = await fetchSettings();
     const fromAddr = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
+
+    // Build attachments if PDF is configured
+    type Attachment = { filename: string; content: string };
+    const attachments: Attachment[] = [];
+    if (settings.pdf_url) {
+      const b64 = await fetchPdfAsBase64(settings.pdf_url);
+      if (b64) {
+        const filename = settings.pdf_url.split("/").pop()?.replace(/[?#].*$/, "") ?? "dhyom-guide.pdf";
+        attachments.push({ filename, content: b64 });
+      }
+    }
+
     const { error: resendErr } = await new Resend(apiKey).emails.send({
-      from:    `Dhyom <${fromAddr}>`,
-      to:      trimmed,
-      replyTo: "dhyomecom@gmail.com",
-      subject: "Welcome to Dhyom",
-      html:    buildWelcomeHtml(),
-      text:    buildWelcomeText(),
+      from:        `Dhyom <${fromAddr}>`,
+      to:          trimmed,
+      replyTo:     "dhyomecom@gmail.com",
+      subject:     settings.subject,
+      html:        buildWelcomeHtml(),
+      text:        buildWelcomeText(),
+      ...(attachments.length > 0 && { attachments }),
       headers: {
         "List-Unsubscribe": `<mailto:${fromAddr}?subject=unsubscribe>`,
       },

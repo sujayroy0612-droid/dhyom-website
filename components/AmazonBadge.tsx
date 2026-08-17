@@ -16,7 +16,7 @@ export default function AmazonBadge() {
       target="_blank"
       rel="noopener"
       aria-label="Shop Dhyom on Amazon — 4.8 stars"
-      className="fixed bottom-6 left-5 z-50 flex flex-col items-center justify-center rounded-full w-10 h-10 md:w-14 md:h-14"
+      className="fixed bottom-6 left-5 z-50 flex flex-col items-center justify-center rounded-full w-14 h-14"
       style={{
         background: "#C4A373",
         border: "2px solid rgba(196,163,115,0.55)",
@@ -46,16 +46,16 @@ export default function AmazonBadge() {
       whileTap={{ scale: 0.93 }}
     >
       <span style={{ color: "#1A0A14", fontWeight: 800, letterSpacing: "-0.5px", lineHeight: 1 }}
-            className="text-[8px] md:text-[13px]">
+            className="text-[13px]">
         amazon
       </span>
       <span aria-hidden
             style={{ color: "#1A0A14", opacity: 0.85, lineHeight: 1 }}
-            className="text-[6px] md:text-[9px]">
+            className="text-[9px]">
         ★★★★★
       </span>
       <span style={{ color: "#1A0A14", fontWeight: 700, lineHeight: 1 }}
-            className="text-[7px] md:text-[11px]">
+            className="text-[11px]">
         4.8
       </span>
     </motion.a>

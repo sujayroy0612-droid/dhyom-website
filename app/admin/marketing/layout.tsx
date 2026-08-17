@@ -7,6 +7,7 @@ const NAV = [
   { label: "Overview",          href: "/admin/marketing",                 icon: "▦" },
   { label: "Leads",             href: "/admin/marketing/leads",           icon: "⊹" },
   { label: "Lead Magnets",      href: "/admin/marketing/campaigns",       icon: "◫" },
+  { label: "Newsletter",        href: "/admin/marketing/newsletter",      icon: "✉" },
   { label: "Soap Opera",        href: "/admin/marketing/soap-opera",      icon: "◌" },
   { label: "Seinfeld",          href: "/admin/marketing/seinfeld",        icon: "◩" },
   { label: "Announcement Bar",  href: "/admin/marketing/announcement",    icon: "◈" },
