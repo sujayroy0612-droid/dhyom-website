@@ -1,20 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 const AMAZON_URL =
   "https://www.amazon.in/stores/DHYOM/page/1AD78961-3772-4711-8015-04282B274B61?lp_asin=B0GVPX8632&ref_=ast_bln&store_ref=bl_ast_dp_brandlogo_sto&bl_grd_status=override";
 
 export default function AmazonBadge() {
+  const pathname = usePathname();
+  if (pathname !== "/") return null;
+
   return (
     <motion.a
       href={AMAZON_URL}
       target="_blank"
       rel="noopener"
       aria-label="Shop Dhyom on Amazon — 4.8 stars"
-      className="fixed left-4 z-[999] flex flex-col items-center justify-center rounded-full w-10 h-10 md:w-14 md:h-14"
+      className="fixed bottom-6 left-5 z-50 flex flex-col items-center justify-center rounded-full w-10 h-10 md:w-14 md:h-14"
       style={{
-        top: "calc(var(--bar-height, 0px) + 96px)",
         background: "#C4A373",
         border: "2px solid rgba(196,163,115,0.55)",
         outline: "2px solid rgba(26,10,20,0.18)",
@@ -23,7 +26,6 @@ export default function AmazonBadge() {
         textDecoration: "none",
         color: "inherit",
       }}
-      /* Pulsing ring — identical rhythm to WhatsApp button */
       animate={{
         boxShadow: [
           "0 4px 14px rgba(0,0,0,0.60), 0 0 0 0px rgba(196,163,115,0.50)",
