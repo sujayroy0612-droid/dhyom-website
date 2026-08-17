@@ -7,6 +7,7 @@ import Providers from "@/components/Providers";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import AmazonTrustBar from "@/components/AmazonTrustBar";
+import AmazonBadge from "@/components/AmazonBadge";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import { fetchVisibleNavData } from "@/lib/supabase/visibility";
 import type { NavCategory } from "@/lib/nav";
@@ -51,6 +52,7 @@ export default async function RootLayout({
           <main style={{ paddingTop: "var(--bar-height, 0px)" }}>{children}</main>
           <ConditionalShell><Footer logoUrl={logoUrl} /></ConditionalShell>
           <ConditionalShell><WhatsAppButton /></ConditionalShell>
+          <ConditionalShell><AmazonBadge /></ConditionalShell>
         </Providers>
       </body>
     </html>
