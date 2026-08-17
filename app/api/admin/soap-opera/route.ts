@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   const { error: sendErr } = await new Resend(apiKey).emails.send({
     from:     `Dhyom <${fromAddr}>`,
     to:       test_email,
-    replyTo:  fromAddr,
+    replyTo:  "dhyomecom@gmail.com",
     subject:  `[TEST] ${subject}`,
     html,
     text,

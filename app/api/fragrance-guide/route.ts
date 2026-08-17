@@ -104,8 +104,9 @@ export async function POST(req: NextRequest) {
 
     const fromAddr = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
     const { data: resendData, error: resendErr } = await new Resend(apiKey).emails.send({
-      from: `Dhyom <${fromAddr}>`,
-      to: trimmed,
+      from:    `Dhyom <${fromAddr}>`,
+      to:      trimmed,
+      replyTo: "dhyomecom@gmail.com",
       subject: "Your Dhyom Fragrance Personalities Guide",
       html: buildGuideHtml(),
       text: "Your Dhyom Fragrance Personalities guide is attached. Visit dhyom.in to explore our collection.\n\nTo unsubscribe, reply with 'unsubscribe' in the subject.",

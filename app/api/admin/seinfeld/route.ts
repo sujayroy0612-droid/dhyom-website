@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
     const { error } = await resend.emails.send({
       from:     `Dhyom <${fromAddr}>`,
       to:       test_email.trim(),
-      replyTo:  fromAddr,
+      replyTo:  "dhyomecom@gmail.com",
       subject:  `[TEST] ${subject}`,
       html:     renderHtml(body_html, preview_text ?? "", null, testUnsub),
       text:     renderText(body_html, null, testUnsub),
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
         return {
           from:     `Dhyom <${fromAddr}>`,
           to:       r.email,
-          replyTo:  fromAddr,
+          replyTo:  "dhyomecom@gmail.com",
           subject,
           html:     renderHtml(body_html, preview_text ?? "", r.name, unsub),
           text:     renderText(body_html, r.name, unsub),

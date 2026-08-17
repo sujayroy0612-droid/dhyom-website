@@ -188,6 +188,7 @@ export async function POST(req: NextRequest) {
     const { error } = await resend.emails.send({
       from:    `Dhyom <${fromEmail}>`,
       to:      FOUNDER_EMAIL,
+      replyTo: "dhyomecom@gmail.com",
       subject: `New Order — ${orderNumber}`,
       html:    buildHtml(orderData),
       text:    buildText(orderData),
