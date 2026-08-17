@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase/client";
 
 const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
@@ -41,18 +40,13 @@ export default function NewsletterSettingsPage() {
   const pdfRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("newsletter_settings")
-        .select("subject, pdf_url")
-        .eq("id", 1)
-        .single();
-      if (data) {
-        setSubject(data.subject ?? "Welcome to Dhyom");
-        setPdfUrl(data.pdf_url ?? "");
-      }
-      setLoading(false);
-    })();
+    fetch("/api/admin/newsletter-settings")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.subject) setSubject(data.subject);
+        if (data.pdf_url) setPdfUrl(data.pdf_url);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   async function handlePdfFile(file: File) {
@@ -89,16 +83,16 @@ export default function NewsletterSettingsPage() {
     setSaveError("");
     setSaved(false);
 
-    const { error } = await supabase.from("newsletter_settings").upsert({
-      id:         1,
-      subject:    subject.trim(),
-      pdf_url:    pdfUrl.trim() || null,
-      updated_at: new Date().toISOString(),
+    const res = await fetch("/api/admin/newsletter-settings", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ subject: subject.trim(), pdf_url: pdfUrl.trim() || null }),
     });
+    const json = await res.json();
 
     setSaving(false);
-    if (error) {
-      setSaveError(error.message);
+    if (!res.ok) {
+      setSaveError(json.error ?? "Save failed.");
     } else {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
