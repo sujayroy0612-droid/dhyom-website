@@ -151,10 +151,10 @@ export async function POST(req: NextRequest) {
     }
 
     const resend = new Resend(apiKey);
-    const fromEmail = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+    const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@dhyom.in";
 
     const { error } = await resend.emails.send({
-      from: fromEmail,
+      from: `Dhyom <${fromEmail}>`,
       to: FOUNDER_EMAIL,
       subject: `New Order — ${orderNumber}`,
       html: buildHtml({ orderNumber, customerName, phone, email, address, items, total, paymentStatus }),

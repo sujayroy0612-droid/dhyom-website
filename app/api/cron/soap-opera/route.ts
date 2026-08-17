@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
   }
 
   const resend = new Resend(apiKey);
-  const fromAddr = `Dhyom <${process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev"}>`;
+  const fromAddr = `Dhyom <${process.env.RESEND_FROM_EMAIL ?? "noreply@dhyom.in"}>`;
   let sent = 0;
   const errors: string[] = [];
 

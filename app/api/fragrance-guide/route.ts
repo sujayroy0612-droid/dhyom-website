@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    const fromAddr = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+    const fromAddr = process.env.RESEND_FROM_EMAIL ?? "noreply@dhyom.in";
     const { data: resendData, error: resendErr } = await new Resend(apiKey).emails.send({
       from: `Dhyom <${fromAddr}>`,
       to: trimmed,
