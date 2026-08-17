@@ -67,7 +67,7 @@ export default function AnnouncementBar() {
         .single();
 
       if (!settings?.enabled) {
-        document.documentElement.style.setProperty("--bar-height", "var(--amazon-bar-height, 0px)");
+        document.documentElement.style.setProperty("--bar-height", "0px");
         return;
       }
 
@@ -79,14 +79,14 @@ export default function AnnouncementBar() {
 
       if (messages?.length) {
         setData({ speed: settings.speed ?? 30, messages });
-        document.documentElement.style.setProperty("--bar-height", "calc(36px + var(--amazon-bar-height, 0px))");
+        document.documentElement.style.setProperty("--bar-height", "36px");
       } else {
-        document.documentElement.style.setProperty("--bar-height", "var(--amazon-bar-height, 0px)");
+        document.documentElement.style.setProperty("--bar-height", "0px");
       }
     })();
 
     return () => {
-      document.documentElement.style.setProperty("--bar-height", "var(--amazon-bar-height, 0px)");
+      document.documentElement.style.setProperty("--bar-height", "0px");
     };
   }, [pathname]);
 
@@ -109,7 +109,7 @@ export default function AnnouncementBar() {
     <div
       style={{
         position: "fixed",
-        top: "var(--amazon-bar-height, 0px)",
+        top: 0,
         left: 0,
         right: 0,
         height: "36px",

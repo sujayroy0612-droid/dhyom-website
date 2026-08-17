@@ -3,8 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --bar-height: 0px;          /* updated at runtime by AnnouncementBar */
-  --amazon-bar-height: 34px;  /* updated at runtime by AmazonTrustBar; 0px on admin/fragrance-guide */
+  --bar-height: 0px;   /* updated at runtime by AnnouncementBar */
 
   /* ── Brand palette: Divine Damson & Champagne Brass ── */
   --color-ink:          #0F0508;

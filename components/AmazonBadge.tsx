@@ -12,10 +12,11 @@ export default function AmazonBadge() {
       target="_blank"
       rel="noopener"
       aria-label="Shop Dhyom on Amazon — 4.8 stars"
-      className="fixed left-4 z-[999] flex flex-col items-center justify-center rounded-full no-underline
+      className="fixed left-4 z-[999] flex flex-col items-center justify-center rounded-full
                  w-[44px] h-[44px] md:w-[52px] md:h-[52px]"
       style={{
-        top: "80px",
+        // 64px header + var(--bar-height) announcement bar + 8px gap
+        top: "calc(var(--bar-height, 0px) + 72px)",
         background: "#C4A373",
         boxShadow: "0 4px 14px rgba(0,0,0,0.6)",
         gap: "2px",
@@ -29,17 +30,17 @@ export default function AmazonBadge() {
       whileTap={{ scale: 0.93 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
-      <span style={{ color: "#1A0A14", fontWeight: 800, fontSize: "9px", letterSpacing: "-0.5px", lineHeight: 1 }}
-            className="md:text-[10px]">
+      <span style={{ color: "#1A0A14", fontWeight: 800, fontSize: "11px", letterSpacing: "-0.5px", lineHeight: 1 }}
+            className="md:text-[13px]">
         amazon
       </span>
       <span aria-hidden
-            style={{ color: "#1A0A14", fontSize: "7px", opacity: 0.85, lineHeight: 1 }}
-            className="md:text-[8px]">
+            style={{ color: "#1A0A14", fontSize: "8px", opacity: 0.85, lineHeight: 1 }}
+            className="md:text-[9px]">
         ★★★★★
       </span>
-      <span style={{ color: "#1A0A14", fontWeight: 700, fontSize: "9px", lineHeight: 1 }}
-            className="md:text-[10px]">
+      <span style={{ color: "#1A0A14", fontWeight: 700, fontSize: "10px", lineHeight: 1 }}
+            className="md:text-[11px]">
         4.8
       </span>
     </motion.a>

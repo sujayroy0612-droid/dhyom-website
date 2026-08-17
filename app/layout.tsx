@@ -6,7 +6,6 @@ import ConditionalShell from "@/components/ConditionalShell";
 import Providers from "@/components/Providers";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import AnnouncementBar from "@/components/AnnouncementBar";
-import AmazonTrustBar from "@/components/AmazonTrustBar";
 import AmazonBadge from "@/components/AmazonBadge";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import { fetchVisibleNavData } from "@/lib/supabase/visibility";
@@ -46,7 +45,6 @@ export default async function RootLayout({
       </head>
       <body>
         <Providers>
-          <AmazonTrustBar />
           <AnnouncementBar />
           <ConditionalShell><Header logoUrl={logoUrl} shopNav={shopNav} /></ConditionalShell>
           <main style={{ paddingTop: "var(--bar-height, 0px)" }}>{children}</main>
