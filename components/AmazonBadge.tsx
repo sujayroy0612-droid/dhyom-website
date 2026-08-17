@@ -12,8 +12,7 @@ export default function AmazonBadge() {
       target="_blank"
       rel="noopener"
       aria-label="Shop Dhyom on Amazon — 4.8 stars"
-      className="fixed left-4 z-[999] flex flex-col items-center justify-center rounded-full
-                 w-[44px] h-[44px] md:w-[52px] md:h-[52px]"
+      className="fixed left-4 z-[999] flex flex-col items-center justify-center rounded-full w-14 h-14"
       style={{
         top: "calc(var(--bar-height, 0px) + 72px)",
         background: "#C4A373",
