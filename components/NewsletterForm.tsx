@@ -25,7 +25,7 @@ export default function NewsletterForm() {
   if (status === "done") {
     return (
       <p className="font-body font-light italic text-[rgba(245,237,224,0.55)] text-base text-center">
-        You're on the list — check your inbox for a welcome from us.
+        You&apos;re on the list — check your inbox for a welcome from us.
       </p>
     );
   }
