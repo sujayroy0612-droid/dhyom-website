@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
 
 export default function NewsletterForm() {
   const [email, setEmail] = useState("");
@@ -15,14 +14,18 @@ export default function NewsletterForm() {
       return;
     }
     setStatus("loading");
-    const { error } = await supabase.from("contacts").insert({ email: trimmed, tag: "newsletter" });
-    setStatus(error ? "error" : "done");
+    const res = await fetch("/api/newsletter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: trimmed }),
+    });
+    setStatus(res.ok ? "done" : "error");
   }
 
   if (status === "done") {
     return (
       <p className="font-body font-light italic text-[rgba(245,237,224,0.55)] text-base text-center">
-        Thank you. Your ritual guide is on its way.
+        You're on the list — check your inbox for a welcome from us.
       </p>
     );
   }
