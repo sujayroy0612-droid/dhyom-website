@@ -75,7 +75,8 @@ export async function GET(req: NextRequest) {
   }
 
   const resend = new Resend(apiKey);
-  const fromAddr = `Dhyom <${process.env.RESEND_FROM_EMAIL ?? "noreply@dhyom.in"}>`;
+  const fromAddr  = `Dhyom <${process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in"}>`;
+  const replyTo   = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
   let sent = 0;
   const errors: string[] = [];
 
@@ -99,8 +100,9 @@ export async function GET(req: NextRequest) {
       const { subject, html, text } = renderEmail(template, contact.name ?? "", unsub);
 
       const { error: sendErr } = await resend.emails.send({
-        from: fromAddr,
-        to: contact.email,
+        from:      fromAddr,
+        to:        contact.email,
+        replyTo:   replyTo,
         subject,
         html,
         text,

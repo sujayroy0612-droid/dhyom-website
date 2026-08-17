@@ -79,14 +79,15 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "RESEND_API_KEY not set" }, { status: 500 });
 
-  const fromAddr = process.env.RESEND_FROM_EMAIL ?? "noreply@dhyom.in";
+  const fromAddr = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
   const testUnsubUrl = `https://dhyom.in/api/unsubscribe?test=1`;
   const { subject, html, text } = renderEmail(row, "there", testUnsubUrl);
 
   const { error: sendErr } = await new Resend(apiKey).emails.send({
-    from: `Dhyom <${fromAddr}>`,
-    to: test_email,
-    subject: `[TEST] ${subject}`,
+    from:     `Dhyom <${fromAddr}>`,
+    to:       test_email,
+    replyTo:  fromAddr,
+    subject:  `[TEST] ${subject}`,
     html,
     text,
   });

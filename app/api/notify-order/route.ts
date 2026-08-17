@@ -48,6 +48,37 @@ function inr(n: number) {
   return "₹" + Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function buildText(data: {
+  orderNumber: string;
+  customerName: string;
+  phone: string;
+  email: string;
+  address: string;
+  items: OrderItem[];
+  total: number;
+  paymentStatus: string;
+}): string {
+  const lines = [
+    `New Order — ${data.orderNumber}`,
+    "",
+    `Customer : ${data.customerName}`,
+    `Phone    : ${data.phone}`,
+    `Email    : ${data.email}`,
+    `Address  : ${data.address}`,
+    `Payment  : ${data.paymentStatus}`,
+    "",
+    "Items:",
+    ...data.items.map(
+      (i) => `  ${i.name}${i.label ? ` (${i.label})` : ""} x${i.quantity} — ${inr(i.price * i.quantity)}`
+    ),
+    "",
+    `Total: ${inr(data.total)}`,
+    "",
+    "This is an internal order alert sent to the Dhyom founder.",
+  ];
+  return lines.join("\n");
+}
+
 function buildHtml(data: {
   orderNumber: string;
   customerName: string;
@@ -151,13 +182,15 @@ export async function POST(req: NextRequest) {
     }
 
     const resend = new Resend(apiKey);
-    const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@dhyom.in";
+    const fromEmail = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
+    const orderData = { orderNumber, customerName, phone, email, address, items, total, paymentStatus };
 
     const { error } = await resend.emails.send({
-      from: `Dhyom <${fromEmail}>`,
-      to: FOUNDER_EMAIL,
+      from:    `Dhyom <${fromEmail}>`,
+      to:      FOUNDER_EMAIL,
       subject: `New Order — ${orderNumber}`,
-      html: buildHtml({ orderNumber, customerName, phone, email, address, items, total, paymentStatus }),
+      html:    buildHtml(orderData),
+      text:    buildText(orderData),
     });
 
     if (error) {

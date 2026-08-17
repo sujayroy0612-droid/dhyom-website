@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "RESEND_API_KEY not set" }, { status: 500 });
 
-  const fromAddr = process.env.RESEND_FROM_EMAIL ?? "noreply@dhyom.in";
+  const fromAddr = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
   const resend   = new Resend(apiKey);
 
   // ── Test send ──
@@ -134,11 +134,12 @@ export async function POST(req: NextRequest) {
     }
     const testUnsub = `https://dhyom.in/api/unsubscribe?test=1`;
     const { error } = await resend.emails.send({
-      from:    `Dhyom <${fromAddr}>`,
-      to:      test_email.trim(),
-      subject: `[TEST] ${subject}`,
-      html:    renderHtml(body_html, preview_text ?? "", null, testUnsub),
-      text:    renderText(body_html, null, testUnsub),
+      from:     `Dhyom <${fromAddr}>`,
+      to:       test_email.trim(),
+      replyTo:  fromAddr,
+      subject:  `[TEST] ${subject}`,
+      html:     renderHtml(body_html, preview_text ?? "", null, testUnsub),
+      text:     renderText(body_html, null, testUnsub),
     });
     if (error) return NextResponse.json({ error: JSON.stringify(error) }, { status: 500 });
     return NextResponse.json({ ok: true });
@@ -191,11 +192,12 @@ export async function POST(req: NextRequest) {
       const emails = batch.map(r => {
         const unsub = unsubscribeUrl(r.email);
         return {
-          from:    `Dhyom <${fromAddr}>`,
-          to:      r.email,
+          from:     `Dhyom <${fromAddr}>`,
+          to:       r.email,
+          replyTo:  fromAddr,
           subject,
-          html:    renderHtml(body_html, preview_text ?? "", r.name, unsub),
-          text:    renderText(body_html, r.name, unsub),
+          html:     renderHtml(body_html, preview_text ?? "", r.name, unsub),
+          text:     renderText(body_html, r.name, unsub),
           headers: {
             "List-Unsubscribe":      `<${unsub}>`,
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
