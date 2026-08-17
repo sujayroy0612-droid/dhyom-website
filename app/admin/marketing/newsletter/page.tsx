@@ -43,16 +43,20 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 export default function NewsletterSettingsPage() {
-  const [token,     setToken]     = useState("");
-  const [subject,   setSubject]   = useState("Welcome to Dhyom");
-  const [bodyText,  setBodyText]  = useState(DEFAULT_BODY);
-  const [pdfUrl,    setPdfUrl]    = useState("");
-  const [pdfStatus, setPdfStatus] = useState<PdfStatus>("idle");
-  const [pdfError,  setPdfError]  = useState("");
-  const [loading,   setLoading]   = useState(true);
-  const [saving,    setSaving]    = useState(false);
-  const [saved,     setSaved]     = useState(false);
-  const [saveError, setSaveError] = useState("");
+  const [token,      setToken]      = useState("");
+  const [subject,    setSubject]    = useState("Welcome to Dhyom");
+  const [bodyText,   setBodyText]   = useState(DEFAULT_BODY);
+  const [pdfUrl,     setPdfUrl]     = useState("");
+  const [pdfStatus,  setPdfStatus]  = useState<PdfStatus>("idle");
+  const [pdfError,   setPdfError]   = useState("");
+  const [loading,    setLoading]    = useState(true);
+  const [saving,     setSaving]     = useState(false);
+  const [saved,      setSaved]      = useState(false);
+  const [saveError,  setSaveError]  = useState("");
+  const [testEmail,  setTestEmail]  = useState("");
+  const [testing,    setTesting]    = useState(false);
+  const [testLog,    setTestLog]    = useState<string[]>([]);
+  const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const pdfRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -82,7 +86,7 @@ export default function NewsletterSettingsPage() {
       fd.append("upload_preset", UPLOAD_PRESET);
 
       const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`,
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`,
         { method: "POST", body: fd }
       );
       if (!res.ok) {
@@ -96,6 +100,22 @@ export default function NewsletterSettingsPage() {
       setPdfError(err instanceof Error ? err.message : "Upload failed");
       setPdfStatus("error");
     }
+  }
+
+  async function handleTest() {
+    if (!testEmail.trim()) return;
+    setTesting(true);
+    setTestLog([]);
+    setTestResult(null);
+    const res = await fetch("/api/admin/newsletter-test", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body:    JSON.stringify({ to: testEmail.trim() }),
+    });
+    const json = await res.json();
+    setTestLog(json.log ?? []);
+    setTestResult({ ok: json.ok, error: json.error });
+    setTesting(false);
   }
 
   async function handleSave() {
@@ -291,6 +311,62 @@ export default function NewsletterSettingsPage() {
               </span>
             )}
           </div>
+        </div>
+
+        {/* Send Test Email */}
+        <div className="mt-6 bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[6px] p-8 flex flex-col gap-4">
+          <div>
+            <p className="font-display text-[0.44rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.55)] mb-1">
+              Send Test Email
+            </p>
+            <p className="font-body font-light italic text-[rgba(245,237,224,0.30)] text-[0.72rem]">
+              Sends a test using the saved settings — including PDF if set. Shows exactly what would fail.
+            </p>
+          </div>
+
+          <div className="flex gap-3 items-center flex-wrap">
+            <input
+              type="email"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="your@email.com"
+              className={inputCls + " max-w-xs"}
+            />
+            <button
+              type="button"
+              disabled={testing || !testEmail.trim()}
+              onClick={handleTest}
+              className="font-display text-[0.50rem] tracking-[0.18em] uppercase border border-[rgba(196,163,115,0.35)] text-brass rounded-[3px] px-5 py-2.5 hover:bg-[rgba(196,163,115,0.07)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] whitespace-nowrap"
+            >
+              {testing ? "Sending…" : "Send Test"}
+            </button>
+          </div>
+
+          {testLog.length > 0 && (
+            <div className="bg-[#12060e] rounded-[4px] px-5 py-4 flex flex-col gap-1">
+              {testLog.map((line, i) => (
+                <p key={i} className={[
+                  "font-mono text-[0.62rem] leading-relaxed",
+                  line.startsWith("✓") ? "text-[rgba(100,215,100,0.70)]"
+                  : line.startsWith("✗") ? "text-[rgba(210,90,90,0.75)]"
+                  : "text-[rgba(196,163,115,0.55)]",
+                ].join(" ")}>
+                  {line}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {testResult && (
+            <p className={[
+              "font-body font-light text-[0.78rem]",
+              testResult.ok ? "text-[rgba(100,215,100,0.70)]" : "text-[rgba(210,90,90,0.75)]",
+            ].join(" ")}>
+              {testResult.ok
+                ? "Test email sent — check your inbox (and spam)."
+                : `Failed: ${testResult.error}`}
+            </p>
+          )}
         </div>
 
         {/* Info box */}
