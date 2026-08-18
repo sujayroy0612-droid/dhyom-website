@@ -11,25 +11,32 @@ function adminClient() {
 
 export async function GET(req: NextRequest) {
   const slug = req.nextUrl.searchParams.get("slug");
+  const file = req.nextUrl.searchParams.get("file"); // optional: actual filename in storage
   if (!slug) return NextResponse.json({ error: "slug required" }, { status: 400 });
 
   const sb = adminClient();
-  const path = `campaigns/${slug}.pdf`;
 
-  // Check the file exists in Supabase Storage
+  // List all files in campaigns folder and find a match
   const { data: fileData, error: fileErr } = await sb.storage
     .from("guides")
-    .list("campaigns", { search: `${slug}.pdf` });
+    .list("campaigns");
 
   if (fileErr) return NextResponse.json({ error: fileErr.message }, { status: 500 });
 
-  const found = fileData?.find((f) => f.name === `${slug}.pdf`);
+  // Match by explicit file param, or slug-based name (case-insensitive, hyphens=underscores)
+  const normalize = (s: string) => s.toLowerCase().replace(/[_-]/g, "").replace(/\.pdf$/, "");
+  const found = file
+    ? fileData?.find((f) => f.name === file)
+    : fileData?.find((f) => normalize(f.name) === normalize(`${slug}.pdf`));
+
   if (!found) {
+    const names = fileData?.map((f) => f.name).join(", ") ?? "none";
     return NextResponse.json({
-      error: `File not found: upload '${slug}.pdf' to Supabase Storage → guides bucket → campaigns folder first`,
+      error: `No matching file for slug '${slug}'. Files in campaigns/: ${names}`,
     }, { status: 404 });
   }
 
+  const path = `campaigns/${found.name}`;
   // Get public URL
   const { data: { publicUrl } } = sb.storage.from("guides").getPublicUrl(path);
 
