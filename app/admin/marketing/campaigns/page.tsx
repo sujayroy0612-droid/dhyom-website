@@ -357,7 +357,7 @@ export default function CampaignsPage() {
             </Field>
 
             {/* PDF Upload */}
-            <Field label="PDF Guide" hint="Attached to the delivery email via Cloudinary">
+            <Field label="PDF Guide" hint="Stored in DB and attached to the delivery email">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-3">
                   <input
@@ -568,8 +568,16 @@ export default function CampaignsPage() {
                     <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase border border-[rgba(196,163,115,0.22)] text-[rgba(196,163,115,0.45)] rounded-full px-2 py-0.5">
                       {c.tag}
                     </span>
-                    {!c.pdf_url && (
-                      <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase border border-[rgba(200,140,60,0.28)] text-[rgba(200,140,60,0.55)] rounded-full px-2 py-0.5">
+                    {c.pdf_filename ? (
+                      <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase border border-[rgba(100,200,100,0.28)] text-[rgba(100,215,100,0.55)] rounded-full px-2 py-0.5">
+                        pdf ready
+                      </span>
+                    ) : c.pdf_url ? (
+                      <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase border border-[rgba(210,140,40,0.38)] text-[rgba(210,160,60,0.70)] rounded-full px-2 py-0.5">
+                        re-upload pdf
+                      </span>
+                    ) : (
+                      <span className="font-display text-[0.36rem] tracking-[0.10em] uppercase border border-[rgba(200,80,80,0.28)] text-[rgba(200,80,80,0.55)] rounded-full px-2 py-0.5">
                         no pdf
                       </span>
                     )}

@@ -36,13 +36,17 @@ export async function POST(req: NextRequest) {
 
   const sb = adminClient();
 
+  console.log(`[campaign-save] id=${id ?? "NEW"} pdf_base64=${payload.pdf_base64 ? `YES (${String(payload.pdf_base64).length} chars)` : "null"}`);
+
   const { error } = id
     ? await sb.from("campaigns").update(payload).eq("id", id)
     : await sb.from("campaigns").insert(payload);
 
   if (error) {
+    console.error("[campaign-save] Supabase error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  console.log(`[campaign-save] saved OK`);
   return NextResponse.json({ ok: true });
 }
