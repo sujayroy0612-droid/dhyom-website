@@ -246,8 +246,17 @@ export default function CampaignsPage() {
       )
     )
       return;
-    const { error } = await supabase.from("campaigns").delete().eq("id", c.id);
-    if (!error) setCampaigns((prev) => prev.filter((x) => x.id !== c.id));
+    const res = await fetch("/api/admin/campaign-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: c.id }),
+    });
+    if (res.ok) {
+      setCampaigns((prev) => prev.filter((x) => x.id !== c.id));
+    } else {
+      const j = await res.json().catch(() => ({})) as { error?: string };
+      alert(`Delete failed: ${j.error ?? "unknown error"}`);
+    }
   }
 
   // ── Loading spinner ─────────────────────────────────────────────────────────
