@@ -9,21 +9,7 @@ function adminClient() {
   );
 }
 
-async function verifyAdmin(req: NextRequest): Promise<boolean> {
-  const token = (req.headers.get("authorization") ?? "").replace("Bearer ", "").trim();
-  if (!token) return false;
-  const { data } = await createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ).auth.getUser(token);
-  return !!data.user;
-}
-
-export async function GET(req: NextRequest) {
-  if (!(await verifyAdmin(req))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function GET() {
   const { data, error } = await adminClient()
     .from("newsletter_settings")
     .select("subject, pdf_url, body_text")
@@ -42,10 +28,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await verifyAdmin(req))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { subject, pdf_url, body_text } = await req.json();
 
   if (!subject?.trim()) {

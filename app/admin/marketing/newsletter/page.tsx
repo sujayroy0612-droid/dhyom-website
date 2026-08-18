@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "@/lib/supabase/client";
 
 const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
@@ -43,7 +42,6 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 export default function NewsletterSettingsPage() {
-  const [token,      setToken]      = useState("");
   const [subject,    setSubject]    = useState("Welcome to Dhyom");
   const [bodyText,   setBodyText]   = useState(DEFAULT_BODY);
   const [pdfUrl,     setPdfUrl]     = useState("");
@@ -60,21 +58,14 @@ export default function NewsletterSettingsPage() {
   const pdfRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { setLoading(false); return; }
-      const tk = session.access_token;
-      setToken(tk);
-      fetch("/api/admin/newsletter-settings", {
-        headers: { Authorization: `Bearer ${tk}` },
+    fetch("/api/admin/newsletter-settings")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.subject)   setSubject(data.subject);
+        if (data.body_text) setBodyText(data.body_text);
+        if (data.pdf_url)   setPdfUrl(data.pdf_url);
       })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.subject)   setSubject(data.subject);
-          if (data.body_text) setBodyText(data.body_text);
-          if (data.pdf_url)   setPdfUrl(data.pdf_url);
-        })
-        .finally(() => setLoading(false));
-    });
+      .finally(() => setLoading(false));
   }, []);
 
   async function handlePdfFile(file: File) {
@@ -109,7 +100,7 @@ export default function NewsletterSettingsPage() {
     setTestResult(null);
     const res = await fetch("/api/admin/newsletter-test", {
       method:  "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ to: testEmail.trim() }),
     });
     const json = await res.json();
@@ -129,10 +120,7 @@ export default function NewsletterSettingsPage() {
 
     const res = await fetch("/api/admin/newsletter-settings", {
       method:  "POST",
-      headers: {
-        "Content-Type":  "application/json",
-        Authorization:   `Bearer ${token}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         subject:   subject.trim(),
         pdf_url:   pdfUrl.trim() || null,

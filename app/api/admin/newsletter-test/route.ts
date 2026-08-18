@@ -11,16 +11,6 @@ function adminClient() {
   );
 }
 
-async function verifyAdmin(req: NextRequest): Promise<boolean> {
-  const token = (req.headers.get("authorization") ?? "").replace("Bearer ", "").trim();
-  if (!token) return false;
-  const { data } = await createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ).auth.getUser(token);
-  return !!data.user;
-}
-
 function bodyToHtml(text: string, name: string): string {
   return text
     .replace(/\{\{name\}\}/g, name || "there")
@@ -34,7 +24,7 @@ function bodyToHtml(text: string, name: string): string {
     .join("");
 }
 
-const FALLBACK_BODY = `Hi {{name}},
+const FALLBACK_BODY = `Hi there,
 
 Welcome to the Dhyom inner circle. I'm so glad you're here.
 
@@ -44,10 +34,6 @@ As promised, your Ritual Guide is attached to this email — a quiet introductio
 Founder, Dhyom`;
 
 export async function POST(req: NextRequest) {
-  if (!(await verifyAdmin(req))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { to } = await req.json();
   if (!to?.trim()) {
     return NextResponse.json({ error: "Test email address is required." }, { status: 400 });
@@ -84,12 +70,12 @@ export async function POST(req: NextRequest) {
         pdf_url:   data?.pdf_url   ?? null,
       };
       log.push(`✓ Settings loaded — subject: "${settings.subject}"`);
-      log.push(settings.body_text ? "✓ Body text found in settings" : "⚠ No body_text saved — using fallback copy");
-      log.push(settings.pdf_url   ? `✓ PDF URL: ${settings.pdf_url}` : "⚠ No PDF URL in settings — sending without attachment");
+      log.push(settings.body_text ? "✓ Body text found in settings" : "⚠ No body_text — using fallback copy");
+      log.push(settings.pdf_url   ? `✓ PDF URL: ${settings.pdf_url}` : "⚠ No PDF URL — sending without attachment");
     }
   } catch (ex) {
     const msg = ex instanceof Error ? ex.message : String(ex);
-    log.push(`✗ newsletter_settings exception: ${msg} — table may not exist`);
+    log.push(`✗ newsletter_settings exception: ${msg} — table may not exist, run the SQL`);
     settings = { subject: "Welcome to Dhyom", body_text: null, pdf_url: null };
   }
 
@@ -110,19 +96,18 @@ export async function POST(req: NextRequest) {
         const b64 = Buffer.from(buf).toString("base64");
         const filename = settings.pdf_url.split("/").pop()?.replace(/[?#].*$/, "") ?? "dhyom-guide.pdf";
         attachments.push({ filename, content: b64 });
-        log.push(`✓ PDF fetched (${Math.round(buf.byteLength / 1024)} KB) — will attach as "${filename}"`);
+        log.push(`✓ PDF fetched (${Math.round(buf.byteLength / 1024)} KB) — attaching as "${filename}"`);
       }
     } catch (ex) {
       log.push(`✗ PDF fetch exception: ${ex instanceof Error ? ex.message : String(ex)}`);
     }
   }
 
-  // 4. Build email
+  // 4. Build + send
   const rawBody = settings.body_text?.trim() || FALLBACK_BODY;
   const html = emailWrapper("Test email from Dhyom admin", bodyToHtml(rawBody, "there"), unsubUrl);
   const text = rawBody.replace(/\{\{name\}\}/g, "there");
 
-  // 5. Send
   const { data: sendData, error: sendErr } = await new Resend(apiKey).emails.send({
     from:    `Dhyom <${fromAddr}>`,
     to:      to.trim(),
@@ -135,7 +120,7 @@ export async function POST(req: NextRequest) {
 
   if (sendErr) {
     log.push(`✗ Resend error: ${JSON.stringify(sendErr)}`);
-    return NextResponse.json({ ok: false, error: sendErr.message ?? "Resend send failed", log });
+    return NextResponse.json({ ok: false, error: sendErr.message ?? "Send failed", log });
   }
 
   log.push(`✓ Email sent — Resend ID: ${(sendData as { id?: string })?.id ?? "unknown"}`);
