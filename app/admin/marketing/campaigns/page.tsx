@@ -175,24 +175,15 @@ export default function CampaignsPage() {
     setPdfStatus("uploading");
     setPdfError("");
     try {
-      // 1. Upload to Supabase Storage
       const fd = new FormData();
       fd.append("file", file);
       fd.append("slug", form.slug || form.title || "guide");
-      const uploadRes  = await fetch("/api/admin/upload-campaign-pdf", { method: "POST", body: fd });
-      const uploadData = await uploadRes.json() as { ok?: boolean; url?: string; error?: string };
-      if (!uploadRes.ok || !uploadData.url) throw new Error(uploadData.error ?? "Upload failed");
+      fd.append("id",   editing.id); // single atomic call: upload + DB write + verify
+      const res  = await fetch("/api/admin/upload-campaign-pdf", { method: "POST", body: fd });
+      const data = await res.json() as { ok?: boolean; url?: string; pdf_filename?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Upload failed");
 
-      // 2. Immediately write the URL to DB (don't wait for Save button)
-      const setRes  = await fetch("/api/admin/set-campaign-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editing.id, pdf_url: uploadData.url, pdf_filename: file.name }),
-      });
-      const setData = await setRes.json() as { ok?: boolean; error?: string };
-      if (!setRes.ok || setData.error) throw new Error(setData.error ?? "DB update failed");
-
-      setForm((f) => ({ ...f, pdf_url: uploadData.url!, pdf_filename: file.name, pdf_base64: null }));
+      setForm((f) => ({ ...f, pdf_url: data.url!, pdf_filename: data.pdf_filename ?? file.name, pdf_base64: null }));
       setPdfStatus("done");
     } catch (err) {
       setPdfError(err instanceof Error ? err.message : "Upload failed");
@@ -406,8 +397,17 @@ export default function CampaignsPage() {
                       : "Upload PDF"}
                   </button>
                   {form.pdf_url && (
-                    <span className="font-body text-[0.68rem] text-[rgba(245,237,224,0.28)] truncate max-w-xs">
-                      {form.pdf_url.split("/").pop()}
+                    <span
+                      className={`font-body text-[0.68rem] truncate max-w-xs ${
+                        form.pdf_url.includes("supabase.co")
+                          ? "text-[rgba(100,215,100,0.65)]"
+                          : "text-[rgba(210,90,90,0.65)]"
+                      }`}
+                      title={form.pdf_url}
+                    >
+                      {form.pdf_url.includes("supabase.co")
+                        ? `✓ supabase: ${form.pdf_url.split("/campaigns/")[1] ?? form.pdf_url.split("/").pop()}`
+                        : `⚠ not supabase: ${form.pdf_url.split("/").pop()}`}
                     </span>
                   )}
                 </div>
