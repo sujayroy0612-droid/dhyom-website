@@ -168,26 +168,31 @@ export default function CampaignsPage() {
   // ── PDF upload ──────────────────────────────────────────────────────────────
 
   async function handlePdfFile(file: File) {
+    if (!editing?.id) {
+      setPdfError("Save the campaign first, then upload the PDF.");
+      return;
+    }
     setPdfStatus("uploading");
     setPdfError("");
     try {
+      // 1. Upload to Supabase Storage
       const fd = new FormData();
       fd.append("file", file);
       fd.append("slug", form.slug || form.title || "guide");
+      const uploadRes  = await fetch("/api/admin/upload-campaign-pdf", { method: "POST", body: fd });
+      const uploadData = await uploadRes.json() as { ok?: boolean; url?: string; error?: string };
+      if (!uploadRes.ok || !uploadData.url) throw new Error(uploadData.error ?? "Upload failed");
 
-      const res  = await fetch("/api/admin/upload-campaign-pdf", { method: "POST", body: fd });
-      const data = await res.json() as { ok?: boolean; url?: string; error?: string };
+      // 2. Immediately write the URL to DB (don't wait for Save button)
+      const setRes  = await fetch("/api/admin/set-campaign-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editing.id, pdf_url: uploadData.url, pdf_filename: file.name }),
+      });
+      const setData = await setRes.json() as { ok?: boolean; error?: string };
+      if (!setRes.ok || setData.error) throw new Error(setData.error ?? "DB update failed");
 
-      if (!res.ok || !data.url) {
-        throw new Error(data.error ?? "Upload failed");
-      }
-
-      setForm((f) => ({
-        ...f,
-        pdf_url:      data.url!,
-        pdf_filename: file.name,
-        pdf_base64:   null,
-      }));
+      setForm((f) => ({ ...f, pdf_url: uploadData.url!, pdf_filename: file.name, pdf_base64: null }));
       setPdfStatus("done");
     } catch (err) {
       setPdfError(err instanceof Error ? err.message : "Upload failed");
