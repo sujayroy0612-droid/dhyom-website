@@ -171,17 +171,22 @@ export default function CampaignsPage() {
     setPdfStatus("uploading");
     setPdfError("");
     try {
-      const b64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload  = () => resolve((reader.result as string).split(",")[1]);
-        reader.onerror = () => reject(new Error("Failed to read file"));
-        reader.readAsDataURL(file);
-      });
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("slug", form.slug || form.title || "guide");
+
+      const res  = await fetch("/api/admin/upload-campaign-pdf", { method: "POST", body: fd });
+      const data = await res.json() as { ok?: boolean; url?: string; error?: string };
+
+      if (!res.ok || !data.url) {
+        throw new Error(data.error ?? "Upload failed");
+      }
+
       setForm((f) => ({
         ...f,
-        pdf_base64:   b64,
+        pdf_url:      data.url!,
         pdf_filename: file.name,
-        pdf_url:      file.name,
+        pdf_base64:   null,
       }));
       setPdfStatus("done");
     } catch (err) {

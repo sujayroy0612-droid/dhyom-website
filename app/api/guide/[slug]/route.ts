@@ -81,10 +81,22 @@ export async function POST(
       console.error(`[guide/${slug}] contacts exception:`, ex);
     }
 
-    // 4. Get PDF base64 from DB (stored at upload time — no external fetch needed)
-    const pdfBase64: string | undefined = campaign.pdf_base64 ?? undefined;
-    if (!pdfBase64) {
-      console.warn(`[guide/${slug}] No pdf_base64 in DB — re-upload PDF in admin to fix`);
+    // 4. Fetch PDF from Supabase Storage public URL
+    let pdfBase64: string | undefined;
+    if (campaign.pdf_url) {
+      try {
+        const pdfRes = await fetch(campaign.pdf_url);
+        if (pdfRes.ok) {
+          pdfBase64 = Buffer.from(await pdfRes.arrayBuffer()).toString("base64");
+          console.log(`[guide/${slug}] PDF fetched OK (${Math.round(pdfBase64.length * 0.75 / 1024)} KB)`);
+        } else {
+          console.warn(`[guide/${slug}] PDF fetch returned ${pdfRes.status} — ${campaign.pdf_url}`);
+        }
+      } catch (fetchErr) {
+        console.warn(`[guide/${slug}] PDF fetch failed:`, fetchErr);
+      }
+    } else {
+      console.warn(`[guide/${slug}] No pdf_url stored — upload PDF in admin`);
     }
 
     // 5. Send via Resend

@@ -24,19 +24,15 @@ export async function POST(req: NextRequest) {
     subheadline:  (fields.subheadline as string | null | undefined)?.trim() || null,
     body_copy:    (fields.body_copy   as string | null | undefined)?.trim() || null,
     pdf_url:      (fields.pdf_url     as string | null | undefined) ?? null,
+    pdf_filename: (fields.pdf_filename as string | null | undefined) ?? null,
     tag:          (fields.tag  as string).trim(),
     dm_copy:      (fields.dm_copy as string | null | undefined)?.trim() || null,
     active:       Boolean(fields.active),
   };
 
-  if (fields.pdf_base64) {
-    payload.pdf_base64   = fields.pdf_base64;
-    payload.pdf_filename = fields.pdf_filename ?? null;
-  }
-
   const sb = adminClient();
 
-  console.log(`[campaign-save] id=${id ?? "NEW"} pdf_base64=${payload.pdf_base64 ? `YES (${String(payload.pdf_base64).length} chars)` : "null"}`);
+  console.log(`[campaign-save] id=${id ?? "NEW"} pdf_url=${payload.pdf_url ?? "null"} pdf_filename=${payload.pdf_filename ?? "null"}`);
 
   const { error } = id
     ? await sb.from("campaigns").update(payload).eq("id", id)
