@@ -201,6 +201,7 @@ export default function CampaignsPage() {
     setSaveError("");
 
     const payload: Record<string, unknown> = {
+      id:           editing?.id ?? undefined,
       title:        form.title.trim(),
       slug:         form.slug.trim(),
       headline:     form.headline.trim(),
@@ -216,14 +217,13 @@ export default function CampaignsPage() {
       payload.pdf_filename = form.pdf_filename;
     }
 
-    const { error } = editing
-      ? await supabase.from("campaigns").update(payload).eq("id", editing.id)
-      : await supabase.from("campaigns").insert(payload);
+    const res  = await fetch("/api/admin/campaign-save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const json = await res.json() as { ok?: boolean; error?: string };
 
     setSaving(false);
 
-    if (error) {
-      setSaveError(error.message);
+    if (!res.ok || json.error) {
+      setSaveError(json.error ?? "Save failed");
       return;
     }
 
