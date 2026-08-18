@@ -212,15 +212,12 @@ export default function CampaignsPage() {
       headline:     form.headline.trim(),
       subheadline:  form.subheadline.trim() || null,
       body_copy:    form.body_copy.trim()   || null,
-      pdf_url:      form.pdf_filename       || null,
+      pdf_url:      form.pdf_url.trim()     || null,
+      pdf_filename: form.pdf_filename       || null,
       tag:          form.tag.trim(),
       dm_copy:      form.dm_copy.trim()     || null,
       active:       form.active,
     };
-    if (form.pdf_base64) {
-      payload.pdf_base64   = form.pdf_base64;
-      payload.pdf_filename = form.pdf_filename;
-    }
 
     const res  = await fetch("/api/admin/campaign-save", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const json = await res.json() as { ok?: boolean; error?: string };
