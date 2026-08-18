@@ -123,13 +123,13 @@ export default function Header({
         {/* ── Logo ── */}
         <Link href="/" className="flex items-center gap-3 group">
           {logoUrl ? (
-            <div className="relative h-8 w-32 flex-shrink-0">
+            <div className="relative h-12 w-44 flex-shrink-0">
               <Image
                 src={logoUrl}
                 alt="Dhyom"
                 fill
                 className="object-contain object-left"
-                sizes="128px"
+                sizes="176px"
                 priority
               />
             </div>
