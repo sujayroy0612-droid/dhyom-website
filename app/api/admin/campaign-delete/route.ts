@@ -13,10 +13,20 @@ export async function POST(req: NextRequest) {
   const { id } = await req.json() as { id?: string };
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-  const { error } = await adminClient()
-    .from("campaigns")
-    .delete()
-    .eq("id", id);
+  const sb = adminClient();
+
+  // Unlink contacts first (preserve email/tag, just remove the campaign reference)
+  const { error: unlinkErr } = await sb
+    .from("contacts")
+    .update({ campaign_id: null })
+    .eq("campaign_id", id);
+
+  if (unlinkErr) {
+    console.error("[campaign-delete] unlink contacts error:", unlinkErr.message);
+    return NextResponse.json({ error: unlinkErr.message }, { status: 500 });
+  }
+
+  const { error } = await sb.from("campaigns").delete().eq("id", id);
 
   if (error) {
     console.error("[campaign-delete] error:", error.message);
