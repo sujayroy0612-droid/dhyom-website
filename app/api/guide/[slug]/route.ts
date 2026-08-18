@@ -81,19 +81,30 @@ export async function POST(
       console.error(`[guide/${slug}] contacts exception:`, ex);
     }
 
-    // 4. Fetch PDF from Supabase Storage public URL
+    // 4. Download PDF via Supabase SDK (service role — bypasses all access restrictions)
     let pdfBase64: string | undefined;
     if (campaign.pdf_url) {
-      try {
-        const pdfRes = await fetch(campaign.pdf_url);
-        if (pdfRes.ok) {
-          pdfBase64 = Buffer.from(await pdfRes.arrayBuffer()).toString("base64");
-          console.log(`[guide/${slug}] PDF fetched OK (${Math.round(pdfBase64.length * 0.75 / 1024)} KB)`);
-        } else {
-          console.warn(`[guide/${slug}] PDF fetch returned ${pdfRes.status} — ${campaign.pdf_url}`);
+      // Extract storage path from URL: .../object/public/guides/campaigns/x.pdf → campaigns/x.pdf
+      const marker = "/object/public/guides/";
+      const markerIdx = campaign.pdf_url.indexOf(marker);
+      const storagePath = markerIdx !== -1
+        ? campaign.pdf_url.slice(markerIdx + marker.length)
+        : null;
+
+      if (storagePath) {
+        try {
+          const { data: fileData, error: dlErr } = await sb.storage.from("guides").download(storagePath);
+          if (dlErr) {
+            console.warn(`[guide/${slug}] Storage download error: ${dlErr.message}`);
+          } else if (fileData) {
+            pdfBase64 = Buffer.from(await fileData.arrayBuffer()).toString("base64");
+            console.log(`[guide/${slug}] PDF downloaded OK via SDK (${Math.round(pdfBase64.length * 0.75 / 1024)} KB)`);
+          }
+        } catch (err) {
+          console.warn(`[guide/${slug}] Storage download exception:`, err);
         }
-      } catch (fetchErr) {
-        console.warn(`[guide/${slug}] PDF fetch failed:`, fetchErr);
+      } else {
+        console.warn(`[guide/${slug}] pdf_url is not a Supabase Storage URL: ${campaign.pdf_url}`);
       }
     } else {
       console.warn(`[guide/${slug}] No pdf_url stored — upload PDF in admin`);
