@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { readFile } from "fs/promises";
-import { join } from "path";
 
 function adminClient() {
   return createClient(
@@ -49,10 +47,10 @@ export async function POST(
     const { slug } = params;
     const sb = adminClient();
 
-    // 1. Look up campaign (service role — can see inactive too, for a cleaner 404)
+    // 1. Look up campaign
     const { data: campaign, error: campErr } = await sb
       .from("campaigns")
-      .select("id, title, tag, pdf_url, active")
+      .select("id, title, tag, pdf_url, pdf_base64, pdf_filename, active")
       .eq("slug", slug)
       .single();
 
@@ -83,29 +81,10 @@ export async function POST(
       console.error(`[guide/${slug}] contacts exception:`, ex);
     }
 
-    // 4. Fetch PDF — filesystem first, Cloudinary fallback
-    let pdfBase64: string | undefined;
-
-    // Try local public/{slug}.pdf (most reliable on Vercel)
-    try {
-      const buf = await readFile(join(process.cwd(), "public", `${slug}.pdf`));
-      pdfBase64 = buf.toString("base64");
-      console.log(`[guide/${slug}] PDF loaded from filesystem, size:`, buf.length);
-    } catch {
-      // Not on filesystem — try Cloudinary URL
-      if (campaign.pdf_url) {
-        try {
-          const pdfRes = await fetch(campaign.pdf_url);
-          if (pdfRes.ok) {
-            pdfBase64 = Buffer.from(await pdfRes.arrayBuffer()).toString("base64");
-            console.log(`[guide/${slug}] PDF loaded from Cloudinary, size:`, pdfBase64.length);
-          } else {
-            console.warn(`[guide/${slug}] Cloudinary fetch returned`, pdfRes.status);
-          }
-        } catch (fetchErr) {
-          console.warn(`[guide/${slug}] Cloudinary fetch failed:`, fetchErr);
-        }
-      }
+    // 4. Get PDF base64 from DB (stored at upload time — no external fetch needed)
+    const pdfBase64: string | undefined = campaign.pdf_base64 ?? undefined;
+    if (!pdfBase64) {
+      console.warn(`[guide/${slug}] No pdf_base64 in DB — re-upload PDF in admin to fix`);
     }
 
     // 5. Send via Resend
@@ -129,8 +108,8 @@ export async function POST(
       ...(pdfBase64 && {
         attachments: [
           {
-            filename: `${slug}.pdf`,
-            content: pdfBase64,
+            filename: campaign.pdf_filename ?? `${slug}.pdf`,
+            content:  pdfBase64,
           },
         ],
       }),

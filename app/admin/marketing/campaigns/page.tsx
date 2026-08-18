@@ -13,6 +13,8 @@ type Campaign = {
   subheadline: string | null;
   body_copy: string | null;
   pdf_url: string | null;
+  pdf_base64: string | null;
+  pdf_filename: string | null;
   tag: string;
   dm_copy: string | null;
   active: boolean;
@@ -22,9 +24,6 @@ type Campaign = {
 type PdfStatus = "idle" | "uploading" | "done" | "error";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!;
-const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!;
 
 function slugify(str: string): string {
   return str.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -67,6 +66,8 @@ type FormState = {
   subheadline: string;
   body_copy: string;
   pdf_url: string;
+  pdf_base64: string | null;
+  pdf_filename: string | null;
   tag: string;
   dm_copy: string;
   active: boolean;
@@ -79,6 +80,8 @@ const BLANK_FORM: FormState = {
   subheadline: "",
   body_copy: "",
   pdf_url: "",
+  pdf_base64: null,
+  pdf_filename: null,
   tag: "reel_lead",
   dm_copy: "",
   active: true,
@@ -86,15 +89,17 @@ const BLANK_FORM: FormState = {
 
 function campaignToForm(c: Campaign): FormState {
   return {
-    title:       c.title,
-    slug:        c.slug,
-    headline:    c.headline,
-    subheadline: c.subheadline ?? "",
-    body_copy:   c.body_copy   ?? "",
-    pdf_url:     c.pdf_url     ?? "",
-    tag:         c.tag,
-    dm_copy:     c.dm_copy     ?? "",
-    active:      c.active,
+    title:        c.title,
+    slug:         c.slug,
+    headline:     c.headline,
+    subheadline:  c.subheadline  ?? "",
+    body_copy:    c.body_copy    ?? "",
+    pdf_url:      c.pdf_url      ?? "",
+    pdf_base64:   c.pdf_base64   ?? null,
+    pdf_filename: c.pdf_filename ?? null,
+    tag:          c.tag,
+    dm_copy:      c.dm_copy      ?? "",
+    active:       c.active,
   };
 }
 
@@ -166,23 +171,18 @@ export default function CampaignsPage() {
     setPdfStatus("uploading");
     setPdfError("");
     try {
-      const publicId = `guides/${slugify(form.slug || form.title || "guide")}`;
-      const fd = new FormData();
-      fd.append("file",           file);
-      fd.append("upload_preset",  UPLOAD_PRESET);
-      fd.append("public_id",      publicId);
-      fd.append("resource_type",  "raw");
-
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`,
-        { method: "POST", body: fd }
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error?.message ?? "Cloudinary upload failed");
-      }
-      const data = await res.json();
-      set("pdf_url", data.secure_url as string);
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsDataURL(file);
+      });
+      setForm((f) => ({
+        ...f,
+        pdf_base64:   b64,
+        pdf_filename: file.name,
+        pdf_url:      file.name,
+      }));
       setPdfStatus("done");
     } catch (err) {
       setPdfError(err instanceof Error ? err.message : "Upload failed");
@@ -200,17 +200,21 @@ export default function CampaignsPage() {
     setSaving(true);
     setSaveError("");
 
-    const payload = {
-      title:       form.title.trim(),
-      slug:        form.slug.trim(),
-      headline:    form.headline.trim(),
-      subheadline: form.subheadline.trim() || null,
-      body_copy:   form.body_copy.trim()   || null,
-      pdf_url:     form.pdf_url.trim()     || null,
-      tag:         form.tag.trim(),
-      dm_copy:     form.dm_copy.trim()     || null,
-      active:      form.active,
+    const payload: Record<string, unknown> = {
+      title:        form.title.trim(),
+      slug:         form.slug.trim(),
+      headline:     form.headline.trim(),
+      subheadline:  form.subheadline.trim() || null,
+      body_copy:    form.body_copy.trim()   || null,
+      pdf_url:      form.pdf_filename       || null,
+      tag:          form.tag.trim(),
+      dm_copy:      form.dm_copy.trim()     || null,
+      active:       form.active,
     };
+    if (form.pdf_base64) {
+      payload.pdf_base64   = form.pdf_base64;
+      payload.pdf_filename = form.pdf_filename;
+    }
 
     const { error } = editing
       ? await supabase.from("campaigns").update(payload).eq("id", editing.id)
