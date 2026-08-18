@@ -53,54 +53,45 @@ export async function POST(req: NextRequest) {
   log.push("✓ RESEND_API_KEY found");
 
   // 2. Fetch settings
-  let settings: { subject: string; body_text: string | null; pdf_url: string | null };
+  let settings: { subject: string; body_text: string | null; pdf_base64: string | null; pdf_filename: string | null };
   try {
     const { data, error } = await adminClient()
       .from("newsletter_settings")
-      .select("subject, body_text, pdf_url")
+      .select("subject, body_text, pdf_base64, pdf_filename")
       .eq("id", 1)
       .single();
     if (error) {
       log.push(`✗ newsletter_settings fetch error: ${error.message}`);
-      settings = { subject: "Welcome to Dhyom", body_text: null, pdf_url: null };
+      settings = { subject: "Welcome to Dhyom", body_text: null, pdf_base64: null, pdf_filename: null };
     } else {
       settings = {
-        subject:   data?.subject   ?? "Welcome to Dhyom",
-        body_text: data?.body_text ?? null,
-        pdf_url:   data?.pdf_url   ?? null,
+        subject:      data?.subject      ?? "Welcome to Dhyom",
+        body_text:    data?.body_text    ?? null,
+        pdf_base64:   data?.pdf_base64   ?? null,
+        pdf_filename: data?.pdf_filename ?? null,
       };
       log.push(`✓ Settings loaded — subject: "${settings.subject}"`);
-      log.push(settings.body_text ? "✓ Body text found in settings" : "⚠ No body_text — using fallback copy");
-      log.push(settings.pdf_url   ? `✓ PDF URL: ${settings.pdf_url}` : "⚠ No PDF URL — sending without attachment");
+      log.push(settings.body_text  ? "✓ Body text found" : "⚠ No body_text — using fallback copy");
+      log.push(settings.pdf_base64 ? `✓ PDF ready in DB (${Math.round(settings.pdf_base64.length * 0.75 / 1024)} KB) — "${settings.pdf_filename}"` : "⚠ No PDF saved — upload one and Save Settings first");
     }
   } catch (ex) {
     const msg = ex instanceof Error ? ex.message : String(ex);
     log.push(`✗ newsletter_settings exception: ${msg} — table may not exist, run the SQL`);
-    settings = { subject: "Welcome to Dhyom", body_text: null, pdf_url: null };
+    settings = { subject: "Welcome to Dhyom", body_text: null, pdf_base64: null, pdf_filename: null };
   }
 
-  // 3. Fetch PDF
+  // 3. Build attachment from stored base64
   const fromAddr = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
   const unsubUrl = `mailto:${fromAddr}?subject=unsubscribe`;
 
   type Attachment = { filename: string; content: string };
   const attachments: Attachment[] = [];
 
-  if (settings.pdf_url) {
-    try {
-      const res = await fetch(settings.pdf_url);
-      if (!res.ok) {
-        log.push(`✗ PDF fetch failed: HTTP ${res.status} — URL may be invalid or private`);
-      } else {
-        const buf = await res.arrayBuffer();
-        const b64 = Buffer.from(buf).toString("base64");
-        const filename = settings.pdf_url.split("/").pop()?.replace(/[?#].*$/, "") ?? "dhyom-guide.pdf";
-        attachments.push({ filename, content: b64 });
-        log.push(`✓ PDF fetched (${Math.round(buf.byteLength / 1024)} KB) — attaching as "${filename}"`);
-      }
-    } catch (ex) {
-      log.push(`✗ PDF fetch exception: ${ex instanceof Error ? ex.message : String(ex)}`);
-    }
+  if (settings.pdf_base64) {
+    attachments.push({
+      filename: settings.pdf_filename ?? "dhyom-guide.pdf",
+      content:  settings.pdf_base64,
+    });
   }
 
   // 4. Build + send

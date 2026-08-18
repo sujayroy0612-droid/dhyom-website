@@ -42,11 +42,13 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 export default function NewsletterSettingsPage() {
-  const [subject,    setSubject]    = useState("Welcome to Dhyom");
-  const [bodyText,   setBodyText]   = useState(DEFAULT_BODY);
-  const [pdfUrl,     setPdfUrl]     = useState("");
-  const [pdfStatus,  setPdfStatus]  = useState<PdfStatus>("idle");
-  const [pdfError,   setPdfError]   = useState("");
+  const [subject,     setSubject]     = useState("Welcome to Dhyom");
+  const [bodyText,    setBodyText]    = useState(DEFAULT_BODY);
+  const [pdfUrl,      setPdfUrl]      = useState("");
+  const [pdfBase64,   setPdfBase64]   = useState<string | null>(null);
+  const [pdfFilename, setPdfFilename] = useState<string | null>(null);
+  const [pdfStatus,   setPdfStatus]   = useState<PdfStatus>("idle");
+  const [pdfError,    setPdfError]    = useState("");
   const [loading,    setLoading]    = useState(true);
   const [saving,     setSaving]     = useState(false);
   const [saved,      setSaved]      = useState(false);
@@ -63,7 +65,8 @@ export default function NewsletterSettingsPage() {
       .then((data) => {
         if (data.subject)   setSubject(data.subject);
         if (data.body_text) setBodyText(data.body_text);
-        if (data.pdf_url)   setPdfUrl(data.pdf_url);
+        if (data.pdf_url)      setPdfUrl(data.pdf_url);
+          if (data.pdf_filename) setPdfFilename(data.pdf_filename);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -72,20 +75,16 @@ export default function NewsletterSettingsPage() {
     setPdfStatus("uploading");
     setPdfError("");
     try {
-      const fd = new FormData();
-      fd.append("file",          file);
-      fd.append("upload_preset", UPLOAD_PRESET);
-
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`,
-        { method: "POST", body: fd }
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error?.message ?? "Cloudinary upload failed");
-      }
-      const data = await res.json();
-      setPdfUrl(data.secure_url as string);
+      // Read as base64 for reliable email attachment (no server-side fetch needed)
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsDataURL(file);
+      });
+      setPdfBase64(b64);
+      setPdfFilename(file.name);
+      setPdfUrl(file.name); // display name only
       setPdfStatus("done");
     } catch (err) {
       setPdfError(err instanceof Error ? err.message : "Upload failed");
@@ -122,9 +121,11 @@ export default function NewsletterSettingsPage() {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        subject:   subject.trim(),
-        pdf_url:   pdfUrl.trim() || null,
-        body_text: bodyText.trim() || null,
+        subject:      subject.trim(),
+        pdf_url:      pdfUrl.trim() || null,
+        pdf_base64:   pdfBase64,
+        pdf_filename: pdfFilename,
+        body_text:    bodyText.trim() || null,
       }),
     });
     const json = await res.json();
@@ -253,7 +254,7 @@ export default function NewsletterSettingsPage() {
                 {pdfUrl && (
                   <button
                     type="button"
-                    onClick={() => { setPdfUrl(""); setPdfStatus("idle"); }}
+                    onClick={() => { setPdfUrl(""); setPdfBase64(null); setPdfFilename(null); setPdfStatus("idle"); }}
                     className="font-display text-[0.40rem] tracking-[0.12em] uppercase text-[rgba(200,80,80,0.38)] hover:text-[rgba(200,80,80,0.65)] transition-colors"
                   >
                     Remove

@@ -11,22 +11,30 @@ function adminClient() {
   );
 }
 
-type Settings = { subject: string; body_text: string | null; pdf_url: string | null };
+type Settings = {
+  subject:      string;
+  body_text:    string | null;
+  pdf_url:      string | null;
+  pdf_base64:   string | null;
+  pdf_filename: string | null;
+};
 
 async function fetchSettings(): Promise<Settings> {
   try {
     const { data } = await adminClient()
       .from("newsletter_settings")
-      .select("subject, body_text, pdf_url")
+      .select("subject, body_text, pdf_url, pdf_base64, pdf_filename")
       .eq("id", 1)
       .single();
     return {
-      subject:   data?.subject   ?? "Welcome to Dhyom",
-      body_text: data?.body_text ?? null,
-      pdf_url:   data?.pdf_url   ?? null,
+      subject:      data?.subject      ?? "Welcome to Dhyom",
+      body_text:    data?.body_text    ?? null,
+      pdf_url:      data?.pdf_url      ?? null,
+      pdf_base64:   data?.pdf_base64   ?? null,
+      pdf_filename: data?.pdf_filename ?? null,
     };
   } catch {
-    return { subject: "Welcome to Dhyom", body_text: null, pdf_url: null };
+    return { subject: "Welcome to Dhyom", body_text: null, pdf_url: null, pdf_base64: null, pdf_filename: null };
   }
 }
 
@@ -60,16 +68,6 @@ Over the coming days, I'll share a little of why Dhyom exists — the story isn'
 — Sujay
 Founder, Dhyom`;
 
-async function fetchPdfAsBase64(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const buf = await res.arrayBuffer();
-    return Buffer.from(buf).toString("base64");
-  } catch {
-    return null;
-  }
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -110,16 +108,14 @@ export async function POST(req: NextRequest) {
     const html = emailWrapper(previewText, bodyHtml, unsubUrl);
     const text = rawBody.replace(/\{\{name\}\}/g, firstName || "there");
 
-    // Build attachments if PDF configured
+    // Build attachments using stored base64 (no external fetch needed)
     type Attachment = { filename: string; content: string };
     const attachments: Attachment[] = [];
-    if (settings.pdf_url) {
-      const b64 = await fetchPdfAsBase64(settings.pdf_url);
-      if (b64) {
-        const filename =
-          settings.pdf_url.split("/").pop()?.replace(/[?#].*$/, "") ?? "dhyom-guide.pdf";
-        attachments.push({ filename, content: b64 });
-      }
+    if (settings.pdf_base64) {
+      attachments.push({
+        filename: settings.pdf_filename ?? "dhyom-guide.pdf",
+        content:  settings.pdf_base64,
+      });
     }
 
     const { error: resendErr } = await new Resend(apiKey).emails.send({
