@@ -53,10 +53,11 @@ export async function GET(req: NextRequest) {
   const { data: contacts, error: fetchErr } = await sb
     .from("contacts")
     .select("id, email, name, tag, sequence_day_sent")
-    .in("tag", ["reel_lead", "newsletter", "checkout_lead"])
+    .in("tag", ["reel_lead", "newsletter", "checkout_lead", "buyer"])
     .eq("unsubscribed", false)
     .lt("sequence_day_sent", 5)
-    .or(`last_email_sent_at.is.null,last_email_sent_at.lte.${twentyHoursAgo}`);
+    .or(`last_email_sent_at.is.null,last_email_sent_at.lte.${twentyHoursAgo}`)
+    .order("sequence_day_sent", { ascending: false }); // process most-advanced row first
 
   if (fetchErr) {
     console.error("[soap-opera] fetch error:", fetchErr);
@@ -78,8 +79,10 @@ export async function GET(req: NextRequest) {
   const fromAddr = `Dhyom <${process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in"}>`;
   let sent = 0;
   const errors: string[] = [];
+  const emailsSentThisRun = new Set<string>(); // deduplicate — one email per address per run
 
   for (const contact of contacts as Contact[]) {
+    if (emailsSentThisRun.has(contact.email.toLowerCase())) continue; // skip duplicate rows
     const nextDay = contact.sequence_day_sent + 1;
     const unsub = unsubscribeUrl(contact.email);
 
@@ -131,6 +134,7 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
+      emailsSentThisRun.add(contact.email.toLowerCase());
       console.log(`[soap-opera] day ${nextDay} → ${contact.email}`);
       sent++;
     } catch (err) {
