@@ -8,7 +8,8 @@ import Image from "next/image";
 import { useCart, CartItem } from "@/lib/cart/CartContext";
 import { supabase } from "@/lib/supabase/client";
 
-const SHIPPING = 80;
+const DEFAULT_SHIPPING = 80;
+const DEFAULT_FREE_THRESHOLD = 999;
 
 interface BumpProduct {
   id: string;
@@ -80,6 +81,19 @@ export default function CartPage() {
   const [coupon, setCoupon] = useState<CouponState>({ status: "idle" });
   const [bumpProduct, setBumpProduct] = useState<BumpProduct | null>(null);
   const [bumpChecked, setBumpChecked] = useState(false);
+  const [shippingFee,           setShippingFee]           = useState(DEFAULT_SHIPPING);
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(DEFAULT_FREE_THRESHOLD);
+
+  /* ── Fetch shipping settings ── */
+  useEffect(() => {
+    fetch("/api/store-settings")
+      .then(r => r.json())
+      .then((d: { shipping_fee?: string; free_shipping_threshold?: string }) => {
+        if (d.shipping_fee)            setShippingFee(Number(d.shipping_fee));
+        if (d.free_shipping_threshold) setFreeShippingThreshold(Number(d.free_shipping_threshold));
+      })
+      .catch(() => {});
+  }, []);
 
   /* ── Fetch bump product via server API (bypasses RLS) ── */
   useEffect(() => {
@@ -94,10 +108,12 @@ export default function CartPage() {
       .catch(() => setBumpProduct(null));
   }, [items]);
 
-  const couponMeta = coupon.status === "applied" ? coupon.meta : null;
-  const discount   = couponMeta ? calcDiscount(couponMeta, subtotal) : 0;
-  const bumpExtra  = bumpChecked && bumpProduct ? bumpProduct.price : 0;
-  const total      = subtotal - discount + SHIPPING + bumpExtra;
+  const couponMeta   = coupon.status === "applied" ? coupon.meta : null;
+  const discount     = couponMeta ? calcDiscount(couponMeta, subtotal) : 0;
+  const bumpExtra    = bumpChecked && bumpProduct ? bumpProduct.price : 0;
+  const isFreeShip   = freeShippingThreshold > 0 && (subtotal - discount + bumpExtra) >= freeShippingThreshold;
+  const shippingCost = isFreeShip ? 0 : shippingFee;
+  const total        = subtotal - discount + shippingCost + bumpExtra;
 
   /* ── Proceed to checkout ── */
   function handleCheckout() {
@@ -262,7 +278,11 @@ export default function CartPage() {
 
                 <div className="flex justify-between items-baseline">
                   <span className="font-body font-light text-[rgba(245,237,224,0.52)] text-[0.9rem]">Shipping</span>
-                  <span className="font-display text-ivory" style={{ fontSize: "0.9rem", letterSpacing: "0.04em" }}>₹{SHIPPING.toLocaleString("en-IN")}</span>
+                  {isFreeShip ? (
+                    <span className="font-display text-[rgba(100,215,100,0.80)]" style={{ fontSize: "0.9rem", letterSpacing: "0.04em" }}>FREE</span>
+                  ) : (
+                    <span className="font-display text-ivory" style={{ fontSize: "0.9rem", letterSpacing: "0.04em" }}>₹{shippingCost.toLocaleString("en-IN")}</span>
+                  )}
                 </div>
 
                 <div className="h-px bg-[rgba(196,163,115,0.14)]" />

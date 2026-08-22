@@ -7,7 +7,8 @@ import Image from "next/image";
 import { useCart } from "@/lib/cart/CartContext";
 import { supabase } from "@/lib/supabase/client";
 
-const SHIPPING = 80;
+const DEFAULT_SHIPPING = 80;
+const DEFAULT_FREE_THRESHOLD = 999;
 
 const INDIAN_STATES = [
   "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
@@ -119,7 +120,23 @@ export default function CheckoutPage() {
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const orderPlacedRef = useRef(false);
-  const total = subtotal + SHIPPING;
+
+  const [shippingFee,           setShippingFee]           = useState(DEFAULT_SHIPPING);
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(DEFAULT_FREE_THRESHOLD);
+
+  useEffect(() => {
+    fetch("/api/store-settings")
+      .then(r => r.json())
+      .then((d: { shipping_fee?: string; free_shipping_threshold?: string }) => {
+        if (d.shipping_fee)            setShippingFee(Number(d.shipping_fee));
+        if (d.free_shipping_threshold) setFreeShippingThreshold(Number(d.free_shipping_threshold));
+      })
+      .catch(() => {});
+  }, []);
+
+  const isFreeShip   = freeShippingThreshold > 0 && subtotal >= freeShippingThreshold;
+  const shippingCost = isFreeShip ? 0 : shippingFee;
+  const total        = subtotal + shippingCost;
 
   useEffect(() => {
     if (hydrated && items.length === 0 && !orderPlacedRef.current) router.replace("/cart");
@@ -175,7 +192,7 @@ export default function CheckoutPage() {
       order_notes: form.notes.trim() || null,
       items: JSON.parse(JSON.stringify(items)),
       subtotal,
-      shipping_fee: SHIPPING,
+      shipping_fee: shippingCost,
       discount: 0,
       total,
       payment_method: "online",
@@ -445,7 +462,11 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between items-baseline">
                     <span className="font-body font-light text-[rgba(245,237,224,0.48)] text-[0.87rem]">Shipping</span>
-                    <span className="font-display text-ivory" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>₹{SHIPPING.toLocaleString("en-IN")}</span>
+                    {isFreeShip ? (
+                      <span className="font-display text-[rgba(100,215,100,0.80)]" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>FREE</span>
+                    ) : (
+                      <span className="font-display text-ivory" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>₹{shippingCost.toLocaleString("en-IN")}</span>
+                    )}
                   </div>
                   <div className="h-px bg-[rgba(196,163,115,0.12)]" />
                   <div className="flex justify-between items-baseline">

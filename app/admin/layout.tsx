@@ -9,6 +9,7 @@ const NAV_MAIN = [
   { label: "Dashboard",    href: "/admin",                     icon: "▦" },
   { label: "Orders",       href: "/admin/orders",              icon: "≡" },
   { label: "Products",     href: "/admin/products",            icon: "⊞" },
+  { label: "Shipping",     href: "/admin/shipping",            icon: "⬡" },
   { label: "Visibility",   href: "/admin/visibility",          icon: "◉" },
   { label: "Brand Assets", href: "/admin/upload-brand-images", icon: "◈" },
   { label: "Analytics",    href: "/admin/analytics",           icon: "↗" },
