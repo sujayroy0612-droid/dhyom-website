@@ -57,6 +57,9 @@ function buildText(data: {
   items: OrderItem[];
   total: number;
   paymentStatus: string;
+  paymentType?: string;
+  amountPaidOnline?: number;
+  amountDueCod?: number;
 }): string {
   const lines = [
     `New Order — ${data.orderNumber}`,
@@ -73,6 +76,13 @@ function buildText(data: {
     ),
     "",
     `Total: ${inr(data.total)}`,
+    ...(data.paymentType === "partial_cod"
+      ? [
+          `Paid online : ${inr(data.amountPaidOnline ?? 0)}`,
+          `COD to collect : ${inr(data.amountDueCod ?? 0)}  ← collect at delivery`,
+        ]
+      : []
+    ),
     "",
     "This is an internal order alert sent to the Dhyom founder.",
   ];
@@ -88,6 +98,9 @@ function buildHtml(data: {
   items: OrderItem[];
   total: number;
   paymentStatus: string;
+  paymentType?: string;
+  amountPaidOnline?: number;
+  amountDueCod?: number;
 }) {
   const itemRows = data.items
     .map(
@@ -150,6 +163,15 @@ function buildHtml(data: {
             <td colspan="2" style="padding:10px 10px 4px;text-align:right;font-size:13px;font-weight:bold;">Total</td>
             <td style="padding:10px 10px 4px;text-align:right;font-size:15px;font-weight:bold;">${inr(data.total)}</td>
           </tr>
+          ${data.paymentType === "partial_cod" ? `
+          <tr>
+            <td colspan="2" style="padding:4px 10px;text-align:right;font-size:12px;color:#888;">Paid online</td>
+            <td style="padding:4px 10px;text-align:right;font-size:13px;color:#1a7a3a;">${inr(data.amountPaidOnline ?? 0)} ✓</td>
+          </tr>
+          <tr style="background:#fff8ec;">
+            <td colspan="2" style="padding:6px 10px;text-align:right;font-size:12px;font-weight:bold;color:#b06000;">⚠ COD to Collect at Delivery</td>
+            <td style="padding:6px 10px;text-align:right;font-size:14px;font-weight:bold;color:#b06000;">${inr(data.amountDueCod ?? 0)}</td>
+          </tr>` : ""}
         </tfoot>
       </table>
 
@@ -166,7 +188,7 @@ function buildHtml(data: {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { orderNumber, customerName, phone, email, address, items, total, paymentStatus } = body;
+    const { orderNumber, customerName, phone, email, address, items, total, paymentStatus, paymentType, amountPaidOnline, amountDueCod } = body;
 
     if (!orderNumber) {
       return NextResponse.json({ error: "orderNumber required" }, { status: 400 });
@@ -183,7 +205,7 @@ export async function POST(req: NextRequest) {
 
     const resend = new Resend(apiKey);
     const fromEmail = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
-    const orderData = { orderNumber, customerName, phone, email, address, items, total, paymentStatus };
+    const orderData = { orderNumber, customerName, phone, email, address, items, total, paymentStatus, paymentType, amountPaidOnline, amountDueCod };
 
     const { error } = await resend.emails.send({
       from:    `Dhyom <${fromEmail}>`,

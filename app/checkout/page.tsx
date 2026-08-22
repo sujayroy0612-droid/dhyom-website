@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase/client";
 
 const DEFAULT_SHIPPING = 99;
 const DEFAULT_FREE_THRESHOLD = 999;
+const COD_FEE = 10;
 
 const INDIAN_STATES = [
   "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
@@ -118,6 +119,7 @@ export default function CheckoutPage() {
   const [errors,       setErrors]       = useState<FormErrors>({});
   const [submitting,   setSubmitting]   = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentType,  setPaymentType]  = useState<"online" | "partial_cod">("online");
 
   const orderPlacedRef = useRef(false);
 
@@ -134,9 +136,16 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, []);
 
-  const isFreeShip   = freeShippingThreshold > 0 && subtotal >= freeShippingThreshold;
-  const shippingCost = isFreeShip ? 0 : shippingFee;
-  const total        = subtotal + shippingCost;
+  const isFreeShip     = freeShippingThreshold > 0 && subtotal >= freeShippingThreshold;
+  const shippingCost   = isFreeShip ? 0 : shippingFee;
+  const codFeeApplied  = paymentType === "partial_cod" ? COD_FEE : 0;
+  const total          = subtotal + shippingCost + codFeeApplied;
+  // For partial COD: charge exactly 50% online, rest on delivery
+  const amountToCharge       = paymentType === "partial_cod" ? Math.round(total / 2) : total;
+  const amountDueCod         = paymentType === "partial_cod" ? total - amountToCharge : 0;
+  // Stable preview for the radio label (computed regardless of selection)
+  const partialCodBaseTotal  = subtotal + shippingCost + COD_FEE;
+  const partialCodPreviewNow = Math.round(partialCodBaseTotal / 2);
 
   useEffect(() => {
     if (hydrated && items.length === 0 && !orderPlacedRef.current) router.replace("/cart");
@@ -200,6 +209,10 @@ export default function CheckoutPage() {
       discount: 0,
       total,
       payment_method: "online",
+      payment_type: paymentType,
+      cod_convenience_fee: codFeeApplied,
+      amount_paid_online: amountToCharge,
+      amount_due_cod: amountDueCod,
       order_status: "pending",
     };
 
@@ -207,7 +220,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total, orderNumber }),
+        body: JSON.stringify({ amount: amountToCharge, orderNumber }),
       });
       if (!res.ok) { const body = await res.json(); throw new Error(body.error ?? "Failed to create payment order"); }
       const { razorpayOrderId } = await res.json();
@@ -216,7 +229,7 @@ export default function CheckoutPage() {
 
       const rzp = new window.Razorpay({
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
-        amount: Math.round(total * 100),
+        amount: Math.round(amountToCharge * 100),
         currency: "INR",
         name: "Dhyom",
         description: "Sacred Home & Pooja Décor",
@@ -247,7 +260,10 @@ export default function CheckoutPage() {
               address: base.address,
               items: base.items,
               total: base.total,
-              paymentStatus: "Paid (Razorpay)",
+              paymentStatus: paymentType === "partial_cod" ? "Partial COD (50% paid online)" : "Paid (Razorpay)",
+              paymentType,
+              amountPaidOnline: amountToCharge,
+              amountDueCod,
             }),
           }).catch(() => {});
           orderPlacedRef.current = true;
@@ -345,7 +361,11 @@ export default function CheckoutPage() {
   }
 
   /* ══ Step B — Full form ══════════════════════════════════ */
-  const submitLabel = submitting ? "Processing..." : `Place Order — ₹${total.toLocaleString("en-IN")}`;
+  const submitLabel = submitting
+    ? "Processing..."
+    : paymentType === "partial_cod"
+      ? `Pay ₹${amountToCharge.toLocaleString("en-IN")} Now — Order Total ₹${total.toLocaleString("en-IN")}`
+      : `Place Order — ₹${total.toLocaleString("en-IN")}`;
 
   return (
     <div className="min-h-screen bg-black-plum">
@@ -415,15 +435,31 @@ export default function CheckoutPage() {
               {/* 3. Payment */}
               <section>
                 <StepHeader num="3" title="Payment" />
-                <div className="flex items-center gap-4 px-5 py-4 rounded-[4px] border border-[rgba(196,163,115,0.30)] bg-[rgba(196,163,115,0.04)]">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="text-brass flex-shrink-0">
-                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-                    <line x1="1" y1="10" x2="23" y2="10" />
-                  </svg>
-                  <div>
-                    <p className="font-display text-ivory" style={{ fontSize: "0.7rem", letterSpacing: "0.1em" }}>Razorpay — Secure Online Payment</p>
-                    <p className="font-body font-light italic text-[rgba(245,237,224,0.40)] text-[0.82rem] mt-0.5">UPI, credit / debit cards, net banking</p>
-                  </div>
+                <div className="flex flex-col gap-3">
+
+                  {/* Pay in Full */}
+                  <label className={`flex items-start gap-4 px-5 py-4 rounded-[4px] border cursor-pointer transition-colors duration-150 ${paymentType === "online" ? "border-[rgba(196,163,115,0.45)] bg-[rgba(196,163,115,0.06)]" : "border-[rgba(196,163,115,0.18)] bg-transparent hover:border-[rgba(196,163,115,0.28)]"}`}>
+                    <input type="radio" name="paymentType" value="online" checked={paymentType === "online"} onChange={() => setPaymentType("online")} className="mt-1 accent-[#C4A373]" />
+                    <div className="flex-1">
+                      <p className="font-display text-ivory" style={{ fontSize: "0.72rem", letterSpacing: "0.10em" }}>Pay in Full</p>
+                      <p className="font-body font-light text-[rgba(245,237,224,0.42)] text-[0.80rem] mt-0.5">Pay the full amount now via Razorpay. UPI, cards, net banking.</p>
+                    </div>
+                    <span className="font-display text-brass text-[0.80rem] flex-shrink-0">₹{total.toLocaleString("en-IN")}</span>
+                  </label>
+
+                  {/* 50/50 Partial COD */}
+                  <label className={`flex items-start gap-4 px-5 py-4 rounded-[4px] border cursor-pointer transition-colors duration-150 ${paymentType === "partial_cod" ? "border-[rgba(196,163,115,0.45)] bg-[rgba(196,163,115,0.06)]" : "border-[rgba(196,163,115,0.18)] bg-transparent hover:border-[rgba(196,163,115,0.28)]"}`}>
+                    <input type="radio" name="paymentType" value="partial_cod" checked={paymentType === "partial_cod"} onChange={() => setPaymentType("partial_cod")} className="mt-1 accent-[#C4A373]" />
+                    <div className="flex-1">
+                      <p className="font-display text-ivory" style={{ fontSize: "0.72rem", letterSpacing: "0.10em" }}>Pay 50% Now, 50% on Delivery</p>
+                      <p className="font-body font-light text-[rgba(245,237,224,0.42)] text-[0.80rem] mt-0.5 leading-[1.7]">
+                        Pay half online now, and the remaining half in cash when your order arrives.
+                        A convenience fee of ₹{COD_FEE} applies, covering additional handling for split payments.
+                      </p>
+                    </div>
+                    <span className="font-display text-brass text-[0.80rem] flex-shrink-0 whitespace-nowrap">₹{partialCodPreviewNow.toLocaleString("en-IN")} now</span>
+                  </label>
+
                 </div>
               </section>
 
@@ -472,11 +508,34 @@ export default function CheckoutPage() {
                       <span className="font-display text-ivory" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>₹{shippingCost.toLocaleString("en-IN")}</span>
                     )}
                   </div>
+                  {paymentType === "partial_cod" && (
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-body font-light text-[rgba(245,237,224,0.48)] text-[0.87rem]">Partial COD fee</span>
+                        <span className="font-display text-ivory" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>₹{COD_FEE}</span>
+                      </div>
+                      <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-[0.70rem] leading-snug">
+                        Covers additional handling for split payments.
+                      </p>
+                    </div>
+                  )}
                   <div className="h-px bg-[rgba(196,163,115,0.12)]" />
                   <div className="flex justify-between items-baseline">
                     <span className="font-display text-ivory" style={{ fontSize: "0.85rem", letterSpacing: "0.08em" }}>Total</span>
                     <span className="font-display text-brass" style={{ fontSize: "1.1rem", letterSpacing: "0.04em" }}>₹{total.toLocaleString("en-IN")}</span>
                   </div>
+                  {paymentType === "partial_cod" && (
+                    <>
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-body font-light text-[rgba(245,237,224,0.48)] text-[0.82rem]">Pay now (50%)</span>
+                        <span className="font-display text-brass" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>₹{amountToCharge.toLocaleString("en-IN")}</span>
+                      </div>
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-body font-light text-[rgba(245,237,224,0.48)] text-[0.82rem]">Due on delivery</span>
+                        <span className="font-display text-[rgba(245,237,224,0.65)]" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>₹{amountDueCod.toLocaleString("en-IN")}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="px-5 pb-5">
                   <button type="submit" disabled={submitting} className="hidden lg:flex w-full items-center justify-center gap-2.5 font-display text-[0.62rem] tracking-[0.22em] uppercase text-brass border border-[rgba(196,163,115,0.40)] hover:bg-[rgba(196,163,115,0.07)] hover:border-[rgba(196,163,115,0.60)] rounded-[3px] py-3.5 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">

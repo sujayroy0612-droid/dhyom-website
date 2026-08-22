@@ -27,6 +27,10 @@ interface OrderRecord {
   shipping_fee: number;
   total: number;
   payment_method: "cod" | "online";
+  payment_type: "online" | "partial_cod" | null;
+  amount_paid_online: number | null;
+  amount_due_cod: number | null;
+  cod_convenience_fee: number | null;
   payment_status: "pending" | "paid" | "failed";
   order_status: string;
   created_at: string;
@@ -163,10 +167,7 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
               <span className="font-body font-light text-[rgba(245,237,224,0.45)] text-[0.85rem]">
                 Subtotal
               </span>
-              <span
-                className="font-display text-ivory"
-                style={{ fontSize: "0.85rem", letterSpacing: "0.04em" }}
-              >
+              <span className="font-display text-ivory" style={{ fontSize: "0.85rem", letterSpacing: "0.04em" }}>
                 ₹{order.subtotal.toLocaleString("en-IN")}
               </span>
             </div>
@@ -174,28 +175,53 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
               <span className="font-body font-light text-[rgba(245,237,224,0.45)] text-[0.85rem]">
                 Shipping
               </span>
-              <span
-                className="font-display text-ivory"
-                style={{ fontSize: "0.85rem", letterSpacing: "0.04em" }}
-              >
+              <span className="font-display text-ivory" style={{ fontSize: "0.85rem", letterSpacing: "0.04em" }}>
                 ₹{order.shipping_fee.toLocaleString("en-IN")}
               </span>
             </div>
+            {order.payment_type === "partial_cod" && (order.cod_convenience_fee ?? 0) > 0 && (
+              <div className="flex justify-between items-baseline">
+                <span className="font-body font-light text-[rgba(245,237,224,0.45)] text-[0.85rem]">
+                  Partial COD convenience fee
+                </span>
+                <span className="font-display text-ivory" style={{ fontSize: "0.85rem", letterSpacing: "0.04em" }}>
+                  ₹{(order.cod_convenience_fee ?? 0).toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
             <div className="h-px bg-[rgba(196,163,115,0.12)]" />
             <div className="flex justify-between items-baseline">
-              <span
-                className="font-display text-ivory"
-                style={{ fontSize: "0.85rem", letterSpacing: "0.08em" }}
-              >
-                Total
+              <span className="font-display text-ivory" style={{ fontSize: "0.85rem", letterSpacing: "0.08em" }}>
+                Order Total
               </span>
-              <span
-                className="font-display text-brass"
-                style={{ fontSize: "1.05rem", letterSpacing: "0.04em" }}
-              >
+              <span className="font-display text-brass" style={{ fontSize: "1.05rem", letterSpacing: "0.04em" }}>
                 ₹{order.total.toLocaleString("en-IN")}
               </span>
             </div>
+            {order.payment_type === "partial_cod" && (
+              <>
+                <div className="h-px bg-[rgba(196,163,115,0.08)]" />
+                <div className="flex justify-between items-baseline">
+                  <span className="font-body font-light text-[rgba(245,237,224,0.55)] text-[0.83rem]">
+                    Paid online now
+                  </span>
+                  <span className="font-display text-[rgba(100,215,100,0.85)]" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>
+                    ₹{(order.amount_paid_online ?? 0).toLocaleString("en-IN")} ✓
+                  </span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="font-body font-light text-[rgba(245,237,224,0.55)] text-[0.83rem]">
+                    Due on delivery (cash)
+                  </span>
+                  <span className="font-display text-[rgba(245,237,224,0.75)]" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>
+                    ₹{(order.amount_due_cod ?? 0).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-[0.72rem] leading-snug">
+                  Please keep ₹{(order.amount_due_cod ?? 0).toLocaleString("en-IN")} in cash ready for the delivery agent. The ₹10 convenience fee is already included in the total above.
+                </p>
+              </>
+            )}
           </div>
         </div>
 
@@ -221,7 +247,7 @@ export default async function OrderConfirmationPage({ params }: PageProps) {
           )}
           <div className="mt-4 pt-4 border-t border-[rgba(196,163,115,0.10)] flex items-center gap-3">
             <span className="font-display text-[0.48rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.38)]">
-              {order.payment_method === "cod" ? "Cash on Delivery" : "Paid Online"}
+              {order.payment_type === "partial_cod" ? "50% Paid · 50% Due on Delivery" : order.payment_method === "cod" ? "Cash on Delivery" : "Paid Online"}
             </span>
             <span className="text-[rgba(196,163,115,0.18)] text-[0.6rem]">·</span>
             <span className="font-display text-[0.48rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.38)]">

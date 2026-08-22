@@ -20,6 +20,9 @@ interface Order {
   shipping_fee: number;
   total: number;
   payment_method: "cod" | "online";
+  payment_type: "online" | "partial_cod" | null;
+  amount_paid_online: number | null;
+  amount_due_cod: number | null;
   payment_status: string;
   order_status: string;
   created_at: string;
@@ -211,10 +214,17 @@ export default function OrdersPage() {
                   ₹{o.total.toLocaleString("en-IN")}
                 </span>
 
-                <span className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.45)]">
-                  {o.payment_method === "cod" ? "COD" : "Online"}
-                  {o.payment_status === "paid" && " ✓"}
-                </span>
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.45)]">
+                    {o.payment_type === "partial_cod" ? "50/50 COD" : o.payment_method === "cod" ? "COD" : "Online"}
+                    {o.payment_status === "paid" && " ✓"}
+                  </span>
+                  {o.payment_type === "partial_cod" && o.amount_due_cod != null && (
+                    <span className="font-display text-[0.40rem] tracking-[0.08em] uppercase text-[rgba(220,150,60,0.90)] bg-[rgba(220,150,60,0.12)] px-1.5 py-0.5 rounded-[2px] w-fit whitespace-nowrap">
+                      Collect ₹{o.amount_due_cod.toLocaleString("en-IN")}
+                    </span>
+                  )}
+                </div>
 
                 <span className={`font-display text-[0.43rem] tracking-[0.12em] uppercase px-2 py-1 rounded-[3px] w-fit ${STATUS_COLORS[o.order_status] ?? "text-[rgba(245,237,224,0.40)]"}`}>
                   {o.order_status}
@@ -294,11 +304,25 @@ export default function OrdersPage() {
 
             {/* Payment */}
             <Section title="Payment">
-              <Row label="Method"   value={selected.payment_method === "cod" ? "Cash on Delivery" : "Online (Razorpay)"} />
+              <Row label="Method"   value={selected.payment_type === "partial_cod" ? "Partial COD (50/50)" : selected.payment_method === "cod" ? "Cash on Delivery" : "Online (Razorpay)"} />
               <Row label="Status"   value={selected.payment_status} />
               <Row label="Subtotal" value={`₹${selected.subtotal.toLocaleString("en-IN")}`} />
               <Row label="Shipping" value={`₹${selected.shipping_fee.toLocaleString("en-IN")}`} />
               <Row label="Total"    value={`₹${selected.total.toLocaleString("en-IN")}`} bold />
+              {selected.payment_type === "partial_cod" && (
+                <>
+                  <Row label="Paid online" value={`₹${(selected.amount_paid_online ?? 0).toLocaleString("en-IN")}`} />
+                  <div className="mt-1 px-4 py-3 rounded-[4px] bg-[rgba(220,150,60,0.10)] border border-[rgba(220,150,60,0.30)]">
+                    <p className="font-display text-[0.40rem] tracking-[0.16em] uppercase text-[rgba(220,150,60,0.65)] mb-1">COD Amount to Collect</p>
+                    <p className="font-display text-[rgba(220,150,60,0.95)]" style={{ fontSize: "1.3rem", letterSpacing: "0.04em" }}>
+                      ₹{(selected.amount_due_cod ?? 0).toLocaleString("en-IN")}
+                    </p>
+                    <p className="font-body font-light text-[rgba(220,150,60,0.55)] text-[0.68rem] mt-1">
+                      Collect this in cash at time of delivery. Already includes the ₹10 convenience fee.
+                    </p>
+                  </div>
+                </>
+              )}
             </Section>
 
             {/* Items */}
