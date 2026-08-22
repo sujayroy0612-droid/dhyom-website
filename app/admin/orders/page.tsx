@@ -60,6 +60,8 @@ export default function OrdersPage() {
   const [invoiceLoading,  setInvoiceLoading]  = useState(false);
   const [invoiceError,    setInvoiceError]    = useState<string | null>(null);
   const [deleting,        setDeleting]        = useState(false);
+  const [checkedIds,      setCheckedIds]      = useState<Set<string>>(new Set());
+  const [bulkDeleting,    setBulkDeleting]    = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -146,14 +148,58 @@ export default function OrdersPage() {
     setUpdating(p => ({ ...p, [order.id]: false }));
   }
 
+  async function callDeleteApi(ids: string[]): Promise<boolean> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch("/api/admin/delete-orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+      body: JSON.stringify({ ids }),
+    });
+    return res.ok;
+  }
+
   async function deleteOrder(order: Order) {
     if (!window.confirm(`Delete order ${order.order_number}? This cannot be undone.`)) return;
     setDeleting(true);
-    await supabase.from("orders").delete().eq("id", order.id);
-    setOrders(prev => prev.filter(o => o.id !== order.id));
-    setTotal(prev => prev - 1);
-    setSelected(null);
+    const ok = await callDeleteApi([order.id]);
+    if (ok) {
+      setOrders(prev => prev.filter(o => o.id !== order.id));
+      setTotal(prev => prev - 1);
+      setSelected(null);
+      setCheckedIds(prev => { const n = new Set(prev); n.delete(order.id); return n; });
+    }
     setDeleting(false);
+  }
+
+  async function deleteBulk() {
+    const ids = [...checkedIds];
+    if (!ids.length) return;
+    if (!window.confirm(`Delete ${ids.length} order${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    const ok = await callDeleteApi(ids);
+    if (ok) {
+      setOrders(prev => prev.filter(o => !checkedIds.has(o.id)));
+      setTotal(prev => prev - ids.length);
+      setCheckedIds(new Set());
+      setSelected(null);
+    }
+    setBulkDeleting(false);
+  }
+
+  function toggleCheck(id: string) {
+    setCheckedIds(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+
+  function toggleAll() {
+    if (checkedIds.size === orders.length) {
+      setCheckedIds(new Set());
+    } else {
+      setCheckedIds(new Set(orders.map(o => o.id)));
+    }
   }
 
   const pages = Math.ceil(total / PAGE_SIZE);
@@ -187,10 +233,39 @@ export default function OrdersPage() {
         </span>
       </div>
 
+      {/* Bulk-action bar */}
+      {checkedIds.size > 0 && (
+        <div className="flex items-center gap-4 mb-3 px-4 py-2.5 bg-[rgba(210,80,80,0.07)] border border-[rgba(210,80,80,0.20)] rounded-[4px]">
+          <span className="font-display text-[0.50rem] tracking-[0.14em] uppercase text-[rgba(245,237,224,0.55)]">
+            {checkedIds.size} selected
+          </span>
+          <button
+            onClick={deleteBulk}
+            disabled={bulkDeleting}
+            className="font-display text-[0.50rem] tracking-[0.14em] uppercase text-[rgba(210,80,80,0.80)] border border-[rgba(210,80,80,0.35)] hover:border-[rgba(210,80,80,0.65)] hover:text-[rgba(210,80,80,1)] rounded-[3px] px-4 py-1.5 transition-all duration-150 disabled:opacity-40"
+          >
+            {bulkDeleting ? "Deleting…" : `Delete ${checkedIds.size} Order${checkedIds.size > 1 ? "s" : ""}`}
+          </button>
+          <button
+            onClick={() => setCheckedIds(new Set())}
+            className="ml-auto font-display text-[0.46rem] tracking-[0.12em] uppercase text-[rgba(245,237,224,0.28)] hover:text-[rgba(245,237,224,0.55)] transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] overflow-hidden mb-4">
         {/* Header */}
-        <div className="hidden lg:grid grid-cols-[1fr_140px_110px_110px_130px_120px] gap-3 px-5 py-3 border-b border-[rgba(196,163,115,0.08)]">
+        <div className="hidden lg:grid grid-cols-[32px_1fr_140px_110px_110px_130px_120px] gap-3 px-5 py-3 border-b border-[rgba(196,163,115,0.08)]">
+          <input
+            type="checkbox"
+            checked={orders.length > 0 && checkedIds.size === orders.length}
+            onChange={toggleAll}
+            className="accent-[#C4A373] mt-0.5"
+            title="Select all"
+          />
           {["Order / Customer", "Total", "Payment", "Status", "Update Status", "Date"].map(h => (
             <span key={h} className="font-display text-[0.42rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.35)]">{h}</span>
           ))}
@@ -207,8 +282,15 @@ export default function OrdersPage() {
             {orders.map(o => (
               <div
                 key={o.id}
-                className="grid grid-cols-1 lg:grid-cols-[1fr_140px_110px_110px_130px_120px] gap-2 lg:gap-3 items-center px-5 py-3.5 hover:bg-[rgba(196,163,115,0.03)] transition-colors"
+                className={`grid grid-cols-1 lg:grid-cols-[32px_1fr_140px_110px_110px_130px_120px] gap-2 lg:gap-3 items-center px-5 py-3.5 hover:bg-[rgba(196,163,115,0.03)] transition-colors ${checkedIds.has(o.id) ? "bg-[rgba(210,80,80,0.04)]" : ""}`}
               >
+                <input
+                  type="checkbox"
+                  checked={checkedIds.has(o.id)}
+                  onChange={() => toggleCheck(o.id)}
+                  onClick={e => e.stopPropagation()}
+                  className="accent-[#C4A373]"
+                />
                 <button
                   onClick={() => setSelected(o)}
                   className="text-left"
