@@ -151,8 +151,12 @@ export default function CheckoutPage() {
       return;
     }
     setLeadSaving(true);
-    // Fire-and-forget — don't block UX on error
-    void supabase.from("contacts").insert({ email, phone: leadPhone.trim() || null, tag: "checkout_lead" });
+    // Save to contacts before proceeding — fire-and-forget, never block UX
+    void fetch("/api/checkout-started", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, phone: leadPhone.trim() || null }),
+    });
     setForm((prev) => ({ ...prev, email, phone: leadPhone.trim() }));
     setLeadSaving(false);
     setStep("form");
