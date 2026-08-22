@@ -32,7 +32,7 @@ export default function ShippingPolicyPage() {
       {divider}
 
       <Section title="Shipping Charges">
-        <p>A flat shipping fee of ₹80 applies to all orders across India.</p>
+        <p>Shipping is free on all orders of ₹999 or above. A flat fee of ₹99 applies to orders below ₹999.</p>
       </Section>
 
       {divider}

@@ -14,7 +14,7 @@ export async function GET() {
   for (const row of data ?? []) map[row.key] = row.value;
   // Defaults if table is empty or key missing
   return NextResponse.json({
-    shipping_fee:             map.shipping_fee             ?? "80",
+    shipping_fee:             map.shipping_fee             ?? "99",
     free_shipping_threshold:  map.free_shipping_threshold  ?? "999",
   });
 }

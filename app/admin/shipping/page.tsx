@@ -36,7 +36,7 @@ export default function ShippingSettingsPage() {
     });
     if (res.ok) {
       const d = await res.json() as Record<string, string>;
-      setShippingFee(d.shipping_fee ?? "80");
+      setShippingFee(d.shipping_fee ?? "99");
       setFreeShippingThreshold(d.free_shipping_threshold ?? "999");
     }
     setLoading(false);

@@ -7,7 +7,7 @@ import Image from "next/image";
 import { useCart } from "@/lib/cart/CartContext";
 import { supabase } from "@/lib/supabase/client";
 
-const DEFAULT_SHIPPING = 80;
+const DEFAULT_SHIPPING = 99;
 const DEFAULT_FREE_THRESHOLD = 999;
 
 const INDIAN_STATES = [

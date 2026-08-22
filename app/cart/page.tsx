@@ -8,7 +8,7 @@ import Image from "next/image";
 import { useCart, CartItem } from "@/lib/cart/CartContext";
 import { supabase } from "@/lib/supabase/client";
 
-const DEFAULT_SHIPPING = 80;
+const DEFAULT_SHIPPING = 99;
 const DEFAULT_FREE_THRESHOLD = 999;
 
 interface BumpProduct {
@@ -284,6 +284,24 @@ export default function CartPage() {
                     <span className="font-display text-ivory" style={{ fontSize: "0.9rem", letterSpacing: "0.04em" }}>₹{shippingCost.toLocaleString("en-IN")}</span>
                   )}
                 </div>
+
+                {/* Free-shipping nudge */}
+                {freeShippingThreshold > 0 && (() => {
+                  const cartValue = subtotal - discount + bumpExtra;
+                  const needed = freeShippingThreshold - cartValue;
+                  if (isFreeShip) {
+                    return (
+                      <p className="font-body font-light text-[0.72rem] text-[rgba(100,215,100,0.60)]">
+                        Free shipping applied on this order.
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="font-body font-light text-[0.72rem] text-[rgba(245,237,224,0.35)]">
+                      Add ₹{needed.toLocaleString("en-IN")} more for free shipping.
+                    </p>
+                  );
+                })()}
 
                 <div className="h-px bg-[rgba(196,163,115,0.14)]" />
 
