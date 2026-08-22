@@ -172,7 +172,7 @@ export default function OrdersPage() {
   }
 
   async function deleteBulk() {
-    const ids = [...checkedIds];
+    const ids = Array.from(checkedIds);
     if (!ids.length) return;
     if (!window.confirm(`Delete ${ids.length} order${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
     setBulkDeleting(true);
@@ -189,7 +189,7 @@ export default function OrdersPage() {
   function toggleCheck(id: string) {
     setCheckedIds(prev => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) { n.delete(id); } else { n.add(id); }
       return n;
     });
   }
