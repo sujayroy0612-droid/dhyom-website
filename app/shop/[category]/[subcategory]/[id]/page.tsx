@@ -7,6 +7,7 @@ import type { DbProduct } from "@/lib/supabase/types";
 import ProductCard from "@/components/ProductCard";
 import ProductActions from "@/components/ProductActions";
 import ProductGallery from "@/components/ProductGallery";
+import FunnelTracker from "@/components/FunnelTracker";
 
 /* ─── Display name maps ───────────────────────────────── */
 const CATEGORY_NAMES: Record<string, string> = {
@@ -115,6 +116,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-black-plum">
+      <FunnelTracker productId={product.id} />
 
       {/* ══ PRODUCT DETAIL ══════════════════════════════════ */}
       <section className="pt-20">

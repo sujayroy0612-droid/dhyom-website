@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Button from "@/components/Button";
 import { useCart } from "@/lib/cart/CartContext";
+import { trackEvent } from "@/lib/funnel/track";
 
 interface ProductActionsProps {
   productId: string;
@@ -39,6 +40,7 @@ export default function ProductActions({
 
   function handleAddToCart() {
     addItem({ id: productId, name: productName, price, quantity: qty, category, subcategorySlug, label, imageUrl });
+    trackEvent("add_to_cart", productId);
     setAddedState("added");
     setTimeout(() => setAddedState("idle"), 1800);
   }

@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cart/CartContext";
 import { supabase } from "@/lib/supabase/client";
+import { trackEvent } from "@/lib/funnel/track";
 
 const DEFAULT_SHIPPING = 99;
 const DEFAULT_FREE_THRESHOLD = 999;
@@ -166,6 +167,7 @@ export default function CheckoutPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, phone: leadPhone.trim() || null }),
     });
+    trackEvent("checkout_started");
     setForm((prev) => ({ ...prev, email, phone: leadPhone.trim() }));
     setLeadSaving(false);
     setStep("form");
@@ -266,6 +268,7 @@ export default function CheckoutPage() {
               amountDueCod,
             }),
           }).catch(() => {});
+          trackEvent("purchase_completed");
           orderPlacedRef.current = true;
           clearCart();
           router.push(`/checkout/offer/${orderNumber}`);

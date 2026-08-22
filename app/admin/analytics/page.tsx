@@ -13,6 +13,16 @@ interface Order {
 interface DayTotal { date: string; total: number }
 interface TopProduct { name: string; units: number }
 interface StatusBreakdown { status: string; count: number }
+interface FunnelStage { event_type: string; count: number }
+
+const FUNNEL_LABELS: Record<string, string> = {
+  product_view:        "Product Views",
+  add_to_cart:         "Added to Cart",
+  checkout_started:    "Checkout Started",
+  purchase_completed:  "Purchase Completed",
+};
+
+const DAY_OPTIONS = [7, 30, 90];
 
 export default function AnalyticsPage() {
   const [daily,    setDaily]    = useState<DayTotal[]>([]);
@@ -22,6 +32,11 @@ export default function AnalyticsPage() {
   const [totalRev, setTotalRev] = useState(0);
   const [totalOrd, setTotalOrd] = useState(0);
 
+  const [days,     setDays]     = useState(30);
+  const [funnel,   setFunnel]   = useState<FunnelStage[]>([]);
+  const [fLoading, setFLoading] = useState(true);
+
+  /* ── Orders data ─────────────────────────────────────── */
   useEffect(() => {
     const since = new Date();
     since.setDate(since.getDate() - 29);
@@ -36,7 +51,6 @@ export default function AnalyticsPage() {
         setTotalOrd(orders.length);
         setTotalRev(orders.reduce((s, o) => s + (o.total ?? 0), 0));
 
-        // Daily totals — last 30 days
         const dayMap: Record<string, number> = {};
         for (let i = 0; i < 30; i++) {
           const d = new Date();
@@ -49,7 +63,6 @@ export default function AnalyticsPage() {
         });
         setDaily(Object.entries(dayMap).map(([date, total]) => ({ date, total })));
 
-        // Top products by units sold
         const unitMap: Record<string, number> = {};
         orders.forEach(o => {
           (o.items ?? []).forEach(item => {
@@ -62,7 +75,6 @@ export default function AnalyticsPage() {
           .map(([name, units]) => ({ name, units }));
         setTop(sorted);
 
-        // Status breakdown
         const stMap: Record<string, number> = {};
         orders.forEach(o => { stMap[o.order_status] = (stMap[o.order_status] ?? 0) + 1; });
         setStatuses(Object.entries(stMap).map(([status, count]) => ({ status, count })).sort((a, b) => b.count - a.count));
@@ -71,8 +83,27 @@ export default function AnalyticsPage() {
       });
   }, []);
 
-  const maxDay = Math.max(...daily.map(d => d.total), 1);
-  const maxUnits = Math.max(...top.map(t => t.units), 1);
+  /* ── Funnel data ─────────────────────────────────────── */
+  useEffect(() => {
+    setFLoading(true);
+    supabase.auth.getSession().then(async ({ data }) => {
+      const token = data.session?.access_token ?? "";
+      try {
+        const res = await fetch(`/api/admin/funnel?days=${days}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setFunnel(json.funnel ?? []);
+        }
+      } catch {}
+      setFLoading(false);
+    });
+  }, [days]);
+
+  const maxDay    = Math.max(...daily.map(d => d.total), 1);
+  const maxUnits  = Math.max(...top.map(t => t.units), 1);
+  const maxFunnel = Math.max(...funnel.map(f => f.count), 1);
 
   return (
     <div className="px-8 pt-8 pb-16">
@@ -87,7 +118,7 @@ export default function AnalyticsPage() {
         </div>
       ) : (
         <>
-          {/* Summary strip */}
+          {/* ── Summary strip ── */}
           <div className="grid grid-cols-2 gap-4 mb-8">
             {[
               { label: "Orders (30d)",  value: totalOrd },
@@ -100,7 +131,7 @@ export default function AnalyticsPage() {
             ))}
           </div>
 
-          {/* Revenue chart */}
+          {/* ── Revenue chart ── */}
           <div className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] px-6 py-6 mb-6">
             <p className="font-display text-ivory mb-5" style={{ fontSize: "0.78rem", letterSpacing: "0.08em" }}>
               Daily Revenue — Last 30 Days
@@ -118,7 +149,6 @@ export default function AnalyticsPage() {
                         className="w-full rounded-t-[2px] bg-brass opacity-60 group-hover:opacity-100 transition-opacity duration-150"
                         style={{ height: `${height}px` }}
                       />
-                      {/* Tooltip */}
                       <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:flex flex-col items-center pointer-events-none z-10">
                         <div className="bg-[#12060e] border border-[rgba(196,163,115,0.25)] rounded-[3px] px-2 py-1 whitespace-nowrap">
                           <p className="font-display text-brass text-[0.50rem] tracking-wide">₹{total.toLocaleString("en-IN")}</p>
@@ -132,8 +162,8 @@ export default function AnalyticsPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top products */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* ── Top products ── */}
             <div className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] px-6 py-6">
               <p className="font-display text-ivory mb-5" style={{ fontSize: "0.78rem", letterSpacing: "0.08em" }}>
                 Top 5 Products by Units Sold
@@ -163,7 +193,7 @@ export default function AnalyticsPage() {
               )}
             </div>
 
-            {/* Status breakdown */}
+            {/* ── Status breakdown ── */}
             <div className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] px-6 py-6">
               <p className="font-display text-ivory mb-5" style={{ fontSize: "0.78rem", letterSpacing: "0.08em" }}>
                 Order Status Breakdown
@@ -189,6 +219,112 @@ export default function AnalyticsPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* ── Customer Journey Funnel ── */}
+          <div className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] px-6 py-6">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <p className="font-display text-ivory" style={{ fontSize: "0.78rem", letterSpacing: "0.08em" }}>
+                  Customer Journey Funnel
+                </p>
+                <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-[0.76rem] mt-1">
+                  Unique sessions per stage
+                </p>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {DAY_OPTIONS.map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setDays(d)}
+                    className={[
+                      "px-3 py-1 rounded-[3px] font-display text-[0.46rem] tracking-[0.12em] uppercase transition-all duration-150",
+                      days === d
+                        ? "bg-[rgba(196,163,115,0.18)] text-brass"
+                        : "text-[rgba(245,237,224,0.28)] hover:text-[rgba(245,237,224,0.55)] hover:bg-[rgba(196,163,115,0.06)]",
+                    ].join(" ")}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {fLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" />
+              </div>
+            ) : funnel.length === 0 || funnel.every(f => f.count === 0) ? (
+              <p className="font-body font-light italic text-[rgba(245,237,224,0.25)] text-sm py-8 text-center">
+                No funnel events yet. They will appear as customers browse the shop.
+              </p>
+            ) : (
+              <div className="flex flex-col">
+                {funnel.map((stage, i) => {
+                  const prev     = i > 0 ? funnel[i - 1].count : null;
+                  const dropPct  = prev && prev > 0 ? Math.round(((prev - stage.count) / prev) * 100) : null;
+                  const barWidth = stage.count > 0 ? Math.max(2, Math.round((stage.count / maxFunnel) * 100)) : 0;
+                  const isLast   = i === funnel.length - 1;
+                  const label    = FUNNEL_LABELS[stage.event_type] ?? stage.event_type;
+
+                  return (
+                    <div key={stage.event_type}>
+                      {/* Drop-off connector */}
+                      {dropPct !== null && (
+                        <div className="flex items-center gap-3 py-2 pl-[3px]">
+                          <div className="flex flex-col items-center gap-0.5">
+                            <div className="w-px h-2 bg-[rgba(196,163,115,0.15)]" />
+                            <div className="w-px h-2 bg-[rgba(196,163,115,0.08)]" />
+                          </div>
+                          <span className="font-body font-light text-[0.72rem]" style={{
+                            color: dropPct > 60 ? "rgba(220,100,80,0.60)" : dropPct > 30 ? "rgba(220,170,60,0.55)" : "rgba(245,237,224,0.25)"
+                          }}>
+                            {dropPct > 0 ? `↓ ${dropPct}% dropped off` : "→ all continued"}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Stage row */}
+                      <div className="py-2.5">
+                        <div className="flex items-baseline justify-between mb-2">
+                          <span className="font-display text-[0.48rem] tracking-[0.14em] uppercase text-[rgba(245,237,224,0.55)]">
+                            {label}
+                          </span>
+                          <span className="font-display tracking-wide text-[0.72rem]" style={{
+                            color: isLast ? "rgba(100,215,140,0.85)" : "rgba(196,163,115,0.85)"
+                          }}>
+                            {stage.count.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="h-[7px] bg-[rgba(196,163,115,0.07)] rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${barWidth}%`,
+                              background: isLast
+                                ? "rgba(80,190,120,0.55)"
+                                : `rgba(196,163,115,${0.55 - i * 0.10})`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Overall conversion rate */}
+                {(funnel[0]?.count ?? 0) > 0 && (funnel[3]?.count ?? 0) > 0 && (
+                  <div className="mt-5 pt-4 border-t border-[rgba(196,163,115,0.10)] flex items-center justify-between">
+                    <span className="font-body font-light text-[rgba(245,237,224,0.30)] text-[0.76rem]">
+                      Overall conversion — viewers → buyers
+                    </span>
+                    <span className="font-display text-[rgba(100,215,140,0.80)] text-[0.80rem] tracking-wide">
+                      {((funnel[3].count / funnel[0].count) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
