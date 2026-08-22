@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Validate
     const trimmed = (email ?? "").trim();
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    if (!trimmed || trimmed.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       return NextResponse.json(
         { error: "Please enter a valid email address." },
         { status: 400 }

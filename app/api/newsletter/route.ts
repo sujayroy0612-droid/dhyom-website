@@ -71,10 +71,14 @@ Founder, Dhyom`;
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, name } = await req.json();
+    const { email, name, hp } = await req.json();
+
+    // Bot trap — filled honeypot means automated submission
+    if (hp) return NextResponse.json({ ok: true });
+
     const trimmed = (email ?? "").trim();
 
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    if (!trimmed || trimmed.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
 

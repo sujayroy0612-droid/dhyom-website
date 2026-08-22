@@ -51,13 +51,19 @@ async function notifyFounder(email: string, phone: string | null) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, phone } = await req.json() as { email?: string; phone?: string };
+    const { email, phone, hp } = await req.json() as { email?: string; phone?: string; hp?: string };
+
+    // Bot trap
+    if (hp) return NextResponse.json({ ok: true });
 
     const cleanEmail = email?.trim().toLowerCase();
-    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    if (!cleanEmail || cleanEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       return NextResponse.json({ error: "Valid email required." }, { status: 400 });
     }
-    const cleanPhone = phone?.trim() || null;
+    const cleanPhone = (phone?.trim() || null);
+    if (cleanPhone && cleanPhone.length > 20) {
+      return NextResponse.json({ error: "Invalid phone number." }, { status: 400 });
+    }
 
     const sb = adminClient();
 

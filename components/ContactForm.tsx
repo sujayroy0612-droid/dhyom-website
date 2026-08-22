@@ -22,12 +22,13 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 }
 
 export default function ContactForm() {
-  const [name,    setName]    = useState("");
-  const [email,   setEmail]   = useState("");
-  const [message, setMessage] = useState("");
-  const [errors,  setErrors]  = useState<{ name?: string; email?: string; message?: string }>({});
-  const [status,  setStatus]  = useState<"idle" | "submitting" | "success" | "error">("idle");
-  const [apiErr,  setApiErr]  = useState("");
+  const [name,      setName]      = useState("");
+  const [email,     setEmail]     = useState("");
+  const [message,   setMessage]   = useState("");
+  const [honeypot,  setHoneypot]  = useState("");
+  const [errors,    setErrors]    = useState<{ name?: string; email?: string; message?: string }>({});
+  const [status,    setStatus]    = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [apiErr,    setApiErr]    = useState("");
 
   function validate() {
     const e: typeof errors = {};
@@ -50,7 +51,7 @@ export default function ContactForm() {
       const res = await fetch("/api/contact-inquiry", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ name, email, message }),
+        body:    JSON.stringify({ name, email, message, hp: honeypot }),
       });
       const data = await res.json();
       if (!res.ok) { setApiErr(data.error ?? "Something went wrong."); setStatus("error"); return; }
@@ -77,6 +78,16 @@ export default function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
+      {/* Honeypot — hidden from users, bots fill it */}
+      <input
+        type="text"
+        aria-hidden="true"
+        tabIndex={-1}
+        autoComplete="off"
+        value={honeypot}
+        onChange={(e) => setHoneypot(e.target.value)}
+        style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0 }}
+      />
       <Field label="Name" error={errors.name}>
         <input
           type="text"

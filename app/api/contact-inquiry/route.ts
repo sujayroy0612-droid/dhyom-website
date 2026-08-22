@@ -23,13 +23,25 @@ async function sendWhatsApp(name: string, email: string, message: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, message } = await req.json();
+    const { name, email, message, hp } = await req.json();
+
+    // Bot trap — filled honeypot means automated submission
+    if (hp) return NextResponse.json({ ok: true });
 
     if (!name?.trim() || !email?.trim() || !message?.trim()) {
       return NextResponse.json({ error: "All fields are required." }, { status: 400 });
     }
+    if (email.trim().length > 254) {
+      return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
+    }
+    if (name.trim().length > 100) {
+      return NextResponse.json({ error: "Name is too long." }, { status: 400 });
+    }
+    if (message.trim().length > 2000) {
+      return NextResponse.json({ error: "Message must be under 2000 characters." }, { status: 400 });
     }
 
     const sb = adminClient();

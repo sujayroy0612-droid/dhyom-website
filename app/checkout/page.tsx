@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cart/CartContext";
-import { supabase } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/funnel/track";
 
 const DEFAULT_SHIPPING = 99;
@@ -109,11 +108,12 @@ export default function CheckoutPage() {
   const { items, subtotal, totalItems, hydrated, clearCart } = useCart();
 
   /* ── Step A state ── */
-  const [step,       setStep]       = useState<"lead" | "form">("lead");
-  const [leadEmail,  setLeadEmail]  = useState("");
-  const [leadPhone,  setLeadPhone]  = useState("");
-  const [leadError,  setLeadError]  = useState("");
-  const [leadSaving, setLeadSaving] = useState(false);
+  const [step,        setStep]        = useState<"lead" | "form">("lead");
+  const [leadEmail,   setLeadEmail]   = useState("");
+  const [leadPhone,   setLeadPhone]   = useState("");
+  const [leadError,   setLeadError]   = useState("");
+  const [leadSaving,  setLeadSaving]  = useState(false);
+  const [leadHoneypot, setLeadHoneypot] = useState("");
 
   /* ── Step B state ── */
   const [form,         setForm]         = useState<CheckoutForm>(BLANK);
@@ -160,12 +160,13 @@ export default function CheckoutPage() {
       setLeadError("Please enter a valid email address.");
       return;
     }
+    if (leadHoneypot) { setLeadSaving(false); setStep("form"); return; } // silent bot drop
     setLeadSaving(true);
     // Save to contacts before proceeding — fire-and-forget, never block UX
     void fetch("/api/checkout-started", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, phone: leadPhone.trim() || null }),
+      body: JSON.stringify({ email, phone: leadPhone.trim() || null, hp: leadHoneypot }),
     });
     trackEvent("checkout_started");
     setForm((prev) => ({ ...prev, email, phone: leadPhone.trim() }));
@@ -239,35 +240,37 @@ export default function CheckoutPage() {
         prefill: { name: `${form.firstName.trim()} ${form.lastName.trim()}`, email: form.email.trim(), contact: form.phone.trim() },
         theme: { color: "#3D1428" },
         handler: async (response: RzpSuccess) => {
-          const { error } = await supabase.from("orders").insert({
-            ...base,
-            payment_status: "paid",
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
+          // Verify signature server-side and insert order via service role —
+          // prevents fake "payment completed" calls that bypass Razorpay.
+          const verifyRes = await fetch("/api/verify-payment", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpayOrderId:   response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+              base,
+              amountToCharge,
+              notifyData: {
+                orderNumber,
+                customerName: base.customer_name,
+                phone: base.phone,
+                email: base.email,
+                address: base.address,
+                items: base.items,
+                total: base.total,
+                paymentStatus: paymentType === "partial_cod" ? "Partial COD (50% paid online)" : "Paid (Razorpay)",
+                paymentType,
+                amountPaidOnline: amountToCharge,
+                amountDueCod,
+              },
+            }),
           });
-          if (error) {
+          if (!verifyRes.ok) {
             setPaymentError(`Payment received (ID: ${response.razorpay_payment_id}) but the order record could not be saved. Please contact us with this reference.`);
             setSubmitting(false);
             return;
           }
-          // Fire founder notification email — non-blocking, never delays the user
-          void fetch("/api/notify-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              orderNumber,
-              customerName: base.customer_name,
-              phone: base.phone,
-              email: base.email,
-              address: base.address,
-              items: base.items,
-              total: base.total,
-              paymentStatus: paymentType === "partial_cod" ? "Partial COD (50% paid online)" : "Paid (Razorpay)",
-              paymentType,
-              amountPaidOnline: amountToCharge,
-              amountDueCod,
-            }),
-          }).catch(() => {});
           trackEvent("purchase_completed");
           orderPlacedRef.current = true;
           clearCart();
@@ -342,6 +345,17 @@ export default function CheckoutPage() {
                 className={inputNormal}
               />
             </Field>
+
+            {/* Honeypot — invisible to humans, bots will fill it */}
+            <input
+              type="text"
+              value={leadHoneypot}
+              onChange={(e) => setLeadHoneypot(e.target.value)}
+              autoComplete="off"
+              tabIndex={-1}
+              aria-hidden="true"
+              style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", overflow: "hidden" }}
+            />
 
             <button
               type="submit"

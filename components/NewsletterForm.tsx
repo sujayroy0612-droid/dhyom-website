@@ -3,8 +3,9 @@
 import { useState } from "react";
 
 export default function NewsletterForm() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [email,    setEmail]    = useState("");
+  const [honeypot, setHoneypot] = useState("");
+  const [status,   setStatus]   = useState<"idle" | "loading" | "done" | "error">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -17,7 +18,7 @@ export default function NewsletterForm() {
     const res = await fetch("/api/newsletter", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: trimmed }),
+      body: JSON.stringify({ email: trimmed, hp: honeypot }),
     });
     setStatus(res.ok ? "done" : "error");
   }
@@ -32,6 +33,16 @@ export default function NewsletterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto">
+      {/* Honeypot — hidden from users, bots fill it */}
+      <input
+        type="text"
+        aria-hidden="true"
+        tabIndex={-1}
+        autoComplete="off"
+        value={honeypot}
+        onChange={(e) => setHoneypot(e.target.value)}
+        style={{ position: "absolute", left: "-9999px", width: "1px", height: "1px", opacity: 0 }}
+      />
       <div className="flex items-center bg-[rgba(245,237,224,0.06)] border border-[rgba(196,163,115,0.28)] rounded-full p-1.5 gap-2">
         <input
           type="email"

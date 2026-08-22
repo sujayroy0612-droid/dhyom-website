@@ -186,6 +186,15 @@ function buildHtml(data: {
 }
 
 export async function POST(req: NextRequest) {
+  // Only accept calls from our own server (verify-payment sends CRON_SECRET as Bearer)
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret) {
+    const auth = (req.headers.get("authorization") ?? "").replace("Bearer ", "").trim();
+    if (auth !== cronSecret) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   try {
     const body = await req.json();
     const { orderNumber, customerName, phone, email, address, items, total, paymentStatus, paymentType, amountPaidOnline, amountDueCod } = body;
