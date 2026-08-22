@@ -33,7 +33,7 @@ interface InvoiceRecord {
   created_at: string;
 }
 
-const STATUSES = ["pending", "confirmed", "processing", "packed", "shipped", "delivered", "cancelled"];
+const STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
 
 const STATUS_COLORS: Record<string, string> = {
   pending:    "text-[rgba(220,160,60,0.85)]   bg-[rgba(220,160,60,0.08)]",
@@ -59,6 +59,7 @@ export default function OrdersPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
   const [invoiceLoading,  setInvoiceLoading]  = useState(false);
   const [invoiceError,    setInvoiceError]    = useState<string | null>(null);
+  const [deleting,        setDeleting]        = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -143,6 +144,16 @@ export default function OrdersPage() {
     }
 
     setUpdating(p => ({ ...p, [order.id]: false }));
+  }
+
+  async function deleteOrder(order: Order) {
+    if (!window.confirm(`Delete order ${order.order_number}? This cannot be undone.`)) return;
+    setDeleting(true);
+    await supabase.from("orders").delete().eq("id", order.id);
+    setOrders(prev => prev.filter(o => o.id !== order.id));
+    setTotal(prev => prev - 1);
+    setSelected(null);
+    setDeleting(false);
   }
 
   const pages = Math.ceil(total / PAGE_SIZE);
@@ -389,6 +400,17 @@ export default function OrdersPage() {
                 ))}
               </select>
             </Section>
+
+            {/* Delete */}
+            <div className="pt-2 border-t border-[rgba(210,80,80,0.12)]">
+              <button
+                onClick={() => deleteOrder(selected)}
+                disabled={deleting}
+                className="w-full font-display text-[0.50rem] tracking-[0.16em] uppercase text-[rgba(210,80,80,0.55)] border border-[rgba(210,80,80,0.22)] hover:text-[rgba(210,80,80,0.85)] hover:border-[rgba(210,80,80,0.45)] rounded-[3px] py-2.5 transition-all duration-150 disabled:opacity-40"
+              >
+                {deleting ? "Deleting…" : "Delete This Order"}
+              </button>
+            </div>
 
           </div>
         </div>
