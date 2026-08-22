@@ -575,12 +575,12 @@ export default async function Home() {
               </p>
             </FadeInView>
 
-            {/* Cards */}
-            <CardGrid gridClassName="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Cards — horizontal scroll */}
+            <div className="flex gap-6 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide -mx-6 px-6">
               {reviews.map((review) => (
-                <FadeInView
+                <div
                   key={review.id}
-                  className="bg-[#1f0914] border border-[rgba(196,163,115,0.13)] rounded-[6px] p-8 flex flex-col h-full hover:border-[rgba(196,163,115,0.30)] transition-colors duration-300"
+                  className="flex-none w-[85vw] sm:w-[42vw] lg:w-[30vw] max-w-[420px] snap-start bg-[#1f0914] border border-[rgba(196,163,115,0.13)] rounded-[6px] p-8 flex flex-col hover:border-[rgba(196,163,115,0.30)] transition-colors duration-300"
                 >
                   {/* Stars */}
                   <Stars rating={review.rating} />
@@ -588,7 +588,7 @@ export default async function Home() {
                   {/* Quote */}
                   <p
                     className="font-body font-light italic text-[rgba(245,237,224,0.72)] leading-[1.85] flex-1 mt-5 mb-6"
-                    style={{ fontSize: "clamp(1rem, 1.5vw, 1.1rem)" }}
+                    style={{ fontSize: "clamp(0.95rem, 1.4vw, 1.05rem)" }}
                   >
                     &ldquo;{review.review_text}&rdquo;
                   </p>
@@ -611,9 +611,9 @@ export default async function Home() {
                       ✦ as seen on amazon.in
                     </p>
                   </div>
-                </FadeInView>
+                </div>
               ))}
-            </CardGrid>
+            </div>
 
           </div>
         </section>
