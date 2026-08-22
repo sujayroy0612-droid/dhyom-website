@@ -8,6 +8,7 @@ type Lead = {
   email: string;
   name: string | null;
   tag: string;
+  message: string | null;
   captured_at: string | null;
   sequence_day_sent: number;
   last_email_sent_at: string | null;
@@ -64,6 +65,7 @@ export default function LeadsPage() {
   const [campaignFilter, setCampaignFilter] = useState("");
   const [search,         setSearch]         = useState("");
   const [deleting,       setDeleting]       = useState<string | null>(null);
+  const [openMsg,        setOpenMsg]        = useState<Lead | null>(null);
 
   const fetchLeads = useCallback(async (tag: string, campaign_id: string, q: string) => {
     setLoading(true);
@@ -333,16 +335,30 @@ export default function LeadsPage() {
                         }
                       </td>
 
-                      {/* Delete */}
+                      {/* Actions */}
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => deleteLead(lead.id)}
-                          disabled={deleting === lead.id}
-                          title="Delete lead"
-                          className="text-[rgba(210,90,90,0.35)] hover:text-[rgba(210,90,90,0.70)] transition-colors text-base leading-none disabled:opacity-20"
-                        >
-                          {deleting === lead.id ? "···" : "×"}
-                        </button>
+                        <div className="flex items-center justify-end gap-3">
+                          {lead.message && (
+                            <button
+                              onClick={() => setOpenMsg(lead)}
+                              title="View message"
+                              className="text-[rgba(196,163,115,0.40)] hover:text-brass transition-colors leading-none"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="1" y="3" width="14" height="10" rx="1.5" />
+                                <path d="M1 5l7 5 7-5" />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => deleteLead(lead.id)}
+                            disabled={deleting === lead.id}
+                            title="Delete lead"
+                            className="text-[rgba(210,90,90,0.35)] hover:text-[rgba(210,90,90,0.70)] transition-colors text-base leading-none disabled:opacity-20"
+                          >
+                            {deleting === lead.id ? "···" : "×"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -360,6 +376,45 @@ export default function LeadsPage() {
         )}
 
       </div>
+
+      {/* Message modal */}
+      {openMsg && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: "rgba(10,2,8,0.82)", backdropFilter: "blur(4px)" }}
+          onClick={() => setOpenMsg(null)}
+        >
+          <div
+            className="relative w-full max-w-lg bg-[#1a0812] border border-[rgba(196,163,115,0.18)] rounded-[6px] p-8 flex flex-col gap-5"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Close */}
+            <button
+              onClick={() => setOpenMsg(null)}
+              className="absolute top-4 right-4 text-[rgba(245,237,224,0.30)] hover:text-ivory transition-colors text-lg leading-none"
+            >
+              ×
+            </button>
+
+            {/* Meta */}
+            <div>
+              <p className="font-display text-[0.40rem] tracking-[0.20em] uppercase text-[rgba(196,163,115,0.42)] mb-2">Inquiry Message</p>
+              <p className="font-display text-ivory" style={{ fontSize: "0.82rem", letterSpacing: "0.06em" }}>{openMsg.email}</p>
+              {openMsg.name && (
+                <p className="font-body font-light text-[rgba(245,237,224,0.45)] text-[0.80rem] mt-0.5">{openMsg.name}</p>
+              )}
+              <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-[0.72rem] mt-1">{fmt(openMsg.captured_at)}</p>
+            </div>
+
+            <div className="h-px bg-[rgba(196,163,115,0.10)]" />
+
+            {/* Message body */}
+            <p className="font-body font-light text-[rgba(245,237,224,0.75)] text-[0.90rem] leading-[1.85] whitespace-pre-wrap">
+              {openMsg.message}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
   // Leads query
   let query = sb
     .from("contacts")
-    .select("id, email, name, tag, captured_at, sequence_day_sent, last_email_sent_at, unsubscribed, campaign_id, campaigns(title)", { count: "exact" })
+    .select("id, email, name, tag, message, captured_at, sequence_day_sent, last_email_sent_at, unsubscribed, campaign_id, campaigns(title)", { count: "exact" })
     .order("captured_at", { ascending: false })
     .limit(500);
 
