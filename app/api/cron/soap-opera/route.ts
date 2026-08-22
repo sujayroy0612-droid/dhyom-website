@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
   const { data: contacts, error: fetchErr } = await sb
     .from("contacts")
     .select("id, email, name, tag, sequence_day_sent")
-    .in("tag", ["reel_lead", "newsletter", "checkout_lead", "buyer"])
+    .in("tag", ["reel_lead", "newsletter", "checkout_lead", "checkout_started", "buyer"])
     .eq("unsubscribed", false)
     .lt("sequence_day_sent", 5)
     .or(`last_email_sent_at.is.null,last_email_sent_at.lte.${twentyHoursAgo}`)
