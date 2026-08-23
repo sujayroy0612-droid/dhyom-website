@@ -140,7 +140,8 @@ export default function CheckoutPage() {
   const isFreeShip     = freeShippingThreshold > 0 && subtotal >= freeShippingThreshold;
   const shippingCost   = isFreeShip ? 0 : shippingFee;
   const codFeeApplied  = paymentType === "partial_cod" ? COD_FEE : 0;
-  const total          = subtotal + shippingCost + codFeeApplied;
+  const fullPaymentTotal = subtotal + shippingCost;
+  const total          = fullPaymentTotal + codFeeApplied;
   // For partial COD: charge exactly 50% online, rest on delivery
   const amountToCharge       = paymentType === "partial_cod" ? Math.round(total / 2) : total;
   const amountDueCod         = paymentType === "partial_cod" ? total - amountToCharge : 0;
@@ -461,7 +462,7 @@ export default function CheckoutPage() {
                       <p className="font-display text-ivory" style={{ fontSize: "0.72rem", letterSpacing: "0.10em" }}>Pay in Full</p>
                       <p className="font-body font-light text-[rgba(245,237,224,0.42)] text-[0.80rem] mt-0.5">Pay the full amount now via Razorpay. UPI, cards, net banking.</p>
                     </div>
-                    <span className="font-display text-brass text-[0.80rem] flex-shrink-0">₹{total.toLocaleString("en-IN")}</span>
+                    <span className="font-display text-brass text-[0.80rem] flex-shrink-0">₹{fullPaymentTotal.toLocaleString("en-IN")}</span>
                   </label>
 
                   {/* 50/50 Partial COD */}
