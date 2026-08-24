@@ -57,12 +57,17 @@ export default function AddressesPage() {
     }
     setSaving(true); setError("");
     const payload = { ...form, user_id: user.id, label: form.label || null, phone: form.phone || null };
+    let dbError;
     if (editing) {
-      await supabase.from("saved_addresses").update(payload).eq("id", editing.id);
+      const { error } = await supabase.from("saved_addresses").update(payload).eq("id", editing.id);
+      dbError = error;
     } else {
-      await supabase.from("saved_addresses").insert(payload);
+      const { error } = await supabase.from("saved_addresses").insert(payload);
+      dbError = error;
     }
-    setSaving(false); setShowForm(false); setEditing(null);
+    setSaving(false);
+    if (dbError) { setError(`Save failed: ${dbError.message}`); return; }
+    setShowForm(false); setEditing(null);
     load();
   }
 
