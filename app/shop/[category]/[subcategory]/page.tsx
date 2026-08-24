@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import type { DbProduct } from "@/lib/supabase/types";
 import ProductCard from "@/components/ProductCard";
+import FadeInView from "@/components/FadeInView";
 
 /* ─── Static metadata ─────────────────────────────────── */
 const CATEGORY_NAMES: Record<string, string> = {
@@ -179,23 +180,25 @@ export default async function SubcategoryPage({ params }: PageProps) {
             </span>
           </nav>
 
-          <h1
-            className="font-display text-ivory mb-4"
-            style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", letterSpacing: "0.05em" }}
-          >
-            {subcategoryName}
-          </h1>
-          <div className="w-10 h-px bg-[rgba(196,163,115,0.35)] mb-5" />
-          {subcategoryDescription && (
-            <p className="font-body font-light italic text-[rgba(245,237,224,0.52)] text-base leading-relaxed max-w-lg">
-              {subcategoryDescription}
-            </p>
-          )}
-          {!error && (
-            <p className="font-display text-[0.54rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.38)] mt-5">
-              {products.length === 1 ? "1 piece" : `${products.length} pieces`}
-            </p>
-          )}
+          <FadeInView delay={0.1}>
+            <h1
+              className="font-display text-ivory mb-4"
+              style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", letterSpacing: "0.05em" }}
+            >
+              {subcategoryName}
+            </h1>
+            <div className="w-10 h-px bg-[rgba(196,163,115,0.35)] mb-5" />
+            {subcategoryDescription && (
+              <p className="font-body font-light italic text-[rgba(245,237,224,0.52)] text-base leading-relaxed max-w-lg">
+                {subcategoryDescription}
+              </p>
+            )}
+            {!error && (
+              <p className="font-display text-[0.54rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.38)] mt-5">
+                {products.length === 1 ? "1 piece" : `${products.length} pieces`}
+              </p>
+            )}
+          </FadeInView>
         </div>
       </section>
 

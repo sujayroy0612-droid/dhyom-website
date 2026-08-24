@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, Children } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { staggerContainer, fadeUp } from "@/lib/motion";
 
 interface Props {
@@ -16,6 +16,7 @@ export default function CardGrid({ children, gridClassName, className }: Props) 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const count = Children.count(children);
+  const shouldReduce = useReducedMotion();
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -73,19 +74,27 @@ export default function CardGrid({ children, gridClassName, className }: Props) 
       </div>
 
       {/* ── Desktop: stagger grid (md+) ── */}
-      <motion.div
-        className={`hidden md:grid ${gridClassName}`}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "-60px" }}
-        variants={staggerContainer}
-      >
-        {Children.map(children, (child, i) => (
-          <motion.div key={i} variants={fadeUp} className="h-full w-full min-w-0">
-            {child}
-          </motion.div>
-        ))}
-      </motion.div>
+      {shouldReduce ? (
+        <div className={`hidden md:grid ${gridClassName}`}>
+          {Children.map(children, (child, i) => (
+            <div key={i} className="h-full w-full min-w-0">{child}</div>
+          ))}
+        </div>
+      ) : (
+        <motion.div
+          className={`hidden md:grid ${gridClassName}`}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+          variants={staggerContainer}
+        >
+          {Children.map(children, (child, i) => (
+            <motion.div key={i} variants={fadeUp} className="h-full w-full min-w-0">
+              {child}
+            </motion.div>
+          ))}
+        </motion.div>
+      )}
 
     </div>
   );

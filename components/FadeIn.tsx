@@ -1,7 +1,7 @@
 "use client";
 
 // On-mount fade — used for hero elements (not scroll-triggered)
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { heroItem } from "@/lib/motion";
 
 interface Props {
@@ -11,6 +11,8 @@ interface Props {
 }
 
 export default function FadeIn({ children, delay = 0, className }: Props) {
+  const shouldReduce = useReducedMotion();
+  if (shouldReduce) return <div className={className}>{children}</div>;
   return (
     <motion.div
       className={className}

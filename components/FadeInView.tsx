@@ -1,7 +1,7 @@
 "use client";
 
 // Scroll-triggered fade — used for homepage sections, shop grids, etc.
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { fadeUp } from "@/lib/motion";
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
 }
 
 export default function FadeInView({ children, delay = 0, className, once = true }: Props) {
+  const shouldReduce = useReducedMotion();
+  if (shouldReduce) return <div className={className}>{children}</div>;
   return (
     <motion.div
       className={className}

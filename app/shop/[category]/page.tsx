@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import FadeInView from "@/components/FadeInView";
 
 /* ─── Subcategory data per category ───────────────────── */
 const SUBCATEGORIES: Record<
@@ -159,13 +160,15 @@ export default function CategoryPage({ params }: PageProps) {
             </span>
           </nav>
 
-          <h1
-            className="font-display text-ivory"
-            style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", letterSpacing: "0.05em" }}
-          >
-            {categoryName}
-          </h1>
-          <div className="w-10 h-px bg-[rgba(196,163,115,0.35)] mt-5" />
+          <FadeInView delay={0.1}>
+            <h1
+              className="font-display text-ivory"
+              style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", letterSpacing: "0.05em" }}
+            >
+              {categoryName}
+            </h1>
+            <div className="w-10 h-px bg-[rgba(196,163,115,0.35)] mt-5" />
+          </FadeInView>
         </div>
       </section>
 
