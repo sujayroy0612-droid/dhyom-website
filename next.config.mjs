@@ -14,12 +14,12 @@ const nextConfig = {
       "default-src 'self'",
       // Next.js + Razorpay popup need unsafe-inline; Razorpay script is external
       "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
-      // framer-motion and Tailwind runtime class generation need unsafe-inline
-      "style-src 'self' 'unsafe-inline'",
+      // framer-motion and Tailwind runtime class generation need unsafe-inline; Google Fonts stylesheet
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // product images from Cloudinary; Razorpay may load its own logo
       "img-src 'self' data: blob: https://res.cloudinary.com https://*.razorpay.com",
-      // fonts from Next.js (self-hosted) + potential data URIs
-      "font-src 'self' data:",
+      // Next.js self-hosted fonts + Google Fonts (Cinzel, Cormorant Garamond)
+      "font-src 'self' data: https://fonts.gstatic.com",
       // Supabase (REST + realtime websocket) + Razorpay API
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com",
       // Razorpay payment modal is an iframe inside the page
