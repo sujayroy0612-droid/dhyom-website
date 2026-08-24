@@ -113,7 +113,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, totalItems, hydrated, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   /* ── Step A state ── */
   const [step,        setStep]        = useState<"lead" | "form">("lead");
@@ -159,6 +159,21 @@ export default function CheckoutPage() {
         }
       });
   }, [user]);
+
+  /* Skip lead step for logged-in users — email already known */
+  useEffect(() => {
+    if (authLoading || !user || step !== "lead") return;
+    const email = user.email ?? "";
+    setLeadEmail(email);
+    setForm((prev) => ({ ...prev, email }));
+    trackEvent("checkout_started");
+    void fetch("/api/checkout-started", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, phone: null, hp: "" }),
+    });
+    setStep("form");
+  }, [user, authLoading, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [shippingFee,           setShippingFee]           = useState(DEFAULT_SHIPPING);
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(DEFAULT_FREE_THRESHOLD);
