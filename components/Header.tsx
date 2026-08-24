@@ -353,7 +353,7 @@ export default function Header({
                 pathname.startsWith("/account/wishlist") ? "text-brass" : "text-[rgba(245,237,224,0.50)] hover:text-ivory",
               ].join(" ")}
             >
-              <HeartIcon filled={wishlistIds.size > 0} />
+              <HeartIcon />
               {wishlistIds.size > 0 && (
                 <span
                   className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] rounded-full bg-brass text-ink flex items-center justify-center font-display px-1 pointer-events-none"
@@ -414,7 +414,7 @@ export default function Header({
                 pathname.startsWith("/account/wishlist") ? "text-brass" : "",
               ].join(" ")}
             >
-              <HeartIcon filled={wishlistIds.size > 0} />
+              <HeartIcon />
               {wishlistIds.size > 0 && (
                 <span
                   className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] rounded-full bg-brass text-ink flex items-center justify-center font-display px-1 pointer-events-none"
