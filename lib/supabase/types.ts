@@ -19,6 +19,7 @@ export interface DbProduct {
   mrp: number | null;
   stock: number;
   description: string;
+  bullet_points: string | null;
   image_url: string;
   image_urls: string[];
   is_visible: boolean;

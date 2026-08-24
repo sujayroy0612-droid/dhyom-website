@@ -201,8 +201,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               )}
 
               {(() => {
-                const bullets = (product as DbProduct & { bullet_points?: string })
-                  .bullet_points?.split("\n").map(s => s.trim()).filter(Boolean) ?? [];
+                const bullets = product.bullet_points?.split("\n").map(s => s.trim()).filter(Boolean) ?? [];
                 return bullets.length > 0 ? (
                   <ul className="flex flex-col gap-2.5">
                     {bullets.map((b, i) => (
