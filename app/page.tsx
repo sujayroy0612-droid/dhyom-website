@@ -9,6 +9,7 @@ import FadeIn from "@/components/FadeIn";
 import FadeInView from "@/components/FadeInView";
 import CardGrid from "@/components/CardGrid";
 import HeroBackground from "@/components/HeroBackground";
+import HeroParallaxBg from "@/components/HeroParallaxBg";
 import TestimonialCarousel from "@/components/TestimonialCarousel";
 import { createServerClient } from "@/lib/supabase/server";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
@@ -189,16 +190,10 @@ export default async function Home() {
 
       {/* ══ 1. HERO ══════════════════════════════════════════ */}
       <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson overflow-hidden">
-        {/* Desktop only: static image — explicitly hidden on mobile so video shows unobstructed */}
+        {/* Desktop only: parallax image — explicitly hidden on mobile so video shows unobstructed */}
         {assets.hero_background && (
-          <Image
+          <HeroParallaxBg
             src={assets.hero_background.replace("/upload/", "/upload/c_limit,w_2400,q_auto:best,f_auto/")}
-            alt=""
-            fill
-            priority
-            quality={90}
-            className="hidden md:block object-cover"
-            sizes="100vw"
           />
         )}
 

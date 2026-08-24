@@ -76,7 +76,7 @@ export default function ProductCard({
           >
             ₹{price.toLocaleString("en-IN")}
           </span>
-          <span className="font-display text-[0.55rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.45)] group-hover:text-brass transition-colors duration-200">
+          <span className="font-display text-[0.55rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.45)] group-hover:text-brass group-hover:translate-x-0.5 transition-all duration-200">
             View →
           </span>
         </div>
