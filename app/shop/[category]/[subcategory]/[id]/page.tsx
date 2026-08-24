@@ -200,6 +200,21 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 </p>
               )}
 
+              {(() => {
+                const bullets = (product as DbProduct & { bullet_points?: string })
+                  .bullet_points?.split("\n").map(s => s.trim()).filter(Boolean) ?? [];
+                return bullets.length > 0 ? (
+                  <ul className="flex flex-col gap-2.5">
+                    {bullets.map((b, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brass mt-[0.45rem] flex-shrink-0" />
+                        <span className="font-body font-light text-[rgba(245,237,224,0.65)] text-[0.95rem] leading-[1.75]">{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null;
+              })()}
+
               <div className="w-full h-px bg-[rgba(196,163,115,0.10)]" />
 
               <ProductActions

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
@@ -25,6 +25,7 @@ interface Product {
   price: number;
   mrp: number | null;
   image_url: string | null;
+  bullet_points: string | null;
 }
 
 async function uploadToCloudinary(file: File, publicId: string): Promise<string> {
@@ -56,24 +57,29 @@ export default function AdminProductsPage() {
   const [deltas,      setDeltas]      = useState<Record<string, number>>({});
   const [mrpDrafts,   setMrpDrafts]   = useState<Record<string, string>>({});
   const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
-  const [toast,       setToast]       = useState("");
+  const [toast,        setToast]        = useState("");
+  const [bulletDrafts, setBulletDrafts] = useState<Record<string, string>>({});
+  const [expandedDesc, setExpandedDesc] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
       .from("products")
-      .select("id, name, category, stock, price, mrp, image_url")
+      .select("id, name, category, stock, price, mrp, image_url, bullet_points")
       .order("category").order("name")
       .then(({ data }) => {
         const prods = (data ?? []) as Product[];
         setProducts(prods);
-        const mrp:   Record<string, string> = {};
-        const price: Record<string, string> = {};
+        const mrp:    Record<string, string> = {};
+        const price:  Record<string, string> = {};
+        const bullets: Record<string, string> = {};
         for (const p of prods) {
-          mrp[p.id]   = p.mrp != null ? String(p.mrp) : "";
-          price[p.id] = String(p.price);
+          mrp[p.id]    = p.mrp != null ? String(p.mrp) : "";
+          price[p.id]  = String(p.price);
+          bullets[p.id] = p.bullet_points ?? "";
         }
         setMrpDrafts(mrp);
         setPriceDrafts(price);
+        setBulletDrafts(bullets);
         setLoading(false);
       });
   }, []);
@@ -129,6 +135,21 @@ export default function AdminProductsPage() {
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, price: val } : p));
     }
     markSaving(product.id, "price", false);
+  }
+
+  /* ── Bullet points save ── */
+  async function saveBullets(product: Product) {
+    const val = (bulletDrafts[product.id] ?? "").trim() || null;
+    if (val === (product.bullet_points ?? null)) return;
+    markSaving(product.id, "bullets", true);
+    const { error } = await supabase.from("products").update({ bullet_points: val }).eq("id", product.id);
+    if (error) {
+      showToast("Error saving description: " + error.message);
+    } else {
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, bullet_points: val } : p));
+      showToast("Description saved.");
+    }
+    markSaving(product.id, "bullets", false);
   }
 
   /* ── Stock adjustment ── */
@@ -244,7 +265,8 @@ export default function AdminProductsPage() {
                 const delta = deltas[product.id] ?? 0;
 
                 return (
-                  <div key={product.id} className="grid grid-cols-[56px_1fr_108px_108px_200px] gap-x-4 px-5 py-4 items-center">
+                  <React.Fragment key={product.id}>
+                  <div className="grid grid-cols-[56px_1fr_108px_108px_200px] gap-x-4 px-5 py-4 items-center">
 
                     {/* Thumbnail */}
                     <div className="relative group/thumb flex-shrink-0">
@@ -285,9 +307,17 @@ export default function AdminProductsPage() {
                       <p className="font-display text-ivory leading-snug truncate" style={{ fontSize: "0.80rem", letterSpacing: "0.04em" }}>
                         {product.name}
                       </p>
-                      <p className="font-display text-[0.40rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.38)] mt-0.5">
-                        {CATEGORY_LABELS[product.category] ?? product.category}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="font-display text-[0.40rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.38)]">
+                          {CATEGORY_LABELS[product.category] ?? product.category}
+                        </p>
+                        <button
+                          onClick={() => setExpandedDesc(v => v === product.id ? null : product.id)}
+                          className={`font-display text-[0.38rem] tracking-[0.10em] uppercase px-2 py-0.5 rounded border transition-colors duration-150 ${expandedDesc === product.id ? "border-brass text-brass bg-[rgba(196,163,115,0.08)]" : "border-[rgba(196,163,115,0.20)] text-[rgba(196,163,115,0.40)] hover:border-brass hover:text-brass"}`}
+                        >
+                          ✎ desc
+                        </button>
+                      </div>
                     </div>
 
                     {/* MRP */}
@@ -358,6 +388,27 @@ export default function AdminProductsPage() {
                     </div>
 
                   </div>
+
+                  {/* Expandable bullet-points editor */}
+                  {expandedDesc === product.id && (
+                    <div className="col-span-5 px-1 pb-4 pt-1">
+                      <p className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.40)] mb-2">
+                        Bullet Points — one per line (shown on product page)
+                      </p>
+                      <textarea
+                        rows={6}
+                        value={bulletDrafts[product.id] ?? ""}
+                        onChange={e => setBulletDrafts(d => ({ ...d, [product.id]: e.target.value }))}
+                        onBlur={() => saveBullets(product)}
+                        placeholder={"100% natural soy wax\nBurns for up to 40 hours\nHand-poured in small batches\nFree from synthetic dyes"}
+                        className="w-full bg-[rgba(245,237,224,0.03)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.32)] focus:border-[rgba(196,163,115,0.55)] rounded-[4px] px-4 py-3 font-body font-light text-[rgba(245,237,224,0.75)] text-sm leading-[1.75] placeholder:text-[rgba(245,237,224,0.18)] focus:outline-none resize-none transition-colors duration-150"
+                      />
+                      <p className="mt-1.5 font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.30)]">
+                        Auto-saves on blur · {isSaving(product.id, "bullets") ? "Saving…" : "Saved"}
+                      </p>
+                    </div>
+                  )}
+                  </React.Fragment>
                 );
               })}
             </div>
