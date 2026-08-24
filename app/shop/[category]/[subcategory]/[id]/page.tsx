@@ -77,7 +77,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const supabase = createServerClient();
   const cols =
-    "id,name,type,subcategory,collection,fragrance,price,description,image_url,image_urls,category,stock,is_visible,created_at";
+    "id,name,type,subcategory,collection,fragrance,price,description,bullet_points,image_url,image_urls,category,stock,is_visible,created_at";
 
   const [productRes, relatedRes, catVisRes, collVisRes] = await Promise.all([
     supabase.from("products").select(cols).eq("id", id).single(),
