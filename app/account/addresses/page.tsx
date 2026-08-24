@@ -141,9 +141,9 @@ export default function AddressesPage() {
           <input className={inp} placeholder="Street address *" required value={form.street} onChange={(e) => setForm((p) => ({ ...p, street: e.target.value }))} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input className={inp} placeholder="City *" required value={form.city} onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))} />
-            <select className={`${inp} text-[rgba(245,237,224,0.60)]`} required value={form.state} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))}>
-              <option value="">State *</option>
-              {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+            <select className={`${inp} text-[rgba(245,237,224,0.60)]`} style={{ backgroundColor: "#1e0716" }} required value={form.state} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))}>
+              <option value="" style={{ backgroundColor: "#1e0716", color: "rgba(245,237,224,0.60)" }}>State *</option>
+              {STATES.map((s) => <option key={s} value={s} style={{ backgroundColor: "#1e0716", color: "#f5ede0" }}>{s}</option>)}
             </select>
           </div>
           {error && <p className="font-body text-[0.82rem] text-[rgba(210,80,80,0.80)]">{error}</p>}
