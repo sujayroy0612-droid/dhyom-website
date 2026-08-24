@@ -7,7 +7,6 @@ import Providers from "@/components/Providers";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import AmazonBadge from "@/components/AmazonBadge";
-import PageTransition from "@/components/PageTransition";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import { fetchVisibleNavData } from "@/lib/supabase/visibility";
 import type { NavCategory } from "@/lib/nav";
@@ -48,9 +47,7 @@ export default async function RootLayout({
         <Providers>
           <AnnouncementBar />
           <ConditionalShell><Header logoUrl={logoUrl} shopNav={shopNav} /></ConditionalShell>
-          <main style={{ paddingTop: "var(--bar-height, 0px)" }}>
-            <PageTransition>{children}</PageTransition>
-          </main>
+          <main style={{ paddingTop: "var(--bar-height, 0px)" }}>{children}</main>
           <ConditionalShell><Footer logoUrl={logoUrl} /></ConditionalShell>
           <ConditionalShell><WhatsAppButton /></ConditionalShell>
           <ConditionalShell><AmazonBadge /></ConditionalShell>
