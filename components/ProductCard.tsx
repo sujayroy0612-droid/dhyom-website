@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import WishlistButton from "@/components/WishlistButton";
 
 export interface Product {
   id: string;
@@ -45,6 +46,7 @@ export default function ProductCard({
             Image coming soon
           </span>
         )}
+        <WishlistButton productId={id} className="absolute top-2.5 right-2.5" />
       </div>
 
       {/* Body */}

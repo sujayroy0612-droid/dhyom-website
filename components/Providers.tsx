@@ -2,16 +2,21 @@
 
 import { MotionConfig } from "framer-motion";
 import { CartProvider } from "@/lib/cart/CartContext";
+import { AuthProvider } from "@/context/AuthContext";
+import { WishlistProvider } from "@/context/WishlistContext";
+import AuthModal from "@/components/AuthModal";
 
-// Single "use client" boundary for all providers.
-// MotionConfig with reducedMotion="user" makes every motion component
-// across the site automatically respect the user's OS accessibility setting.
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <MotionConfig reducedMotion="user">
-      <CartProvider>
-        {children}
-      </CartProvider>
+      <AuthProvider>
+        <WishlistProvider>
+          <CartProvider>
+            {children}
+            <AuthModal />
+          </CartProvider>
+        </WishlistProvider>
+      </AuthProvider>
     </MotionConfig>
   );
 }

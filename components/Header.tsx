@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/lib/cart/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { SHOP_NAV, type NavCategory } from "@/lib/nav";
 
 /* ─── Icons ───────────────────────────────────────────── */
@@ -41,6 +42,15 @@ function BagIcon() {
   );
 }
 
+function UserIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.25">
+      <circle cx="9" cy="6" r="3.5" />
+      <path d="M2 16c0-3.866 3.134-7 7-7s7 3.134 7 7" />
+    </svg>
+  );
+}
+
 /* ─── Component ───────────────────────────────────────── */
 export default function Header({
   logoUrl,
@@ -51,10 +61,13 @@ export default function Header({
 }) {
   const pathname = usePathname();
   const { totalItems } = useCart();
+  const { user, loading: authLoading, openModal, signOut } = useAuth();
 
   /* Desktop */
   const [shopOpen,       setShopOpen]       = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [userMenuOpen,   setUserMenuOpen]   = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   /* Mobile */
   const [menuOpen,          setMenuOpen]          = useState(false);
@@ -63,6 +76,17 @@ export default function Header({
 
   /* Hover-delay timer ref */
   const closeTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  /* Close user menu on outside click */
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    if (userMenuOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [userMenuOpen]);
 
   /* Close everything on route change */
   useEffect(() => {
@@ -99,6 +123,7 @@ export default function Header({
     setMenuOpen(false);
     setMobileShopOpen(false);
     setMobileExpandedCats(new Set());
+    setUserMenuOpen(false);
   }
 
   /* Mobile: toggle a category's subcategory accordion */
@@ -249,6 +274,62 @@ export default function Header({
             )}
           </div>
 
+          {/* ── Auth button ── */}
+          {!authLoading && (
+            user ? (
+              <div ref={userMenuRef} className="relative flex items-center self-center">
+                <button
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="flex items-center gap-1.5 text-[rgba(245,237,224,0.50)] hover:text-ivory transition-colors duration-200"
+                  aria-label="Account"
+                >
+                  <div className="w-7 h-7 rounded-full bg-[rgba(196,163,115,0.18)] border border-[rgba(196,163,115,0.35)] flex items-center justify-center flex-shrink-0">
+                    <span className="font-display text-brass" style={{ fontSize: "0.58rem", letterSpacing: "0.04em" }}>
+                      {(user.user_metadata?.full_name ?? user.email ?? "U").charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </button>
+                {userMenuOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-2 w-48 bg-damson border border-[rgba(196,163,115,0.18)] rounded-[4px] shadow-[0_16px_48px_rgba(15,5,8,0.70)] overflow-hidden z-50"
+                    style={{ animation: "menu-enter 140ms ease-out" }}
+                  >
+                    <div className="px-4 py-3 border-b border-[rgba(196,163,115,0.10)]">
+                      <p className="font-display text-[0.52rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.45)] truncate">
+                        {user.user_metadata?.full_name ?? user.email}
+                      </p>
+                    </div>
+                    <Link href="/account/orders" onClick={closeAll} className="flex items-center px-4 py-2.5 font-body text-[0.90rem] text-[rgba(245,237,224,0.62)] hover:text-ivory hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100">
+                      My Orders
+                    </Link>
+                    <Link href="/account/addresses" onClick={closeAll} className="flex items-center px-4 py-2.5 font-body text-[0.90rem] text-[rgba(245,237,224,0.62)] hover:text-ivory hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100">
+                      Saved Addresses
+                    </Link>
+                    <Link href="/account/wishlist" onClick={closeAll} className="flex items-center px-4 py-2.5 font-body text-[0.90rem] text-[rgba(245,237,224,0.62)] hover:text-ivory hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100">
+                      Wishlist
+                    </Link>
+                    <div className="border-t border-[rgba(196,163,115,0.10)] mt-1">
+                      <button
+                        onClick={() => { signOut(); closeAll(); }}
+                        className="w-full text-left px-4 py-2.5 font-body text-[0.90rem] text-[rgba(245,237,224,0.42)] hover:text-[rgba(210,80,80,0.80)] hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={openModal}
+                className="flex items-center self-center text-[rgba(245,237,224,0.50)] hover:text-ivory transition-colors duration-200"
+                aria-label="Sign in"
+              >
+                <UserIcon />
+              </button>
+            )
+          )}
+
           {/* Cart */}
           <Link
             href="/cart"
@@ -330,6 +411,24 @@ export default function Header({
             >
               Home
             </Link>
+
+            {/* Account / Sign In */}
+            {!authLoading && (
+              user ? (
+                <>
+                  <Link href="/account/orders" onClick={closeAll} className="py-3.5 font-display text-[0.62rem] tracking-[0.2em] uppercase border-b border-[rgba(196,163,115,0.08)] text-[rgba(245,237,224,0.50)] hover:text-brass transition-colors duration-200">
+                    My Account
+                  </Link>
+                  <button onClick={() => { signOut(); closeAll(); }} className="py-3.5 text-left font-display text-[0.62rem] tracking-[0.2em] uppercase border-b border-[rgba(196,163,115,0.08)] text-[rgba(245,237,224,0.36)] hover:text-[rgba(210,80,80,0.70)] transition-colors duration-200 w-full">
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => { openModal(); setMenuOpen(false); }} className="py-3.5 text-left font-display text-[0.62rem] tracking-[0.2em] uppercase border-b border-[rgba(196,163,115,0.08)] text-[rgba(245,237,224,0.50)] hover:text-brass transition-colors duration-200 w-full">
+                  Sign In
+                </button>
+              )
+            )}
 
             {/* ── Shop accordion ── */}
             <div className="border-b border-[rgba(196,163,115,0.08)]">

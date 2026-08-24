@@ -8,6 +8,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductActions from "@/components/ProductActions";
 import ProductGallery from "@/components/ProductGallery";
 import FunnelTracker from "@/components/FunnelTracker";
+import WishlistButton from "@/components/WishlistButton";
 
 /* ─── Display name maps ───────────────────────────────── */
 const CATEGORY_NAMES: Record<string, string> = {
@@ -170,16 +171,19 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 </p>
               )}
 
-              <h1
-                className="font-display text-ivory leading-tight"
-                style={{
-                  fontSize: "clamp(1.7rem, 3.5vw, 2.6rem)",
-                  letterSpacing: "0.05em",
-                  lineHeight: 1.1,
-                }}
-              >
-                {product.name}
-              </h1>
+              <div className="flex items-start gap-4">
+                <h1
+                  className="font-display text-ivory leading-tight flex-1"
+                  style={{
+                    fontSize: "clamp(1.7rem, 3.5vw, 2.6rem)",
+                    letterSpacing: "0.05em",
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {product.name}
+                </h1>
+                <WishlistButton productId={product.id} className="mt-1 flex-shrink-0" />
+              </div>
 
               <div className="w-10 h-px bg-[rgba(196,163,115,0.30)]" />
 

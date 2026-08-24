@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/lib/cart/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase/client";
 import { trackEvent } from "@/lib/funnel/track";
+
+type SavedAddress = {
+  id: string; label?: string; customer_name: string; phone?: string;
+  street: string; city: string; state: string; pincode: string; is_default: boolean;
+};
 
 const DEFAULT_SHIPPING = 99;
 const DEFAULT_FREE_THRESHOLD = 999;
@@ -106,6 +113,7 @@ function Field({ label, error, children }: { label: string; error?: string; chil
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, totalItems, hydrated, clearCart } = useCart();
+  const { user } = useAuth();
 
   /* ── Step A state ── */
   const [step,        setStep]        = useState<"lead" | "form">("lead");
@@ -123,6 +131,34 @@ export default function CheckoutPage() {
   const [paymentType,  setPaymentType]  = useState<"online" | "partial_cod">("online");
 
   const orderPlacedRef = useRef(false);
+
+  /* ── Saved addresses (logged-in users) ── */
+  const [savedAddresses,    setSavedAddresses]    = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("saved_addresses").select("*").eq("user_id", user.id)
+      .order("is_default", { ascending: false }).order("created_at")
+      .then(({ data }) => {
+        const addrs = (data ?? []) as SavedAddress[];
+        setSavedAddresses(addrs);
+        const def = addrs.find((a) => a.is_default) ?? addrs[0];
+        if (def) {
+          setSelectedAddressId(def.id);
+          setForm((prev) => ({
+            ...prev,
+            firstName: def.customer_name.split(" ")[0] ?? "",
+            lastName:  def.customer_name.split(" ").slice(1).join(" ") ?? "",
+            phone:     def.phone ?? prev.phone,
+            street:    def.street,
+            city:      def.city,
+            state:     def.state,
+            pincode:   def.pincode,
+          }));
+        }
+      });
+  }, [user]);
 
   const [shippingFee,           setShippingFee]           = useState(DEFAULT_SHIPPING);
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(DEFAULT_FREE_THRESHOLD);
@@ -195,7 +231,7 @@ export default function CheckoutPage() {
     const orderNumber = generateOrderNumber();
     const base = {
       order_number: orderNumber,
-      customer_id: null,
+      customer_id: user?.id ?? null,
       customer_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
       first_name: form.firstName.trim(),
       last_name: form.lastName.trim(),
@@ -424,6 +460,58 @@ export default function CheckoutPage() {
               {/* 2. Shipping */}
               <section>
                 <StepHeader num="2" title="Shipping Address" />
+
+                {/* Saved address picker (logged-in only) */}
+                {savedAddresses.length > 0 && (
+                  <div className="mb-5 flex flex-col gap-2">
+                    <p className="font-display text-[0.52rem] tracking-[0.20em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Saved Addresses</p>
+                    {savedAddresses.map((a) => (
+                      <label
+                        key={a.id}
+                        className={`flex items-start gap-3 px-4 py-3 rounded-[4px] border cursor-pointer transition-colors duration-150 ${selectedAddressId === a.id ? "border-[rgba(196,163,115,0.45)] bg-[rgba(196,163,115,0.06)]" : "border-[rgba(196,163,115,0.16)] hover:border-[rgba(196,163,115,0.28)]"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="savedAddress"
+                          checked={selectedAddressId === a.id}
+                          onChange={() => {
+                            setSelectedAddressId(a.id);
+                            setForm((prev) => ({
+                              ...prev,
+                              firstName: a.customer_name.split(" ")[0] ?? "",
+                              lastName:  a.customer_name.split(" ").slice(1).join(" ") ?? "",
+                              phone:     a.phone ?? prev.phone,
+                              street:    a.street,
+                              city:      a.city,
+                              state:     a.state,
+                              pincode:   a.pincode,
+                            }));
+                          }}
+                          className="mt-0.5 accent-[#C4A373]"
+                        />
+                        <div>
+                          {a.label && <p className="font-display text-[0.50rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.50)]">{a.label}</p>}
+                          <p className="font-body font-light text-ivory text-[0.88rem]">{a.customer_name}</p>
+                          <p className="font-body font-light text-[rgba(245,237,224,0.45)] text-[0.82rem]">{a.street}, {a.city} — {a.pincode}</p>
+                        </div>
+                      </label>
+                    ))}
+                    <label
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-[4px] border cursor-pointer transition-colors duration-150 ${selectedAddressId === null ? "border-[rgba(196,163,115,0.45)] bg-[rgba(196,163,115,0.06)]" : "border-[rgba(196,163,115,0.16)] hover:border-[rgba(196,163,115,0.28)]"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="savedAddress"
+                        checked={selectedAddressId === null}
+                        onChange={() => { setSelectedAddressId(null); setForm((prev) => ({ ...prev, street: "", city: "", state: "", pincode: "" })); }}
+                        className="accent-[#C4A373]"
+                      />
+                      <span className="font-body font-light text-[rgba(245,237,224,0.55)] text-[0.88rem]">Use a different address</span>
+                    </label>
+                    <div className="h-px bg-[rgba(196,163,115,0.10)] mt-1 mb-2" />
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-5">
                   <Field label="Street Address" error={errors.street}>
                     <input type="text" value={form.street} onChange={(e) => set("street", e.target.value)} placeholder="Flat / house / block, street, area" autoComplete="street-address" className={errors.street ? inputError : inputNormal} />
