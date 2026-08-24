@@ -444,7 +444,7 @@ export default async function Home() {
             {pillars.map((pillar) => (
               <div
                 key={pillar.label}
-                className="flex flex-col items-center text-center gap-6 px-6 py-10 border border-[rgba(196,163,115,0.09)] rounded-[4px]"
+                className="w-full h-full flex flex-col items-center text-center gap-6 px-6 py-10 border border-[rgba(196,163,115,0.09)] rounded-[4px]"
               >
                 <span className="text-brass" style={{ opacity: 0.78 }}>
                   {pillar.icon}

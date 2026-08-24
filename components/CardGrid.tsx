@@ -81,7 +81,7 @@ export default function CardGrid({ children, gridClassName, className }: Props) 
         variants={staggerContainer}
       >
         {Children.map(children, (child, i) => (
-          <motion.div key={i} variants={fadeUp} className="h-full">
+          <motion.div key={i} variants={fadeUp} className="h-full w-full min-w-0">
             {child}
           </motion.div>
         ))}
