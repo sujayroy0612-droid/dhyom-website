@@ -4,9 +4,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/lib/cart/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useCartFly } from "@/context/CartFlyContext";
 import { SHOP_NAV, type NavCategory } from "@/lib/nav";
 
 /* ─── Icons ───────────────────────────────────────────── */
@@ -72,6 +74,7 @@ export default function Header({
   const { totalItems } = useCart();
   const { user, loading: authLoading, openModal, signOut } = useAuth();
   const { ids: wishlistIds } = useWishlist();
+  const { cartRef } = useCartFly();
 
   /* Desktop */
   const [shopOpen,       setShopOpen]       = useState(false);
@@ -371,24 +374,33 @@ export default function Header({
           )}
 
           {/* Cart */}
-          <Link
-            href="/cart"
-            aria-label={totalItems > 0 ? `Shopping bag — ${totalItems} item${totalItems === 1 ? "" : "s"}` : "Shopping bag"}
-            className={[
-              "relative flex items-center self-center transition-colors duration-200",
-              pathname.startsWith("/cart") ? "text-brass" : "text-[rgba(245,237,224,0.50)] hover:text-ivory",
-            ].join(" ")}
-          >
-            <BagIcon />
-            {totalItems > 0 && (
-              <span
-                className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] rounded-full bg-brass text-ink flex items-center justify-center font-display px-1 pointer-events-none"
-                style={{ fontSize: "0.42rem", letterSpacing: "0.04em" }}
-              >
-                {totalItems > 9 ? "9+" : totalItems}
-              </span>
-            )}
-          </Link>
+          <div ref={(el) => { cartRef.current = el; }} className="flex items-center self-center">
+            <Link
+              href="/cart"
+              aria-label={totalItems > 0 ? `Shopping bag — ${totalItems} item${totalItems === 1 ? "" : "s"}` : "Shopping bag"}
+              className={[
+                "relative flex items-center transition-colors duration-200",
+                pathname.startsWith("/cart") ? "text-brass" : "text-[rgba(245,237,224,0.50)] hover:text-ivory",
+              ].join(" ")}
+            >
+              <BagIcon />
+              <AnimatePresence mode="popLayout">
+                {totalItems > 0 && (
+                  <motion.span
+                    key={totalItems}
+                    initial={{ scale: 0.4, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.6, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                    className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] rounded-full bg-brass text-ink flex items-center justify-center font-display px-1 pointer-events-none"
+                    style={{ fontSize: "0.42rem", letterSpacing: "0.04em" }}
+                  >
+                    {totalItems > 9 ? "9+" : totalItems}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </Link>
+          </div>
         </nav>
 
         {/* ── Mobile right: wishlist + cart + hamburger ── */}

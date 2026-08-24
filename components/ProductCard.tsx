@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import WishlistButton from "@/components/WishlistButton";
+import Skeleton from "@/components/Skeleton";
 
 export interface Product {
   id: string;
@@ -23,6 +27,8 @@ export default function ProductCard({
   description,
   imageUrl,
 }: Product) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+
   return (
     <Link
       href={`/shop/${category}/${subcategorySlug}/${id}`}
@@ -31,13 +37,17 @@ export default function ProductCard({
       {/* Image */}
       <div className="aspect-square bg-[#270b1b] flex items-center justify-center overflow-hidden flex-shrink-0 relative">
         {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={name}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
+          <>
+            {!imgLoaded && <Skeleton className="absolute inset-0" />}
+            <Image
+              src={imageUrl}
+              alt={name}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              onLoad={() => setImgLoaded(true)}
+            />
+          </>
         ) : (
           <span
             aria-hidden="true"

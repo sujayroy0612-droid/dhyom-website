@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import Button from "@/components/Button";
+import MagneticButton from "@/components/MagneticButton";
 import ProductCard from "@/components/ProductCard";
 import NewsletterForm from "@/components/NewsletterForm";
 import FadeIn from "@/components/FadeIn";
@@ -238,12 +239,14 @@ export default async function Home() {
         </FadeIn>
 
         <FadeIn delay={0.30} className="relative">
-          <Link
-            href="/shop"
-            className="inline-flex items-center justify-center font-display uppercase tracking-[0.22em] rounded-full transition-colors duration-200 active:scale-[0.98] px-8 py-2.5 text-[0.65rem] bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383]"
-          >
-            Explore the Collection
-          </Link>
+          <MagneticButton strength={7}>
+            <Link
+              href="/shop"
+              className="inline-flex items-center justify-center font-display uppercase tracking-[0.22em] rounded-full transition-colors duration-200 active:scale-[0.98] px-8 py-2.5 text-[0.65rem] bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383]"
+            >
+              Explore the Collection
+            </Link>
+          </MagneticButton>
         </FadeIn>
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[rgba(196,163,115,0.35)]">
@@ -408,9 +411,11 @@ export default async function Home() {
               for the bond you cherish most.
             </p>
             <div>
-              <Link href="/shop/gift">
-                <Button size="md">Shop the Collection</Button>
-              </Link>
+              <MagneticButton strength={6}>
+                <Link href="/shop/gift">
+                  <Button size="md">Shop the Collection</Button>
+                </Link>
+              </MagneticButton>
             </div>
           </div>
 
@@ -519,9 +524,11 @@ export default async function Home() {
               it is made for? If the answer is yes, it belongs in our collection.
             </p>
             <div>
-              <Link href="/shop">
-                <Button variant="secondary" size="md">Explore the Collection</Button>
-              </Link>
+              <MagneticButton strength={6}>
+                <Link href="/shop">
+                  <Button variant="secondary" size="md">Explore the Collection</Button>
+                </Link>
+              </MagneticButton>
             </div>
           </FadeInView>
 

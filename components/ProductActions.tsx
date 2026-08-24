@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Button from "@/components/Button";
+import MagneticButton from "@/components/MagneticButton";
 import { useCart } from "@/lib/cart/CartContext";
+import { useCartFly } from "@/context/CartFlyContext";
 import { trackEvent } from "@/lib/funnel/track";
 
 interface ProductActionsProps {
@@ -28,6 +30,7 @@ export default function ProductActions({
   subcategorySlug,
 }: ProductActionsProps) {
   const { addItem } = useCart();
+  const { triggerFly } = useCartFly();
   const [qty, setQty] = useState(1);
   const [addedState, setAddedState] = useState<"idle" | "added">("idle");
 
@@ -39,6 +42,15 @@ export default function ProductActions({
   }
 
   function handleAddToCart() {
+    // Fly ghost from the product image to the cart icon
+    if (imageUrl) {
+      const sources = Array.from(document.querySelectorAll<HTMLElement>("[data-fly-source]"));
+      const source = sources.find((el) => el.getBoundingClientRect().width > 0);
+      if (source) {
+        const rect = source.getBoundingClientRect();
+        triggerFly(imageUrl, rect.left + rect.width / 2, rect.top + rect.height / 2);
+      }
+    }
     addItem({ id: productId, name: productName, price, quantity: qty, category, subcategorySlug, label, imageUrl });
     trackEvent("add_to_cart", productId);
     setAddedState("added");
@@ -83,22 +95,24 @@ export default function ProductActions({
 
       {/* Add to cart button */}
       <div className="flex flex-col gap-3">
-        <motion.div whileTap={inStock && addedState !== "added" ? { scale: 0.95 } : {}}>
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            disabled={!inStock || addedState === "added"}
-            onClick={handleAddToCart}
-            className="w-full sm:w-auto"
-          >
-            {!inStock
-              ? "Currently Unavailable"
-              : addedState === "added"
-              ? "Added to Cart ✓"
-              : "Add to Cart"}
-          </Button>
-        </motion.div>
+        <MagneticButton strength={5}>
+          <motion.div whileTap={inStock && addedState !== "added" ? { scale: 0.95 } : {}}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              disabled={!inStock || addedState === "added"}
+              onClick={handleAddToCart}
+              className="w-full sm:w-auto"
+            >
+              {!inStock
+                ? "Currently Unavailable"
+                : addedState === "added"
+                ? "Added to Cart ✓"
+                : "Add to Cart"}
+            </Button>
+          </motion.div>
+        </MagneticButton>
 
         <p
           className={[

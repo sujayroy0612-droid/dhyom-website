@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
+import Skeleton from "@/components/Skeleton";
 
 interface Props {
   images: string[];
@@ -11,6 +12,7 @@ interface Props {
 
 export default function ProductGallery({ images, alt }: Props) {
   const [active, setActive] = useState(0);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const hasMultiple = images.length > 1;
 
   if (images.length === 0) {
@@ -26,25 +28,29 @@ export default function ProductGallery({ images, alt }: Props) {
   }
 
   const MainImage = ({ sizes }: { sizes: string }) => (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={active}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
-        className="absolute inset-0"
-      >
-        <Image
-          src={images[active]}
-          alt={alt}
-          fill
-          priority
-          className="object-cover"
-          sizes={sizes}
-        />
-      </motion.div>
-    </AnimatePresence>
+    <>
+      {!imgLoaded && <Skeleton className="absolute inset-0" />}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={active}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+          className="absolute inset-0"
+        >
+          <Image
+            src={images[active]}
+            alt={alt}
+            fill
+            priority
+            className="object-cover"
+            sizes={sizes}
+            onLoad={() => setImgLoaded(true)}
+          />
+        </motion.div>
+      </AnimatePresence>
+    </>
   );
 
   return (
@@ -76,14 +82,14 @@ export default function ProductGallery({ images, alt }: Props) {
           </div>
         )}
 
-        <div className="flex-1 aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] overflow-hidden relative">
+        <div data-fly-source className="flex-1 aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] overflow-hidden relative">
           <MainImage sizes="(max-width: 1280px) 50vw, 560px" />
         </div>
       </div>
 
       {/* ── Mobile: [main image] then [horizontal thumb strip] ── */}
       <div className="flex flex-col gap-3 lg:hidden">
-        <div className="aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] overflow-hidden relative">
+        <div data-fly-source className="aspect-square bg-[#270b1b] rounded-[6px] border border-[rgba(196,163,115,0.12)] overflow-hidden relative">
           <MainImage sizes="100vw" />
         </div>
 
