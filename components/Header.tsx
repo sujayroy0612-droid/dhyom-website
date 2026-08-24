@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useCart } from "@/lib/cart/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useWishlist } from "@/context/WishlistContext";
 import { SHOP_NAV, type NavCategory } from "@/lib/nav";
 
 /* ─── Icons ───────────────────────────────────────────── */
@@ -51,6 +52,14 @@ function UserIcon() {
   );
 }
 
+function HeartIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.25">
+      <path d="M9 15.5S2 11 2 6.5a4 4 0 0 1 7-2.65A4 4 0 0 1 16 6.5C16 11 9 15.5 9 15.5z" />
+    </svg>
+  );
+}
+
 /* ─── Component ───────────────────────────────────────── */
 export default function Header({
   logoUrl,
@@ -62,6 +71,7 @@ export default function Header({
   const pathname = usePathname();
   const { totalItems } = useCart();
   const { user, loading: authLoading, openModal, signOut } = useAuth();
+  const { ids: wishlistIds } = useWishlist();
 
   /* Desktop */
   const [shopOpen,       setShopOpen]       = useState(false);
@@ -330,6 +340,36 @@ export default function Header({
             )
           )}
 
+          {/* Wishlist */}
+          {user ? (
+            <Link
+              href="/account/wishlist"
+              aria-label="Wishlist"
+              className={[
+                "relative flex items-center self-center transition-colors duration-200",
+                pathname.startsWith("/account/wishlist") ? "text-brass" : "text-[rgba(245,237,224,0.50)] hover:text-ivory",
+              ].join(" ")}
+            >
+              <HeartIcon filled={wishlistIds.size > 0} />
+              {wishlistIds.size > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] rounded-full bg-brass text-ink flex items-center justify-center font-display px-1 pointer-events-none"
+                  style={{ fontSize: "0.42rem", letterSpacing: "0.04em" }}
+                >
+                  {wishlistIds.size > 9 ? "9+" : wishlistIds.size}
+                </span>
+              )}
+            </Link>
+          ) : (
+            <button
+              onClick={openModal}
+              aria-label="Wishlist"
+              className="flex items-center self-center text-[rgba(245,237,224,0.50)] hover:text-ivory transition-colors duration-200"
+            >
+              <HeartIcon />
+            </button>
+          )}
+
           {/* Cart */}
           <Link
             href="/cart"
@@ -351,8 +391,36 @@ export default function Header({
           </Link>
         </nav>
 
-        {/* ── Mobile right: cart + hamburger ── */}
+        {/* ── Mobile right: wishlist + cart + hamburger ── */}
         <div className="md:hidden flex items-center gap-4">
+          {user ? (
+            <Link
+              href="/account/wishlist"
+              aria-label="Wishlist"
+              className={[
+                "relative text-[rgba(245,237,224,0.50)] hover:text-ivory transition-colors duration-200",
+                pathname.startsWith("/account/wishlist") ? "text-brass" : "",
+              ].join(" ")}
+            >
+              <HeartIcon filled={wishlistIds.size > 0} />
+              {wishlistIds.size > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] rounded-full bg-brass text-ink flex items-center justify-center font-display px-1 pointer-events-none"
+                  style={{ fontSize: "0.42rem", letterSpacing: "0.04em" }}
+                >
+                  {wishlistIds.size > 9 ? "9+" : wishlistIds.size}
+                </span>
+              )}
+            </Link>
+          ) : (
+            <button
+              onClick={openModal}
+              aria-label="Wishlist"
+              className="text-[rgba(245,237,224,0.50)] hover:text-ivory transition-colors duration-200"
+            >
+              <HeartIcon />
+            </button>
+          )}
           <Link
             href="/cart"
             aria-label={totalItems > 0 ? `Cart (${totalItems})` : "Cart"}
