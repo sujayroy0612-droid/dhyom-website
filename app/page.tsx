@@ -221,6 +221,22 @@ export default async function Home() {
           }}
         />
 
+        {/* Candle inner-glow — desktop only, positioned over the candle jar (right ~75%, top ~58%) */}
+        <div
+          aria-hidden="true"
+          className="absolute pointer-events-none hidden md:block"
+          style={{
+            left: "68%",
+            top: "42%",
+            width: "32vw",
+            height: "52vh",
+            transform: "translate(-50%, -50%)",
+            background:
+              "radial-gradient(ellipse 55% 60% at 50% 50%, rgba(201,162,39,0.22) 0%, rgba(201,162,39,0.10) 40%, rgba(201,162,39,0.02) 70%, transparent 100%)",
+            animation: "candle-breathe 4.2s ease-in-out infinite",
+          }}
+        />
+
         <FadeIn delay={0} className="relative">
           <p className="font-display text-[0.62rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.60)] mb-7">
             Sacred · Sustainable · Indian

@@ -12,6 +12,13 @@
   }
 }
 
+/* Candle inner-glow breathing — very slow, like a real flame */
+@keyframes candle-breathe {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  35%       { opacity: 0.70; transform: scale(0.96); }
+  65%       { opacity: 0.82; transform: scale(0.98); }
+}
+
 @keyframes shimmer {
   from { transform: translateX(-100%); }
   to   { transform: translateX(200%); }
