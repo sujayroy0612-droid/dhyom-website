@@ -21,7 +21,7 @@ export default function HeroParallaxBg({ src }: Props) {
         fill
         priority
         quality={90}
-        className="hidden md:block object-cover object-[center_60%]"
+        className="hidden md:block object-cover object-[center_65%]"
         sizes="100vw"
       />
     );
@@ -38,7 +38,7 @@ export default function HeroParallaxBg({ src }: Props) {
         fill
         priority
         quality={90}
-        className="object-cover object-[center_60%]"
+        className="object-cover object-[center_65%]"
         sizes="100vw"
       />
     </motion.div>
