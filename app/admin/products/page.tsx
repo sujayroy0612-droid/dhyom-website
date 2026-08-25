@@ -126,6 +126,7 @@ export default function AdminProductsPage() {
   const [imgsLoading,  setImgsLoading]  = useState(false);
   const [imgUploading,       setImgUploading]       = useState(false);
   const [imgUploadProgress, setImgUploadProgress] = useState("");
+  const [imgError,           setImgError]           = useState("");
   const imgFileRef = useRef<HTMLInputElement>(null);
 
   /* Category creation */
@@ -297,7 +298,7 @@ export default function AdminProductsPage() {
 
   function closeDrawer() {
     setDrawerOpen(false); setEditingProd(null); setDrawerForm(EMPTY_DRAWER);
-    setDrawerImages([]); setShowNewCat(false); setNewCatName(""); setNewCatSlug("");
+    setDrawerImages([]); setImgError(""); setShowNewCat(false); setNewCatName(""); setNewCatSlug("");
   }
 
   /* ── Category creation ── */
@@ -399,28 +400,52 @@ export default function AdminProductsPage() {
 
   /* ── Product image management ── */
   async function uploadDrawerImages(files: FileList) {
-    if (!editingProd) { showToast("Save the product first before uploading images."); return; }
-    if (!CLOUD_NAME || !UPLOAD_PRESET) { showToast("Cloudinary not configured — check NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in .env.local"); return; }
-    setImgUploading(true);
-    // Use a local cursor so sequential uploads see correct display_order
+    if (!editingProd) { setImgError("Save the product first, then upload images."); return; }
+    setImgError(""); setImgUploading(true);
     let current = [...drawerImages];
+
+    // Get the current session token to authenticate the API route
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+
     for (let i = 0; i < files.length; i++) {
       setImgUploadProgress(`${i + 1} / ${files.length}`);
       try {
-        const url = await uploadToCloudinary(files[i], `products/${editingProd.id}_img_${Date.now()}_${i}`);
+        const fd = new FormData();
+        fd.append("file", files[i]);
+        fd.append("productId", editingProd.id);
+
+        const res = await fetch("/api/admin/upload-product-image", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: fd,
+        });
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setImgError(`Image ${i + 1} failed: ${(body as { error?: string }).error ?? res.statusText}`);
+          continue;
+        }
+
+        const { url } = await res.json() as { url: string };
         const isPrimary = current.length === 0;
         const { data, error } = await supabase.from("product_images").insert({
           product_id: editingProd.id, url, display_order: current.length, is_primary: isPrimary, alt_text: null,
         }).select().single();
-        if (error) { showToast(`Image ${i + 1} error: ${error.message}`); continue; }
+
+        if (error) { setImgError(`DB error on image ${i + 1}: ${error.message}`); continue; }
         current = [...current, data as DbProductImage];
         setDrawerImages([...current]);
+
         if (isPrimary) {
           await supabase.from("products").update({ image_url: url }).eq("id", editingProd.id);
           setProducts(prev => prev.map(p => p.id === editingProd.id ? { ...p, image_url: url } : p));
         }
-      } catch (err) { showToast(`Image ${i + 1}: ${err instanceof Error ? err.message : "Upload failed"}`); }
+      } catch (err) {
+        setImgError(`Image ${i + 1}: ${err instanceof Error ? err.message : "Upload failed"}`);
+      }
     }
+
     setImgUploading(false);
     setImgUploadProgress("");
     if (imgFileRef.current) imgFileRef.current.value = "";
@@ -921,10 +946,16 @@ export default function AdminProductsPage() {
                     <input ref={imgFileRef} type="file" accept="image/*" multiple className="hidden" disabled={imgUploading} onChange={e => { const files = e.target.files; if (files && files.length > 0) uploadDrawerImages(files); }} />
                   </label>
                 </div>
+                {imgError && (
+                  <div className="mb-3 bg-[rgba(200,60,60,0.10)] border border-[rgba(200,60,60,0.28)] rounded-[4px] px-3 py-2.5 flex items-start justify-between gap-2">
+                    <p className="font-body font-light text-[rgba(220,80,80,0.90)] text-xs leading-snug">{imgError}</p>
+                    <button onClick={() => setImgError("")} className="text-[rgba(220,80,80,0.55)] hover:text-[rgba(220,80,80,0.90)] text-base leading-none flex-shrink-0">×</button>
+                  </div>
+                )}
                 {imgsLoading ? <div className="h-20 flex items-center justify-center"><div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" /></div>
                 : drawerImages.length === 0 ? (
                   <div className="border border-dashed border-[rgba(196,163,115,0.15)] rounded-[6px] p-5 text-center">
-                    <p className="font-display text-[0.36rem] uppercase text-[rgba(196,163,115,0.22)]">No images yet — upload above</p>
+                    <p className="font-display text-[0.36rem] uppercase text-[rgba(196,163,115,0.22)]">No images yet — click + Upload to add up to 5 images</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
