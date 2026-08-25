@@ -112,7 +112,7 @@ async function uploadToCloudinary(file: File, publicId: string): Promise<string>
 
 /* ── Input style ── */
 const FIELD =
-  "w-full bg-transparent border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.32)] focus:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 font-body font-light text-[rgba(245,237,224,0.80)] text-sm focus:outline-none transition-colors duration-150 placeholder:text-[rgba(245,237,224,0.18)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+  "w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.32)] focus:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 font-body font-light text-[rgba(245,237,224,0.75)] text-sm focus:outline-none transition-colors duration-150 placeholder:text-[rgba(245,237,224,0.18)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 const LABEL = "block font-display text-[0.38rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.45)] mb-1";
 
 export default function AdminProductsPage() {
@@ -674,7 +674,7 @@ export default function AdminProductsPage() {
         />
 
         {/* Panel */}
-        <div className="fixed top-0 right-0 bottom-0 w-full max-w-[520px] bg-[#1a0a12] border-l border-[rgba(196,163,115,0.14)] z-50 flex flex-col overflow-hidden shadow-[−16px_0_48px_rgba(0,0,0,0.55)]">
+        <div className="fixed top-0 right-0 bottom-0 w-full max-w-[520px] border-l border-[rgba(196,163,115,0.14)] z-50 flex flex-col overflow-hidden" style={{ background: '#1a0a12', boxShadow: '-16px 0 48px rgba(0,0,0,0.55)' }}>
 
           {/* Drawer header */}
           <div className="flex items-center justify-between px-6 py-5 border-b border-[rgba(196,163,115,0.10)] flex-shrink-0">
@@ -718,7 +718,7 @@ export default function AdminProductsPage() {
                 <div>
                   <label className={LABEL}>Category *</label>
                   <select
-                    className={FIELD + " bg-[#1a0a12]"}
+                    className={FIELD} style={{ background: '#1a0a12' }}
                     value={drawerForm.category}
                     onChange={e => setDrawerForm(f => ({ ...f, category: e.target.value }))}
                   >
