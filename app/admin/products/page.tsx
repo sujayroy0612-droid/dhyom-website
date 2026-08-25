@@ -411,9 +411,12 @@ export default function AdminProductsPage() {
     for (let i = 0; i < files.length; i++) {
       setImgUploadProgress(`${i + 1} / ${files.length}`);
       try {
+        const isPrimary = current.length === 0;
         const fd = new FormData();
         fd.append("file", files[i]);
         fd.append("productId", editingProd.id);
+        fd.append("displayOrder", String(current.length));
+        fd.append("isPrimary", String(isPrimary));
 
         const res = await fetch("/api/admin/upload-product-image", {
           method: "POST",
@@ -427,19 +430,13 @@ export default function AdminProductsPage() {
           continue;
         }
 
-        const { url } = await res.json() as { url: string };
-        const isPrimary = current.length === 0;
-        const { data, error } = await supabase.from("product_images").insert({
-          product_id: editingProd.id, url, display_order: current.length, is_primary: isPrimary, alt_text: null,
-        }).select().single();
-
-        if (error) { setImgError(`DB error on image ${i + 1}: ${error.message}`); continue; }
-        current = [...current, data as DbProductImage];
+        const { image, url } = await res.json() as { image: DbProductImage; url: string };
+        current = [...current, image];
         setDrawerImages([...current]);
 
+        // If primary, sync image_url in local products state
         if (isPrimary) {
-          await supabase.from("products").update({ image_url: url }).eq("id", editingProd.id);
-          setProducts(prev => prev.map(p => p.id === editingProd.id ? { ...p, image_url: url } : p));
+          setProducts(prev => prev.map(p => p.id === editingProd!.id ? { ...p, image_url: url } : p));
         }
       } catch (err) {
         setImgError(`Image ${i + 1}: ${err instanceof Error ? err.message : "Upload failed"}`);
