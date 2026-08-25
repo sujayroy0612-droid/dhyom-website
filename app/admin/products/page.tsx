@@ -8,6 +8,7 @@ import type { DbProductImage } from "@/lib/supabase/types";
 const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
+/* ── Static category config ── */
 const CATEGORY_LABELS: Record<string, string> = {
   candle:             "Candle",
   idol:               "Idol",
@@ -73,20 +74,12 @@ const EMPTY_DRAWER: DrawerForm = {
 
 function productToDrawer(p: Product): DrawerForm {
   return {
-    name: p.name,
-    category: p.category,
-    type: p.type ?? "",
-    price: String(p.price),
-    mrp: p.mrp != null ? String(p.mrp) : "",
-    stock: String(p.stock),
-    is_visible: p.is_visible,
-    is_featured: p.is_featured,
-    bullet_points: p.bullet_points ?? "",
-    sku: p.sku ?? "",
-    short_description: p.short_description ?? "",
-    long_description: p.long_description ?? "",
-    meta_title: p.meta_title ?? "",
-    meta_description: p.meta_description ?? "",
+    name: p.name, category: p.category, type: p.type ?? "",
+    price: String(p.price), mrp: p.mrp != null ? String(p.mrp) : "",
+    stock: String(p.stock), is_visible: p.is_visible, is_featured: p.is_featured,
+    bullet_points: p.bullet_points ?? "", sku: p.sku ?? "",
+    short_description: p.short_description ?? "", long_description: p.long_description ?? "",
+    meta_title: p.meta_title ?? "", meta_description: p.meta_description ?? "",
     weight_grams: p.weight_grams != null ? String(p.weight_grams) : "",
     length_cm: p.length_cm != null ? String(p.length_cm) : "",
     width_cm: p.width_cm != null ? String(p.width_cm) : "",
@@ -95,51 +88,61 @@ function productToDrawer(p: Product): DrawerForm {
   };
 }
 
+interface CatOption { slug: string; name: string; }
+
 /* ── Cloudinary upload ── */
 async function uploadToCloudinary(file: File, publicId: string): Promise<string> {
   if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error("Cloudinary not configured.");
   const fd = new FormData();
-  fd.append("file", file);
-  fd.append("upload_preset", UPLOAD_PRESET);
-  fd.append("public_id", publicId);
+  fd.append("file", file); fd.append("upload_preset", UPLOAD_PRESET); fd.append("public_id", publicId);
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: "POST", body: fd });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error?.message ?? "Upload failed");
-  }
+  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error?.message ?? "Upload failed"); }
   return (await res.json()).secure_url as string;
 }
 
 /* ── Input style ── */
-const FIELD =
-  "w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.32)] focus:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 font-body font-light text-[rgba(245,237,224,0.75)] text-sm focus:outline-none transition-colors duration-150 placeholder:text-[rgba(245,237,224,0.18)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+const FIELD = "w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.32)] focus:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 font-body font-light text-[rgba(245,237,224,0.75)] text-sm focus:outline-none transition-colors duration-150 placeholder:text-[rgba(245,237,224,0.18)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 const LABEL = "block font-display text-[0.38rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.45)] mb-1";
 
 export default function AdminProductsPage() {
   /* ── List state ── */
-  const [products,    setProducts]    = useState<Product[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [filter,      setFilter]      = useState("all");
-  const [search,      setSearch]      = useState("");
-  const [uploading,   setUploading]   = useState<Record<string, boolean>>({});
-  const [saving,      setSaving]      = useState<Record<string, Record<string, boolean>>>({});
-  const [deltas,      setDeltas]      = useState<Record<string, number>>({});
-  const [mrpDrafts,   setMrpDrafts]   = useState<Record<string, string>>({});
-  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
-  const [toast,       setToast]       = useState("");
+  const [products,     setProducts]     = useState<Product[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [search,       setSearch]       = useState("");
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(CATEGORY_ORDER));
+  const [uploading,    setUploading]    = useState<Record<string, boolean>>({});
+  const [saving,       setSaving]       = useState<Record<string, Record<string, boolean>>>({});
+  const [deltas,       setDeltas]       = useState<Record<string, number>>({});
+  const [mrpDrafts,    setMrpDrafts]    = useState<Record<string, string>>({});
+  const [priceDrafts,  setPriceDrafts]  = useState<Record<string, string>>({});
+  const [toast,        setToast]        = useState("");
   const [bulletDrafts, setBulletDrafts] = useState<Record<string, string>>({});
   const [expandedDesc, setExpandedDesc] = useState<string | null>(null);
 
   /* ── Drawer state ── */
-  const [drawerOpen,    setDrawerOpen]    = useState(false);
-  const [editingProd,   setEditingProd]   = useState<Product | null>(null); // null = new product
-  const [drawerForm,    setDrawerForm]    = useState<DrawerForm>(EMPTY_DRAWER);
-  const [drawerSaving,  setDrawerSaving]  = useState(false);
-  const [drawerImages,  setDrawerImages]  = useState<DbProductImage[]>([]);
-  const [imgsLoading,   setImgsLoading]   = useState(false);
-  const [imgUploading,  setImgUploading]  = useState(false);
+  const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [editingProd,  setEditingProd]  = useState<Product | null>(null);
+  const [drawerForm,   setDrawerForm]   = useState<DrawerForm>(EMPTY_DRAWER);
+  const [drawerSaving, setDrawerSaving] = useState(false);
+  const [drawerImages, setDrawerImages] = useState<DbProductImage[]>([]);
+  const [imgsLoading,  setImgsLoading]  = useState(false);
+  const [imgUploading, setImgUploading] = useState(false);
   const imgFileRef = useRef<HTMLInputElement>(null);
 
+  /* ── Inline new-category state (inside drawer) ── */
+  const [extraCats,    setExtraCats]    = useState<CatOption[]>([]);
+  const [showNewCat,   setShowNewCat]   = useState(false);
+  const [newCatName,   setNewCatName]   = useState("");
+  const [newCatSlug,   setNewCatSlug]   = useState("");
+  const [creatingCat,  setCreatingCat]  = useState(false);
+
+  /* ── All available category options ── */
+  const allCatOptions: CatOption[] = [
+    ...CATEGORY_ORDER.map(s => ({ slug: s, name: CATEGORY_LABELS[s] ?? s })),
+    ...extraCats,
+  ];
+
+  /* ── Load products ── */
   useEffect(() => {
     supabase
       .from("products")
@@ -148,37 +151,31 @@ export default function AdminProductsPage() {
       .then(({ data }) => {
         const prods = (data ?? []) as Product[];
         setProducts(prods);
-        const mrp:    Record<string, string> = {};
-        const price:  Record<string, string> = {};
+        const mrp: Record<string, string> = {};
+        const price: Record<string, string> = {};
         const bullets: Record<string, string> = {};
         for (const p of prods) {
-          mrp[p.id]    = p.mrp != null ? String(p.mrp) : "";
-          price[p.id]  = String(p.price);
+          mrp[p.id]     = p.mrp != null ? String(p.mrp) : "";
+          price[p.id]   = String(p.price);
           bullets[p.id] = p.bullet_points ?? "";
         }
-        setMrpDrafts(mrp);
-        setPriceDrafts(price);
-        setBulletDrafts(bullets);
+        setMrpDrafts(mrp); setPriceDrafts(price); setBulletDrafts(bullets);
         setLoading(false);
       });
   }, []);
 
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 5000);
-  }
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(""), 5000); }
   function markSaving(id: string, field: string, val: boolean) {
     setSaving(s => ({ ...s, [id]: { ...(s[id] ?? {}), [field]: val } }));
   }
   function isSaving(id: string, field: string) { return !!saving[id]?.[field]; }
 
-  /* ── Inline saves (preserved) ── */
+  /* ── Inline saves ── */
   async function saveMrp(product: Product) {
     const raw = (mrpDrafts[product.id] ?? "").trim();
     const val = raw === "" ? null : Number(raw);
     if (raw !== "" && (isNaN(val as number) || (val as number) < 0)) {
-      setMrpDrafts(d => ({ ...d, [product.id]: product.mrp != null ? String(product.mrp) : "" }));
-      return;
+      setMrpDrafts(d => ({ ...d, [product.id]: product.mrp != null ? String(product.mrp) : "" })); return;
     }
     if (val === product.mrp) return;
     markSaving(product.id, "mrp", true);
@@ -239,7 +236,6 @@ export default function AdminProductsPage() {
     }
   }
 
-  /* ── Visibility toggle ── */
   async function toggleVisible(product: Product) {
     const next = !product.is_visible;
     setProducts(prev => prev.map(p => p.id === product.id ? { ...p, is_visible: next } : p));
@@ -250,33 +246,62 @@ export default function AdminProductsPage() {
     }
   }
 
+  /* ── Category toggle ── */
+  function toggleCat(cat: string) {
+    setExpandedCats(prev => {
+      const next = new Set<string>(Array.from(prev));
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
+  }
+  function expandAll()   { setExpandedCats(new Set<string>(allCatSlugs)); }
+  function collapseAll() { setExpandedCats(new Set<string>()); }
+
   /* ── Drawer open ── */
   async function openEdit(product: Product) {
     setEditingProd(product);
     setDrawerForm(productToDrawer(product));
+    setShowNewCat(false);
     setDrawerOpen(true);
     setImgsLoading(true);
-    const { data } = await supabase
-      .from("product_images")
-      .select("*")
-      .eq("product_id", product.id)
-      .order("display_order");
+    const { data } = await supabase.from("product_images").select("*").eq("product_id", product.id).order("display_order");
     setDrawerImages((data ?? []) as DbProductImage[]);
     setImgsLoading(false);
   }
 
-  function openAdd() {
+  function openAdd(defaultCategory?: string) {
     setEditingProd(null);
-    setDrawerForm(EMPTY_DRAWER);
+    setDrawerForm({ ...EMPTY_DRAWER, category: defaultCategory ?? "candle" });
     setDrawerImages([]);
+    setShowNewCat(false);
     setDrawerOpen(true);
   }
 
   function closeDrawer() {
-    setDrawerOpen(false);
-    setEditingProd(null);
-    setDrawerForm(EMPTY_DRAWER);
-    setDrawerImages([]);
+    setDrawerOpen(false); setEditingProd(null); setDrawerForm(EMPTY_DRAWER);
+    setDrawerImages([]); setShowNewCat(false); setNewCatName(""); setNewCatSlug("");
+  }
+
+  /* ── Inline category creation ── */
+  function handleNewCatName(val: string) {
+    setNewCatName(val);
+    setNewCatSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""));
+  }
+
+  async function createCategory() {
+    if (!newCatName.trim() || !newCatSlug.trim()) { showToast("Name and slug required."); return; }
+    setCreatingCat(true);
+    const { data, error } = await supabase.from("categories").insert({
+      name: newCatName.trim(), slug: newCatSlug.trim(), display_order: 99, parent_id: null,
+    }).select().single();
+    setCreatingCat(false);
+    if (error) { showToast("Error creating category: " + error.message); return; }
+    const opt = { slug: data.slug as string, name: data.name as string };
+    setExtraCats(prev => [...prev, opt]);
+    setDrawerForm(f => ({ ...f, category: opt.slug }));
+    setShowNewCat(false);
+    setNewCatName(""); setNewCatSlug("");
+    showToast(`Category "${opt.name}" created and selected.`);
   }
 
   /* ── Drawer save ── */
@@ -286,35 +311,30 @@ export default function AdminProductsPage() {
     setDrawerSaving(true);
 
     const payload: Record<string, unknown> = {
-      name:              drawerForm.name.trim(),
-      category:          drawerForm.category,
-      type:              drawerForm.type.trim() || "general",
-      price:             Number(drawerForm.price),
-      mrp:               drawerForm.mrp ? Number(drawerForm.mrp) : null,
-      stock:             Number(drawerForm.stock) || 0,
-      is_visible:        drawerForm.is_visible,
-      is_featured:       drawerForm.is_featured,
-      bullet_points:     drawerForm.bullet_points.trim() || null,
-      sku:               drawerForm.sku.trim() || null,
+      name: drawerForm.name.trim(), category: drawerForm.category,
+      type: drawerForm.type.trim() || "general",
+      price: Number(drawerForm.price),
+      mrp: drawerForm.mrp ? Number(drawerForm.mrp) : null,
+      stock: Number(drawerForm.stock) || 0,
+      is_visible: drawerForm.is_visible, is_featured: drawerForm.is_featured,
+      bullet_points: drawerForm.bullet_points.trim() || null,
+      sku: drawerForm.sku.trim() || null,
       short_description: drawerForm.short_description.trim() || null,
-      long_description:  drawerForm.long_description.trim() || null,
-      meta_title:        drawerForm.meta_title.trim() || null,
-      meta_description:  drawerForm.meta_description.trim() || null,
-      weight_grams:      drawerForm.weight_grams ? Number(drawerForm.weight_grams) : null,
-      length_cm:         drawerForm.length_cm ? Number(drawerForm.length_cm) : null,
-      width_cm:          drawerForm.width_cm ? Number(drawerForm.width_cm) : null,
-      height_cm:         drawerForm.height_cm ? Number(drawerForm.height_cm) : null,
-      hsn_code:          drawerForm.hsn_code.trim() || null,
+      long_description: drawerForm.long_description.trim() || null,
+      meta_title: drawerForm.meta_title.trim() || null,
+      meta_description: drawerForm.meta_description.trim() || null,
+      weight_grams: drawerForm.weight_grams ? Number(drawerForm.weight_grams) : null,
+      length_cm: drawerForm.length_cm ? Number(drawerForm.length_cm) : null,
+      width_cm: drawerForm.width_cm ? Number(drawerForm.width_cm) : null,
+      height_cm: drawerForm.height_cm ? Number(drawerForm.height_cm) : null,
+      hsn_code: drawerForm.hsn_code.trim() || null,
     };
 
     if (editingProd) {
-      /* Update */
       const { error } = await supabase.from("products").update(payload).eq("id", editingProd.id);
-      if (error) {
-        showToast("Error: " + error.message);
-      } else {
+      if (error) { showToast("Error: " + error.message); }
+      else {
         setProducts(prev => prev.map(p => p.id === editingProd.id ? { ...p, ...(payload as Partial<Product>) } : p));
-        // Sync inline drafts
         setMrpDrafts(d => ({ ...d, [editingProd.id]: drawerForm.mrp }));
         setPriceDrafts(d => ({ ...d, [editingProd.id]: drawerForm.price }));
         setBulletDrafts(d => ({ ...d, [editingProd.id]: drawerForm.bullet_points }));
@@ -322,24 +342,19 @@ export default function AdminProductsPage() {
         closeDrawer();
       }
     } else {
-      /* Insert new */
       const { data, error } = await supabase.from("products").insert({
-        ...payload,
-        description: "",
-        image_url: "",
-        image_urls: [],
-        subcategory: null,
-        collection: null,
-        fragrance: null,
+        ...payload, description: "", image_url: "", image_urls: [],
+        subcategory: null, collection: null, fragrance: null,
       }).select().single();
-      if (error) {
-        showToast("Error: " + error.message);
-      } else {
-        const newProd = data as Product;
-        setProducts(prev => [...prev, newProd].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)));
-        setMrpDrafts(d => ({ ...d, [newProd.id]: newProd.mrp != null ? String(newProd.mrp) : "" }));
-        setPriceDrafts(d => ({ ...d, [newProd.id]: String(newProd.price) }));
-        setBulletDrafts(d => ({ ...d, [newProd.id]: newProd.bullet_points ?? "" }));
+      if (error) { showToast("Error: " + error.message); }
+      else {
+        const np = data as Product;
+        setProducts(prev => [...prev, np].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)));
+        setMrpDrafts(d => ({ ...d, [np.id]: np.mrp != null ? String(np.mrp) : "" }));
+        setPriceDrafts(d => ({ ...d, [np.id]: String(np.price) }));
+        setBulletDrafts(d => ({ ...d, [np.id]: np.bullet_points ?? "" }));
+        // Expand the new product's category
+        setExpandedCats(prev => new Set(Array.from(prev).concat(np.category)));
         showToast("Product added.");
         closeDrawer();
       }
@@ -354,9 +369,8 @@ export default function AdminProductsPage() {
     try {
       const url = await uploadToCloudinary(file, `products/${editingProd.id}_img_${Date.now()}`);
       const isPrimary = drawerImages.length === 0;
-      const order = drawerImages.length;
       const { data, error } = await supabase.from("product_images").insert({
-        product_id: editingProd.id, url, display_order: order, is_primary: isPrimary, alt_text: null,
+        product_id: editingProd.id, url, display_order: drawerImages.length, is_primary: isPrimary, alt_text: null,
       }).select().single();
       if (error) throw new Error(error.message);
       setDrawerImages(prev => [...prev, data as DbProductImage]);
@@ -382,8 +396,7 @@ export default function AdminProductsPage() {
   }
 
   async function deleteImage(img: DbProductImage) {
-    if (!editingProd) return;
-    if (!confirm("Delete this image?")) return;
+    if (!editingProd || !confirm("Delete this image?")) return;
     const { error } = await supabase.from("product_images").delete().eq("id", img.id);
     if (error) { showToast("Error: " + error.message); return; }
     const remaining = drawerImages.filter(i => i.id !== img.id);
@@ -400,11 +413,17 @@ export default function AdminProductsPage() {
     }
   }
 
-  /* ── Computed list ── */
+  /* ── Computed ── */
+  const q = search.trim().toLowerCase();
+  const filtered = q ? products.filter(p => p.name.toLowerCase().includes(q)) : products;
+
+  // All category slugs that have at least one product
+  const allCatSlugs = [
+    ...CATEGORY_ORDER,
+    ...Array.from(new Set(products.map(p => p.category))).filter(c => !CATEGORY_ORDER.includes(c)),
+  ];
+
   const lowCount = products.filter(p => p.stock < 10).length;
-  const visible  = products
-    .filter(p => filter === "all" || p.category === filter)
-    .filter(p => !search.trim() || p.name.toLowerCase().includes(search.trim().toLowerCase()));
 
   if (loading) {
     return (
@@ -414,6 +433,126 @@ export default function AdminProductsPage() {
     );
   }
 
+  /* ── Row renderer ── */
+  function ProductRow({ product }: { product: Product }) {
+    const low   = product.stock < 10;
+    const delta = deltas[product.id] ?? 0;
+
+    return (
+      <React.Fragment>
+        <div className="grid grid-cols-[56px_1fr_90px_90px_196px_36px_80px] gap-x-3 px-5 py-3.5 items-center hover:bg-[rgba(196,163,115,0.02)] transition-colors duration-150">
+
+          {/* Thumbnail */}
+          <div className="relative group/thumb flex-shrink-0">
+            <div className={["w-14 h-14 rounded-[4px] border overflow-hidden relative bg-[#270b1b] flex items-center justify-center",
+              product.image_url ? "border-[rgba(196,163,115,0.22)]" : "border-dashed border-[rgba(196,163,115,0.18)]"].join(" ")}>
+              {product.image_url ? (
+                <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="56px" />
+              ) : (
+                <span className="font-display text-[0.26rem] tracking-[0.08em] uppercase text-[rgba(196,163,115,0.20)]">img</span>
+              )}
+              {uploading[product.id] && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
+                  <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.20)] border-t-brass animate-spin" />
+                </div>
+              )}
+              {!uploading[product.id] && (
+                <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 transition-opacity z-10 flex items-center justify-center pointer-events-none">
+                  <span className="font-display text-[0.26rem] tracking-[0.08em] uppercase text-ivory">Replace</span>
+                </div>
+              )}
+            </div>
+            {!uploading[product.id] && (
+              <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30" style={{ fontSize: 0 }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handlePrimary(product, f); e.target.value = ""; }} />
+            )}
+          </div>
+
+          {/* Name */}
+          <div className="min-w-0">
+            <p className="font-display text-ivory leading-snug truncate" style={{ fontSize: "0.78rem", letterSpacing: "0.04em" }}>{product.name}</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              {product.sku && <span className="font-mono text-[rgba(196,163,115,0.30)] text-[0.60rem]">{product.sku}</span>}
+              <button
+                onClick={() => setExpandedDesc(v => v === product.id ? null : product.id)}
+                className={`font-display text-[0.34rem] tracking-[0.10em] uppercase px-1.5 py-0.5 rounded border transition-colors duration-150 ${expandedDesc === product.id ? "border-brass text-brass bg-[rgba(196,163,115,0.08)]" : "border-[rgba(196,163,115,0.16)] text-[rgba(196,163,115,0.35)] hover:border-brass hover:text-brass"}`}
+              >✎ desc</button>
+            </div>
+          </div>
+
+          {/* MRP */}
+          <div className="relative">
+            <input type="number" value={mrpDrafts[product.id] ?? ""} placeholder="—"
+              onChange={e => setMrpDrafts(d => ({ ...d, [product.id]: e.target.value }))}
+              onBlur={() => saveMrp(product)}
+              onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+              className="w-full bg-transparent border border-[rgba(196,163,115,0.14)] hover:border-[rgba(196,163,115,0.28)] focus:border-[rgba(196,163,115,0.50)] rounded-[3px] px-2.5 py-2 font-display text-[rgba(245,237,224,0.60)] text-[0.72rem] tracking-wide focus:outline-none transition-colors placeholder:text-[rgba(245,237,224,0.18)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            {isSaving(product.id, "mrp") && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[rgba(196,163,115,0.45)] text-xs">…</span>}
+          </div>
+
+          {/* Price */}
+          <div className="relative">
+            <input type="number" value={priceDrafts[product.id] ?? ""}
+              onChange={e => setPriceDrafts(d => ({ ...d, [product.id]: e.target.value }))}
+              onBlur={() => savePrice(product)}
+              onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+              className="w-full bg-transparent border border-[rgba(196,163,115,0.14)] hover:border-[rgba(196,163,115,0.28)] focus:border-[rgba(196,163,115,0.50)] rounded-[3px] px-2.5 py-2 font-display text-brass text-[0.72rem] tracking-wide focus:outline-none transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            {isSaving(product.id, "price") && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[rgba(196,163,115,0.45)] text-xs">…</span>}
+          </div>
+
+          {/* Stock */}
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setDeltas(d => ({ ...d, [product.id]: (d[product.id] ?? 0) - 1 }))}
+              className="w-7 h-7 rounded-[3px] border border-[rgba(196,163,115,0.20)] text-[rgba(245,237,224,0.50)] hover:border-[rgba(196,163,115,0.40)] hover:text-ivory flex items-center justify-center text-sm leading-none transition-colors flex-shrink-0">−</button>
+            <div className="flex flex-col items-center w-9 flex-shrink-0">
+              <span className={`font-display text-[0.85rem] leading-none tracking-wide ${low ? "text-[rgba(200,80,80,0.85)]" : "text-ivory"}`}>{product.stock}</span>
+              {delta !== 0 && <span className="font-display text-[0.36rem] tracking-wide text-brass mt-0.5">{delta > 0 ? `+${delta}` : delta}</span>}
+            </div>
+            <button onClick={() => setDeltas(d => ({ ...d, [product.id]: (d[product.id] ?? 0) + 1 }))}
+              className="w-7 h-7 rounded-[3px] border border-[rgba(196,163,115,0.20)] text-[rgba(245,237,224,0.50)] hover:border-[rgba(196,163,115,0.40)] hover:text-ivory flex items-center justify-center text-sm leading-none transition-colors flex-shrink-0">+</button>
+            <button disabled={delta === 0 || isSaving(product.id, "stock")} onClick={() => applyDelta(product)}
+              className="font-display text-[0.38rem] tracking-[0.12em] uppercase px-2 py-1.5 border rounded-[3px] transition-all disabled:opacity-30 disabled:cursor-not-allowed border-[rgba(196,163,115,0.28)] text-brass hover:bg-[rgba(196,163,115,0.08)] flex-shrink-0">
+              {isSaving(product.id, "stock") ? "…" : "Save"}
+            </button>
+            {low && delta === 0 && !isSaving(product.id, "stock") && (
+              <span className="font-display text-[0.34rem] tracking-[0.08em] uppercase text-[rgba(200,80,80,0.60)] flex-shrink-0">low</span>
+            )}
+          </div>
+
+          {/* Visible toggle */}
+          <button onClick={() => toggleVisible(product)} title={product.is_visible ? "Visible" : "Hidden"}
+            className={`w-9 h-5 rounded-full border transition-all duration-200 flex-shrink-0 relative ${product.is_visible ? "bg-[rgba(196,163,115,0.15)] border-brass" : "bg-transparent border-[rgba(196,163,115,0.20)]"}`}>
+            <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-200 ${product.is_visible ? "left-[calc(100%-18px)] bg-brass" : "left-0.5 bg-[rgba(245,237,224,0.22)]"}`} />
+          </button>
+
+          {/* Edit */}
+          <button onClick={() => openEdit(product)}
+            className="font-display text-[0.38rem] tracking-[0.12em] uppercase px-2 py-1.5 border border-[rgba(196,163,115,0.20)] text-[rgba(245,237,224,0.42)] rounded-[3px] hover:border-brass hover:text-brass transition-colors whitespace-nowrap">
+            Edit →
+          </button>
+        </div>
+
+        {/* Bullet editor */}
+        {expandedDesc === product.id && (
+          <div className="px-5 pb-4 pt-1 border-t border-[rgba(196,163,115,0.05)]">
+            <p className="font-display text-[0.36rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.35)] mb-2">Bullet Points — one per line</p>
+            <textarea rows={5} value={bulletDrafts[product.id] ?? ""}
+              onChange={e => setBulletDrafts(d => ({ ...d, [product.id]: e.target.value }))}
+              onBlur={() => saveBullets(product)}
+              placeholder={"100% natural soy wax\nBurns for up to 40 hours\nHand-poured in small batches"}
+              className="w-full bg-[rgba(245,237,224,0.03)] border border-[rgba(196,163,115,0.16)] hover:border-[rgba(196,163,115,0.30)] focus:border-[rgba(196,163,115,0.50)] rounded-[4px] px-4 py-3 font-body font-light text-[rgba(245,237,224,0.72)] text-sm leading-[1.75] placeholder:text-[rgba(245,237,224,0.16)] focus:outline-none resize-none transition-colors" />
+            <p className="mt-1 font-display text-[0.32rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.28)]">
+              Auto-saves on blur · {isSaving(product.id, "bullets") ? "Saving…" : "Saved"}
+            </p>
+          </div>
+        )}
+      </React.Fragment>
+    );
+  }
+
+  /* ── Page render ── */
   return (
     <>
     <div className="px-8 pt-8 pb-20">
@@ -427,21 +566,19 @@ export default function AdminProductsPage() {
       )}
 
       {/* Header */}
-      <div className="mb-5 flex items-end justify-between">
+      <div className="mb-6 flex items-end justify-between">
         <div>
           <p className="font-display text-[0.44rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.35)] mb-1">Management</p>
           <h1 className="font-display text-ivory" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Products</h1>
         </div>
         <div className="flex items-center gap-3">
           {lowCount > 0 && (
-            <span className="font-display text-[0.46rem] tracking-[0.14em] uppercase text-[rgba(200,80,80,0.75)] bg-[rgba(200,80,80,0.08)] border border-[rgba(200,80,80,0.20)] px-3 py-1.5 rounded-full">
+            <span className="font-display text-[0.44rem] tracking-[0.14em] uppercase text-[rgba(200,80,80,0.72)] bg-[rgba(200,80,80,0.08)] border border-[rgba(200,80,80,0.20)] px-3 py-1.5 rounded-full">
               {lowCount} low stock
             </span>
           )}
-          <button
-            onClick={openAdd}
-            className="font-display text-[0.44rem] tracking-[0.16em] uppercase px-4 py-2.5 border border-brass text-brass bg-[rgba(196,163,115,0.05)] rounded-[4px] hover:bg-[rgba(196,163,115,0.12)] transition-colors duration-150"
-          >
+          <button onClick={() => openAdd()}
+            className="font-display text-[0.44rem] tracking-[0.16em] uppercase px-5 py-2.5 border border-brass text-brass bg-[rgba(196,163,115,0.05)] rounded-[4px] hover:bg-[rgba(196,163,115,0.12)] transition-colors duration-150">
             + Add Product
           </button>
         </div>
@@ -451,232 +588,100 @@ export default function AdminProductsPage() {
       {(!CLOUD_NAME || !UPLOAD_PRESET) && (
         <div className="mb-5 bg-[rgba(200,140,40,0.10)] border border-[rgba(200,140,40,0.28)] rounded-[6px] px-5 py-3">
           <p className="font-body font-light text-[rgba(220,160,60,0.90)] text-sm">
-            Image uploads require{" "}
-            <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code>{" "}
-            and{" "}
-            <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET</code>
+            Image uploads require <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code> and <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET</code>
           </p>
         </div>
       )}
 
-      {/* Search + filter */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-5">
-        <input
-          type="search"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search products…"
-          className="flex-1 bg-[#1e0c17] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.30)] focus:border-[rgba(196,163,115,0.55)] rounded-[4px] px-4 py-2.5 font-body font-light text-[rgba(245,237,224,0.75)] text-sm focus:outline-none transition-colors duration-150 placeholder:text-[rgba(245,237,224,0.22)]"
+      {/* Search + collapse controls */}
+      <div className="flex gap-3 mb-6 items-center">
+        <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products…"
+          className="flex-1 bg-[#1e0c17] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.30)] focus:border-[rgba(196,163,115,0.50)] rounded-[4px] px-4 py-2.5 font-body font-light text-[rgba(245,237,224,0.72)] text-sm focus:outline-none transition-colors placeholder:text-[rgba(245,237,224,0.20)]"
         />
-        <div className="flex gap-2 flex-wrap">
-          {["all", ...CATEGORY_ORDER].map(c => (
-            <button
-              key={c}
-              onClick={() => setFilter(c)}
-              className={[
-                "font-display text-[0.44rem] tracking-[0.14em] uppercase px-3 py-1.5 rounded-full border transition-all duration-150",
-                filter === c
-                  ? "border-brass text-brass bg-[rgba(196,163,115,0.08)]"
-                  : "border-[rgba(196,163,115,0.18)] text-[rgba(245,237,224,0.38)] hover:border-[rgba(196,163,115,0.35)] hover:text-[rgba(245,237,224,0.60)]",
-              ].join(" ")}
-            >
-              {c === "all" ? `All (${products.length})` : `${CATEGORY_LABELS[c]} (${products.filter(p => p.category === c).length})`}
-            </button>
-          ))}
-        </div>
+        <button onClick={expandAll}   className="font-display text-[0.40rem] tracking-[0.12em] uppercase px-3 py-2 border border-[rgba(196,163,115,0.18)] text-[rgba(245,237,224,0.35)] rounded-[3px] hover:border-[rgba(196,163,115,0.35)] hover:text-[rgba(245,237,224,0.60)] transition-colors whitespace-nowrap">Expand All</button>
+        <button onClick={collapseAll} className="font-display text-[0.40rem] tracking-[0.12em] uppercase px-3 py-2 border border-[rgba(196,163,115,0.18)] text-[rgba(245,237,224,0.35)] rounded-[3px] hover:border-[rgba(196,163,115,0.35)] hover:text-[rgba(245,237,224,0.60)] transition-colors whitespace-nowrap">Collapse All</button>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <div className="min-w-[780px]">
-          <div className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] overflow-hidden">
+      {/* Category sections */}
+      <div className="space-y-4">
+        {allCatSlugs.map(catSlug => {
+          const catLabel   = CATEGORY_LABELS[catSlug] ?? catSlug;
+          const catProducts = filtered.filter(p => p.category === catSlug);
+          const allInCat   = products.filter(p => p.category === catSlug);
+          const isExpanded = expandedCats.has(catSlug);
 
-            {/* Header */}
-            <div className="grid grid-cols-[56px_1fr_90px_90px_200px_36px_90px] gap-x-3 px-5 py-3 border-b border-[rgba(196,163,115,0.08)] items-center">
-              {["", "Product", "MRP (₹)", "Price (₹)", "Stock", "", ""].map((h, i) => (
-                <span key={i} className="font-display text-[0.40rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.35)]">{h}</span>
-              ))}
-            </div>
+          // When searching, skip categories with no results
+          if (q && catProducts.length === 0) return null;
 
-            {/* Rows */}
-            {visible.length === 0 ? (
-              <div className="px-5 py-10 text-center">
-                <p className="font-display text-[0.44rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.25)]">No products found</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-[rgba(196,163,115,0.06)]">
-                {visible.map(product => {
-                  const low   = product.stock < 10;
-                  const delta = deltas[product.id] ?? 0;
+          return (
+            <div key={catSlug} className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] overflow-hidden">
 
-                  return (
-                    <React.Fragment key={product.id}>
-                    <div className="grid grid-cols-[56px_1fr_90px_90px_200px_36px_90px] gap-x-3 px-5 py-4 items-center">
+              {/* Category header row */}
+              <button
+                onClick={() => toggleCat(catSlug)}
+                className="w-full flex items-center justify-between px-5 py-4 hover:bg-[rgba(196,163,115,0.04)] transition-colors duration-150 group"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="font-display text-brass text-[0.60rem] tracking-[0.08em] opacity-60 group-hover:opacity-100 transition-opacity">
+                    {isExpanded ? "▾" : "▸"}
+                  </span>
+                  <div className="text-left">
+                    <p className="font-display text-ivory" style={{ fontSize: "0.95rem", letterSpacing: "0.06em" }}>{catLabel}s</p>
+                    <p className="font-display text-[0.38rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.38)] mt-0.5">
+                      {allInCat.length} {allInCat.length === 1 ? "product" : "products"}
+                      {allInCat.filter(p => p.stock < 10).length > 0 && (
+                        <span className="ml-2 text-[rgba(200,80,80,0.60)]">· {allInCat.filter(p => p.stock < 10).length} low stock</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={e => { e.stopPropagation(); openAdd(catSlug); }}
+                  className="font-display text-[0.38rem] tracking-[0.12em] uppercase px-3 py-1.5 border border-[rgba(196,163,115,0.20)] text-[rgba(196,163,115,0.45)] rounded-[3px] hover:border-brass hover:text-brass transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  + Add to {catLabel}
+                </button>
+              </button>
 
-                      {/* Thumbnail */}
-                      <div className="relative group/thumb flex-shrink-0">
-                        <div className={[
-                          "w-14 h-14 rounded-[4px] border overflow-hidden relative bg-[#270b1b] flex items-center justify-center",
-                          product.image_url ? "border-[rgba(196,163,115,0.22)]" : "border-dashed border-[rgba(196,163,115,0.18)]",
-                        ].join(" ")}>
-                          {product.image_url ? (
-                            <Image src={product.image_url} alt={product.name} fill className="object-cover" sizes="56px" />
-                          ) : (
-                            <span className="font-display text-[0.28rem] tracking-[0.08em] uppercase text-[rgba(196,163,115,0.22)]">img</span>
-                          )}
-                          {uploading[product.id] && (
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
-                              <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.20)] border-t-brass animate-spin" />
-                            </div>
-                          )}
-                          {!uploading[product.id] && (
-                            <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 transition-opacity z-10 flex items-center justify-center pointer-events-none">
-                              <span className="font-display text-[0.28rem] tracking-[0.08em] uppercase text-ivory">Replace</span>
-                            </div>
-                          )}
-                        </div>
-                        {!uploading[product.id] && (
-                          <input
-                            type="file" accept="image/*"
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
-                            style={{ fontSize: 0 }}
-                            onChange={e => { const f = e.target.files?.[0]; if (f) handlePrimary(product, f); e.target.value = ""; }}
-                          />
-                        )}
-                      </div>
+              {/* Column headers */}
+              {isExpanded && (
+                <div className="border-t border-[rgba(196,163,115,0.08)]">
+                  <div className="grid grid-cols-[56px_1fr_90px_90px_196px_36px_80px] gap-x-3 px-5 py-2 items-center">
+                    {["", "Product", "MRP (₹)", "Price (₹)", "Stock", "", ""].map((h, i) => (
+                      <span key={i} className="font-display text-[0.36rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.28)]">{h}</span>
+                    ))}
+                  </div>
 
-                      {/* Name + category */}
-                      <div className="min-w-0">
-                        <p className="font-display text-ivory leading-snug truncate" style={{ fontSize: "0.80rem", letterSpacing: "0.04em" }}>
-                          {product.name}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <p className="font-display text-[0.38rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.38)]">
-                            {CATEGORY_LABELS[product.category] ?? product.category}
-                          </p>
-                          <button
-                            onClick={() => setExpandedDesc(v => v === product.id ? null : product.id)}
-                            className={`font-display text-[0.36rem] tracking-[0.10em] uppercase px-1.5 py-0.5 rounded border transition-colors duration-150 ${expandedDesc === product.id ? "border-brass text-brass bg-[rgba(196,163,115,0.08)]" : "border-[rgba(196,163,115,0.18)] text-[rgba(196,163,115,0.38)] hover:border-brass hover:text-brass"}`}
-                          >
-                            ✎ desc
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* MRP */}
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={mrpDrafts[product.id] ?? ""}
-                          onChange={e => setMrpDrafts(d => ({ ...d, [product.id]: e.target.value }))}
-                          onBlur={() => saveMrp(product)}
-                          onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                          placeholder="—"
-                          className="w-full bg-transparent border border-[rgba(196,163,115,0.14)] hover:border-[rgba(196,163,115,0.30)] focus:border-[rgba(196,163,115,0.55)] rounded-[3px] px-2.5 py-2 font-display text-[rgba(245,237,224,0.65)] text-[0.75rem] tracking-wide focus:outline-none transition-colors duration-150 placeholder:text-[rgba(245,237,224,0.20)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        {isSaving(product.id, "mrp") && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[rgba(196,163,115,0.45)] text-xs">…</span>}
-                      </div>
-
-                      {/* Price */}
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={priceDrafts[product.id] ?? ""}
-                          onChange={e => setPriceDrafts(d => ({ ...d, [product.id]: e.target.value }))}
-                          onBlur={() => savePrice(product)}
-                          onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-                          className="w-full bg-transparent border border-[rgba(196,163,115,0.14)] hover:border-[rgba(196,163,115,0.30)] focus:border-[rgba(196,163,115,0.55)] rounded-[3px] px-2.5 py-2 font-display text-brass text-[0.75rem] tracking-wide focus:outline-none transition-colors duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        {isSaving(product.id, "price") && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[rgba(196,163,115,0.45)] text-xs">…</span>}
-                      </div>
-
-                      {/* Stock */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setDeltas(d => ({ ...d, [product.id]: (d[product.id] ?? 0) - 1 }))}
-                          className="w-7 h-7 rounded-[3px] border border-[rgba(196,163,115,0.20)] text-[rgba(245,237,224,0.50)] hover:border-[rgba(196,163,115,0.40)] hover:text-ivory flex items-center justify-center text-sm leading-none transition-colors flex-shrink-0"
-                        >−</button>
-                        <div className="flex flex-col items-center w-9 flex-shrink-0">
-                          <span className={`font-display text-[0.85rem] leading-none tracking-wide ${low ? "text-[rgba(200,80,80,0.85)]" : "text-ivory"}`}>{product.stock}</span>
-                          {delta !== 0 && <span className="font-display text-[0.38rem] tracking-wide text-brass mt-0.5">{delta > 0 ? `+${delta}` : delta}</span>}
-                        </div>
-                        <button
-                          onClick={() => setDeltas(d => ({ ...d, [product.id]: (d[product.id] ?? 0) + 1 }))}
-                          className="w-7 h-7 rounded-[3px] border border-[rgba(196,163,115,0.20)] text-[rgba(245,237,224,0.50)] hover:border-[rgba(196,163,115,0.40)] hover:text-ivory flex items-center justify-center text-sm leading-none transition-colors flex-shrink-0"
-                        >+</button>
-                        <button
-                          disabled={delta === 0 || isSaving(product.id, "stock")}
-                          onClick={() => applyDelta(product)}
-                          className="font-display text-[0.40rem] tracking-[0.12em] uppercase px-2 py-1.5 border rounded-[3px] transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed border-[rgba(196,163,115,0.30)] text-brass hover:bg-[rgba(196,163,115,0.08)] flex-shrink-0"
-                        >
-                          {isSaving(product.id, "stock") ? "…" : "Save"}
-                        </button>
-                        {low && delta === 0 && !isSaving(product.id, "stock") && (
-                          <span className="font-display text-[0.36rem] tracking-[0.08em] uppercase text-[rgba(200,80,80,0.60)] flex-shrink-0">low</span>
-                        )}
-                      </div>
-
-                      {/* Visible toggle */}
-                      <button
-                        onClick={() => toggleVisible(product)}
-                        title={product.is_visible ? "Visible — click to hide" : "Hidden — click to show"}
-                        className={`w-9 h-5 rounded-full border transition-all duration-200 flex-shrink-0 relative ${product.is_visible ? "bg-[rgba(196,163,115,0.18)] border-brass" : "bg-transparent border-[rgba(196,163,115,0.22)]"}`}
-                      >
-                        <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-200 ${product.is_visible ? "left-[calc(100%-18px)] bg-brass" : "left-0.5 bg-[rgba(245,237,224,0.25)]"}`} />
-                      </button>
-
-                      {/* Edit button */}
-                      <button
-                        onClick={() => openEdit(product)}
-                        className="font-display text-[0.40rem] tracking-[0.12em] uppercase px-2.5 py-1.5 border border-[rgba(196,163,115,0.22)] text-[rgba(245,237,224,0.45)] rounded-[3px] hover:border-brass hover:text-brass transition-colors duration-150 whitespace-nowrap"
-                      >
-                        Edit →
-                      </button>
-
-                    </div>
-
-                    {/* Expandable bullet-points editor */}
-                    {expandedDesc === product.id && (
-                      <div className="col-span-7 px-1 pb-4 pt-1">
-                        <p className="font-display text-[0.38rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.40)] mb-2">
-                          Bullet Points — one per line (shown on product page)
-                        </p>
-                        <textarea
-                          rows={6}
-                          value={bulletDrafts[product.id] ?? ""}
-                          onChange={e => setBulletDrafts(d => ({ ...d, [product.id]: e.target.value }))}
-                          onBlur={() => saveBullets(product)}
-                          placeholder={"100% natural soy wax\nBurns for up to 40 hours\nHand-poured in small batches"}
-                          className="w-full bg-[rgba(245,237,224,0.03)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.32)] focus:border-[rgba(196,163,115,0.55)] rounded-[4px] px-4 py-3 font-body font-light text-[rgba(245,237,224,0.75)] text-sm leading-[1.75] placeholder:text-[rgba(245,237,224,0.18)] focus:outline-none resize-none transition-colors duration-150"
-                        />
-                        <p className="mt-1.5 font-display text-[0.34rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.30)]">
-                          Auto-saves on blur · {isSaving(product.id, "bullets") ? "Saving…" : "Saved"}
+                  {/* Product rows */}
+                  <div className="divide-y divide-[rgba(196,163,115,0.05)]">
+                    {catProducts.length === 0 ? (
+                      <div className="px-5 py-6 text-center">
+                        <p className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.22)]">
+                          {q ? "No products match your search" : "No products in this category"}
                         </p>
                       </div>
+                    ) : (
+                      catProducts.map(product => <ProductRow key={product.id} product={product} />)
                     )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
+
     </div>
 
     {/* ── Edit / Add Drawer ── */}
     {drawerOpen && (
       <>
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-black/55 z-40 backdrop-blur-sm"
-          onClick={closeDrawer}
-        />
+        <div className="fixed inset-0 bg-black/55 z-40 backdrop-blur-sm" onClick={closeDrawer} />
 
-        {/* Panel */}
-        <div className="fixed top-0 right-0 bottom-0 w-full max-w-[520px] border-l border-[rgba(196,163,115,0.14)] z-50 flex flex-col overflow-hidden" style={{ background: '#1a0a12', boxShadow: '-16px 0 48px rgba(0,0,0,0.55)' }}>
+        <div className="fixed top-0 right-0 bottom-0 w-full max-w-[520px] border-l border-[rgba(196,163,115,0.14)] z-50 flex flex-col overflow-hidden"
+          style={{ background: '#1a0a12', boxShadow: '-16px 0 48px rgba(0,0,0,0.55)' }}>
 
-          {/* Drawer header */}
+          {/* Header */}
           <div className="flex items-center justify-between px-6 py-5 border-b border-[rgba(196,163,115,0.10)] flex-shrink-0">
             <div>
               <p className="font-display text-[0.40rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.38)] mb-0.5">
@@ -686,18 +691,13 @@ export default function AdminProductsPage() {
                 {editingProd ? editingProd.name : "New Product"}
               </p>
             </div>
-            <button
-              onClick={closeDrawer}
-              className="w-9 h-9 flex items-center justify-center rounded-full text-[rgba(245,237,224,0.35)] hover:text-ivory hover:bg-[rgba(255,255,255,0.05)] transition-colors duration-150 text-lg"
-            >
-              ×
-            </button>
+            <button onClick={closeDrawer} className="w-9 h-9 flex items-center justify-center rounded-full text-[rgba(245,237,224,0.35)] hover:text-ivory hover:bg-[rgba(255,255,255,0.05)] transition-colors text-xl leading-none">×</button>
           </div>
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
-            {/* ── Section: Basic Info ── */}
+            {/* Basic Info */}
             <section>
               <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass mb-3">Basic Info</p>
               <div className="space-y-3">
@@ -715,152 +715,137 @@ export default function AdminProductsPage() {
                     <input className={FIELD} value={drawerForm.type} onChange={e => setDrawerForm(f => ({ ...f, type: e.target.value }))} placeholder="scented" />
                   </div>
                 </div>
+
+                {/* Category select + inline create */}
                 <div>
-                  <label className={LABEL}>Category *</label>
-                  <select
-                    className={FIELD} style={{ background: '#1a0a12' }}
+                  <div className="flex items-end justify-between mb-1">
+                    <label className={LABEL + " mb-0"}>Category *</label>
+                    {!showNewCat && (
+                      <button
+                        onClick={() => setShowNewCat(true)}
+                        className="font-display text-[0.36rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.45)] hover:text-brass transition-colors"
+                      >
+                        + Create new category
+                      </button>
+                    )}
+                  </div>
+                  <select className={FIELD} style={{ background: '#1a0a12' }}
                     value={drawerForm.category}
-                    onChange={e => setDrawerForm(f => ({ ...f, category: e.target.value }))}
-                  >
-                    {CATEGORY_ORDER.map(c => (
-                      <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                    onChange={e => setDrawerForm(f => ({ ...f, category: e.target.value }))}>
+                    {allCatOptions.map(c => (
+                      <option key={c.slug} value={c.slug}>{c.name}</option>
                     ))}
                   </select>
+
+                  {/* Inline new category form */}
+                  {showNewCat && (
+                    <div className="mt-2 p-3 border border-[rgba(196,163,115,0.18)] rounded-[4px] bg-[rgba(196,163,115,0.03)]">
+                      <p className="font-display text-[0.38rem] tracking-[0.14em] uppercase text-brass mb-2">New Category</p>
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div>
+                          <label className={LABEL}>Name *</label>
+                          <input className={FIELD} value={newCatName} onChange={e => handleNewCatName(e.target.value)} placeholder="Dhoop" autoFocus />
+                        </div>
+                        <div>
+                          <label className={LABEL}>Slug *</label>
+                          <input className={FIELD} value={newCatSlug} onChange={e => setNewCatSlug(e.target.value)} placeholder="dhoop" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={createCategory} disabled={creatingCat}
+                          className="font-display text-[0.38rem] tracking-[0.12em] uppercase px-3 py-1.5 border border-brass text-brass bg-[rgba(196,163,115,0.06)] rounded-[3px] hover:bg-[rgba(196,163,115,0.14)] disabled:opacity-40 transition-colors">
+                          {creatingCat ? "Creating…" : "Create & Select"}
+                        </button>
+                        <button onClick={() => { setShowNewCat(false); setNewCatName(""); setNewCatSlug(""); }}
+                          className="font-display text-[0.38rem] tracking-[0.12em] uppercase px-3 py-1.5 border border-[rgba(196,163,115,0.18)] text-[rgba(245,237,224,0.38)] rounded-[3px] hover:border-[rgba(196,163,115,0.35)] hover:text-[rgba(245,237,224,0.60)] transition-colors">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-6">
+
+                <div className="flex items-center gap-6 pt-1">
                   <label className="flex items-center gap-2.5 cursor-pointer">
-                    <button
-                      type="button"
-                      onClick={() => setDrawerForm(f => ({ ...f, is_visible: !f.is_visible }))}
-                      className={`w-10 h-5 rounded-full border transition-all duration-200 relative ${drawerForm.is_visible ? "bg-[rgba(196,163,115,0.18)] border-brass" : "bg-transparent border-[rgba(196,163,115,0.22)]"}`}
-                    >
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-200 ${drawerForm.is_visible ? "left-[calc(100%-18px)] bg-brass" : "left-0.5 bg-[rgba(245,237,224,0.25)]"}`} />
+                    <button type="button" onClick={() => setDrawerForm(f => ({ ...f, is_visible: !f.is_visible }))}
+                      className={`w-10 h-5 rounded-full border transition-all duration-200 relative ${drawerForm.is_visible ? "bg-[rgba(196,163,115,0.15)] border-brass" : "bg-transparent border-[rgba(196,163,115,0.20)]"}`}>
+                      <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-200 ${drawerForm.is_visible ? "left-[calc(100%-18px)] bg-brass" : "left-0.5 bg-[rgba(245,237,224,0.22)]"}`} />
                     </button>
-                    <span className="font-display text-[0.42rem] tracking-[0.14em] uppercase text-[rgba(245,237,224,0.55)]">Visible on storefront</span>
+                    <span className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(245,237,224,0.50)]">Visible on storefront</span>
                   </label>
                   <label className="flex items-center gap-2.5 cursor-pointer">
-                    <button
-                      type="button"
-                      onClick={() => setDrawerForm(f => ({ ...f, is_featured: !f.is_featured }))}
-                      className={`w-10 h-5 rounded-full border transition-all duration-200 relative ${drawerForm.is_featured ? "bg-[rgba(196,163,115,0.18)] border-brass" : "bg-transparent border-[rgba(196,163,115,0.22)]"}`}
-                    >
-                      <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-200 ${drawerForm.is_featured ? "left-[calc(100%-18px)] bg-brass" : "left-0.5 bg-[rgba(245,237,224,0.25)]"}`} />
+                    <button type="button" onClick={() => setDrawerForm(f => ({ ...f, is_featured: !f.is_featured }))}
+                      className={`w-10 h-5 rounded-full border transition-all duration-200 relative ${drawerForm.is_featured ? "bg-[rgba(196,163,115,0.15)] border-brass" : "bg-transparent border-[rgba(196,163,115,0.20)]"}`}>
+                      <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all duration-200 ${drawerForm.is_featured ? "left-[calc(100%-18px)] bg-brass" : "left-0.5 bg-[rgba(245,237,224,0.22)]"}`} />
                     </button>
-                    <span className="font-display text-[0.42rem] tracking-[0.14em] uppercase text-[rgba(245,237,224,0.55)]">Featured</span>
+                    <span className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(245,237,224,0.50)]">Featured</span>
                   </label>
                 </div>
               </div>
             </section>
 
-            {/* ── Section: Pricing ── */}
+            {/* Pricing & Stock */}
             <section>
               <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass mb-3">Pricing & Stock</p>
               <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className={LABEL}>Price (₹) *</label>
-                  <input type="number" className={FIELD} value={drawerForm.price} onChange={e => setDrawerForm(f => ({ ...f, price: e.target.value }))} placeholder="999" />
-                </div>
-                <div>
-                  <label className={LABEL}>MRP (₹)</label>
-                  <input type="number" className={FIELD} value={drawerForm.mrp} onChange={e => setDrawerForm(f => ({ ...f, mrp: e.target.value }))} placeholder="1299" />
-                </div>
-                <div>
-                  <label className={LABEL}>Stock</label>
-                  <input type="number" className={FIELD} value={drawerForm.stock} onChange={e => setDrawerForm(f => ({ ...f, stock: e.target.value }))} placeholder="50" />
-                </div>
+                <div><label className={LABEL}>Price (₹) *</label><input type="number" className={FIELD} value={drawerForm.price} onChange={e => setDrawerForm(f => ({ ...f, price: e.target.value }))} placeholder="999" /></div>
+                <div><label className={LABEL}>MRP (₹)</label><input type="number" className={FIELD} value={drawerForm.mrp} onChange={e => setDrawerForm(f => ({ ...f, mrp: e.target.value }))} placeholder="1299" /></div>
+                <div><label className={LABEL}>Stock</label><input type="number" className={FIELD} value={drawerForm.stock} onChange={e => setDrawerForm(f => ({ ...f, stock: e.target.value }))} placeholder="50" /></div>
               </div>
             </section>
 
-            {/* ── Section: Description ── */}
+            {/* Description */}
             <section>
               <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass mb-3">Description</p>
               <div className="space-y-3">
-                <div>
-                  <label className={LABEL}>Short Description</label>
-                  <input className={FIELD} value={drawerForm.short_description} onChange={e => setDrawerForm(f => ({ ...f, short_description: e.target.value }))} placeholder="A divine candle for your sacred space" />
-                </div>
-                <div>
-                  <label className={LABEL}>Bullet Points (one per line)</label>
-                  <textarea
-                    rows={5}
-                    className={FIELD + " resize-none leading-[1.7]"}
-                    value={drawerForm.bullet_points}
+                <div><label className={LABEL}>Short Description</label><input className={FIELD} value={drawerForm.short_description} onChange={e => setDrawerForm(f => ({ ...f, short_description: e.target.value }))} placeholder="A divine candle for your sacred space" /></div>
+                <div><label className={LABEL}>Bullet Points (one per line)</label>
+                  <textarea rows={5} className={FIELD + " resize-none leading-[1.7]"} value={drawerForm.bullet_points}
                     onChange={e => setDrawerForm(f => ({ ...f, bullet_points: e.target.value }))}
-                    placeholder={"100% natural soy wax\nBurns for up to 40 hours\nHand-poured in small batches"}
-                  />
+                    placeholder={"100% natural soy wax\nBurns for up to 40 hours\nHand-poured in small batches"} />
                 </div>
-                <div>
-                  <label className={LABEL}>Long Description</label>
-                  <textarea
-                    rows={4}
-                    className={FIELD + " resize-none leading-[1.7]"}
-                    value={drawerForm.long_description}
+                <div><label className={LABEL}>Long Description</label>
+                  <textarea rows={4} className={FIELD + " resize-none leading-[1.7]"} value={drawerForm.long_description}
                     onChange={e => setDrawerForm(f => ({ ...f, long_description: e.target.value }))}
-                    placeholder="Detailed product description…"
-                  />
+                    placeholder="Detailed product description…" />
                 </div>
               </div>
             </section>
 
-            {/* ── Section: Images ── */}
+            {/* Images (edit only) */}
             {editingProd && (
               <section>
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass">Images</p>
-                  <label className={[
-                    "font-display text-[0.40rem] tracking-[0.12em] uppercase px-3 py-1.5 border rounded-[3px] cursor-pointer transition-colors duration-150",
-                    imgUploading
-                      ? "border-[rgba(196,163,115,0.22)] text-[rgba(196,163,115,0.35)] cursor-not-allowed"
-                      : "border-[rgba(196,163,115,0.28)] text-[rgba(245,237,224,0.55)] hover:border-brass hover:text-brass",
-                  ].join(" ")}>
+                  <label className={["font-display text-[0.38rem] tracking-[0.12em] uppercase px-3 py-1.5 border rounded-[3px] cursor-pointer transition-colors",
+                    imgUploading ? "border-[rgba(196,163,115,0.18)] text-[rgba(196,163,115,0.30)] cursor-not-allowed" : "border-[rgba(196,163,115,0.25)] text-[rgba(245,237,224,0.50)] hover:border-brass hover:text-brass"].join(" ")}>
                     {imgUploading ? "Uploading…" : "+ Upload Image"}
-                    <input
-                      ref={imgFileRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={imgUploading}
-                      onChange={e => { const f = e.target.files?.[0]; if (f) uploadDrawerImage(f); }}
-                    />
+                    <input ref={imgFileRef} type="file" accept="image/*" className="hidden" disabled={imgUploading}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) uploadDrawerImage(f); }} />
                   </label>
                 </div>
-
                 {imgsLoading ? (
-                  <div className="h-24 flex items-center justify-center">
+                  <div className="h-20 flex items-center justify-center">
                     <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" />
                   </div>
                 ) : drawerImages.length === 0 ? (
-                  <div className="border border-dashed border-[rgba(196,163,115,0.18)] rounded-[6px] p-6 text-center">
-                    <p className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.28)]">No images in product_images table</p>
-                    <p className="font-body font-light text-[rgba(245,237,224,0.22)] text-xs mt-1">The thumbnail above uses the legacy image_url field</p>
+                  <div className="border border-dashed border-[rgba(196,163,115,0.16)] rounded-[6px] p-5 text-center">
+                    <p className="font-display text-[0.38rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.25)]">No images yet — upload above</p>
+                    <p className="font-body font-light text-[rgba(245,237,224,0.20)] text-xs mt-1">Thumbnail above uses the legacy image_url field</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-3 gap-2">
                     {drawerImages.map(img => (
                       <div key={img.id} className="relative group">
-                        <div className={`aspect-square rounded-[4px] overflow-hidden border relative ${img.is_primary ? "border-brass" : "border-[rgba(196,163,115,0.20)]"}`}>
-                          <Image src={img.url} alt={img.alt_text ?? "Product image"} fill className="object-cover" sizes="160px" />
-                          {img.is_primary && (
-                            <div className="absolute top-1 left-1 bg-brass/90 text-ink font-display text-[0.28rem] tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-sm">
-                              Primary
-                            </div>
-                          )}
+                        <div className={`aspect-square rounded-[4px] overflow-hidden border relative ${img.is_primary ? "border-brass" : "border-[rgba(196,163,115,0.18)]"}`}>
+                          <Image src={img.url} alt="" fill className="object-cover" sizes="160px" />
+                          {img.is_primary && <div className="absolute top-1 left-1 bg-brass/90 text-[#1a0a12] font-display text-[0.26rem] tracking-[0.08em] uppercase px-1.5 py-0.5 rounded-sm">Primary</div>}
                         </div>
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-[4px] flex items-center justify-center gap-1.5">
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-[4px] flex items-center justify-center gap-1">
                           {!img.is_primary && (
-                            <button
-                              onClick={() => setPrimaryImage(img)}
-                              className="font-display text-[0.30rem] tracking-[0.08em] uppercase px-2 py-1 bg-brass text-ink rounded-[2px] hover:bg-[#d4b580] transition-colors"
-                            >
-                              Set Primary
-                            </button>
+                            <button onClick={() => setPrimaryImage(img)} className="font-display text-[0.28rem] tracking-[0.08em] uppercase px-2 py-1 bg-brass text-[#1a0a12] rounded-[2px] hover:bg-[#d4b580]">Set Primary</button>
                           )}
-                          <button
-                            onClick={() => deleteImage(img)}
-                            className="font-display text-[0.30rem] tracking-[0.08em] uppercase px-2 py-1 bg-[rgba(200,60,60,0.80)] text-ivory rounded-[2px] hover:bg-[rgba(200,60,60,1)] transition-colors"
-                          >
-                            Delete
-                          </button>
+                          <button onClick={() => deleteImage(img)} className="font-display text-[0.28rem] tracking-[0.08em] uppercase px-2 py-1 bg-[rgba(200,60,60,0.80)] text-ivory rounded-[2px] hover:bg-[rgba(200,60,60,1)]">Delete</button>
                         </div>
                       </div>
                     ))}
@@ -869,50 +854,36 @@ export default function AdminProductsPage() {
               </section>
             )}
 
-            {/* ── Section: SEO ── */}
+            {/* SEO */}
             <section>
               <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass mb-3">SEO</p>
               <div className="space-y-3">
                 <div>
                   <div className="flex items-end justify-between mb-1">
                     <label className={LABEL + " mb-0"}>Meta Title</label>
-                    <span className={`font-display text-[0.34rem] tracking-wide ${drawerForm.meta_title.length > 60 ? "text-[rgba(200,80,80,0.70)]" : "text-[rgba(196,163,115,0.30)]"}`}>
-                      {drawerForm.meta_title.length}/60
-                    </span>
+                    <span className={`font-display text-[0.32rem] tracking-wide ${drawerForm.meta_title.length > 60 ? "text-[rgba(200,80,80,0.65)]" : "text-[rgba(196,163,115,0.28)]"}`}>{drawerForm.meta_title.length}/60</span>
                   </div>
                   <input className={FIELD} value={drawerForm.meta_title} onChange={e => setDrawerForm(f => ({ ...f, meta_title: e.target.value }))} placeholder="Nakshatra Candle — Rose | Dhyom" />
                 </div>
                 <div>
                   <div className="flex items-end justify-between mb-1">
                     <label className={LABEL + " mb-0"}>Meta Description</label>
-                    <span className={`font-display text-[0.34rem] tracking-wide ${drawerForm.meta_description.length > 160 ? "text-[rgba(200,80,80,0.70)]" : "text-[rgba(196,163,115,0.30)]"}`}>
-                      {drawerForm.meta_description.length}/160
-                    </span>
+                    <span className={`font-display text-[0.32rem] tracking-wide ${drawerForm.meta_description.length > 160 ? "text-[rgba(200,80,80,0.65)]" : "text-[rgba(196,163,115,0.28)]"}`}>{drawerForm.meta_description.length}/160</span>
                   </div>
-                  <textarea
-                    rows={3}
-                    className={FIELD + " resize-none leading-[1.7]"}
-                    value={drawerForm.meta_description}
+                  <textarea rows={3} className={FIELD + " resize-none leading-[1.7]"} value={drawerForm.meta_description}
                     onChange={e => setDrawerForm(f => ({ ...f, meta_description: e.target.value }))}
-                    placeholder="A hand-poured soy wax candle with rose fragrance, perfect for meditation and sacred rituals."
-                  />
+                    placeholder="A hand-poured soy wax candle with rose fragrance, perfect for meditation." />
                 </div>
               </div>
             </section>
 
-            {/* ── Section: Shipping ── */}
+            {/* Shipping */}
             <section>
               <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass mb-3">Shipping</p>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={LABEL}>Weight (grams)</label>
-                    <input type="number" className={FIELD} value={drawerForm.weight_grams} onChange={e => setDrawerForm(f => ({ ...f, weight_grams: e.target.value }))} placeholder="350" />
-                  </div>
-                  <div>
-                    <label className={LABEL}>HSN Code</label>
-                    <input className={FIELD} value={drawerForm.hsn_code} onChange={e => setDrawerForm(f => ({ ...f, hsn_code: e.target.value }))} placeholder="3406" />
-                  </div>
+                  <div><label className={LABEL}>Weight (grams)</label><input type="number" className={FIELD} value={drawerForm.weight_grams} onChange={e => setDrawerForm(f => ({ ...f, weight_grams: e.target.value }))} placeholder="350" /></div>
+                  <div><label className={LABEL}>HSN Code</label><input className={FIELD} value={drawerForm.hsn_code} onChange={e => setDrawerForm(f => ({ ...f, hsn_code: e.target.value }))} placeholder="3406" /></div>
                 </div>
                 <div>
                   <label className={LABEL}>Dimensions (cm) — L × W × H</label>
@@ -927,19 +898,14 @@ export default function AdminProductsPage() {
 
           </div>
 
-          {/* Drawer footer */}
+          {/* Footer */}
           <div className="flex-shrink-0 px-6 py-4 border-t border-[rgba(196,163,115,0.10)] flex items-center justify-between gap-3">
-            <button
-              onClick={closeDrawer}
-              className="font-display text-[0.42rem] tracking-[0.14em] uppercase px-4 py-2.5 border border-[rgba(196,163,115,0.20)] text-[rgba(245,237,224,0.40)] rounded-[3px] hover:border-[rgba(196,163,115,0.40)] hover:text-[rgba(245,237,224,0.65)] transition-colors duration-150"
-            >
+            <button onClick={closeDrawer}
+              className="font-display text-[0.42rem] tracking-[0.14em] uppercase px-4 py-2.5 border border-[rgba(196,163,115,0.18)] text-[rgba(245,237,224,0.38)] rounded-[3px] hover:border-[rgba(196,163,115,0.38)] hover:text-[rgba(245,237,224,0.62)] transition-colors">
               Cancel
             </button>
-            <button
-              onClick={saveDrawer}
-              disabled={drawerSaving}
-              className="flex-1 font-display text-[0.44rem] tracking-[0.16em] uppercase py-2.5 border border-brass text-brass bg-[rgba(196,163,115,0.06)] rounded-[3px] hover:bg-[rgba(196,163,115,0.14)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
-            >
+            <button onClick={saveDrawer} disabled={drawerSaving}
+              className="flex-1 font-display text-[0.44rem] tracking-[0.16em] uppercase py-2.5 border border-brass text-brass bg-[rgba(196,163,115,0.06)] rounded-[3px] hover:bg-[rgba(196,163,115,0.14)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               {drawerSaving ? "Saving…" : editingProd ? "Save Changes" : "Add Product"}
             </button>
           </div>
