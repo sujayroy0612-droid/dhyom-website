@@ -129,8 +129,14 @@ export default function AdminProductsPage() {
   const [imgUploading, setImgUploading] = useState(false);
   const imgFileRef = useRef<HTMLInputElement>(null);
 
-  /* ── Inline new-category state (inside drawer) ── */
+  /* ── Category creation (shared between header modal + drawer inline) ── */
   const [extraCats,    setExtraCats]    = useState<CatOption[]>([]);
+  // Header modal
+  const [catModal,     setCatModal]     = useState(false);
+  const [catModalName, setCatModalName] = useState("");
+  const [catModalSlug, setCatModalSlug] = useState("");
+  const [catModalSaving, setCatModalSaving] = useState(false);
+  // Drawer inline
   const [showNewCat,   setShowNewCat]   = useState(false);
   const [newCatName,   setNewCatName]   = useState("");
   const [newCatSlug,   setNewCatSlug]   = useState("");
@@ -283,9 +289,31 @@ export default function AdminProductsPage() {
   }
 
   /* ── Inline category creation ── */
+  function slugify(val: string) {
+    return val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  }
+
+  /* ── Header modal category creation ── */
+  function openCatModal() { setCatModal(true); setCatModalName(""); setCatModalSlug(""); }
+  function closeCatModal() { setCatModal(false); setCatModalName(""); setCatModalSlug(""); }
+
+  async function saveCatModal() {
+    if (!catModalName.trim() || !catModalSlug.trim()) { showToast("Name and slug are required."); return; }
+    setCatModalSaving(true);
+    const { data, error } = await supabase.from("categories").insert({
+      name: catModalName.trim(), slug: catModalSlug.trim(), display_order: 99, parent_id: null,
+    }).select().single();
+    setCatModalSaving(false);
+    if (error) { showToast("Error: " + error.message); return; }
+    const opt = { slug: data.slug as string, name: data.name as string };
+    setExtraCats(prev => [...prev, opt]);
+    closeCatModal();
+    showToast(`Category "${opt.name}" created.`);
+  }
+
   function handleNewCatName(val: string) {
     setNewCatName(val);
-    setNewCatSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""));
+    setNewCatSlug(slugify(val));
   }
 
   async function createCategory() {
@@ -295,7 +323,7 @@ export default function AdminProductsPage() {
       name: newCatName.trim(), slug: newCatSlug.trim(), display_order: 99, parent_id: null,
     }).select().single();
     setCreatingCat(false);
-    if (error) { showToast("Error creating category: " + error.message); return; }
+    if (error) { showToast("Error: " + error.message); return; }
     const opt = { slug: data.slug as string, name: data.name as string };
     setExtraCats(prev => [...prev, opt]);
     setDrawerForm(f => ({ ...f, category: opt.slug }));
@@ -571,12 +599,16 @@ export default function AdminProductsPage() {
           <p className="font-display text-[0.44rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.35)] mb-1">Management</p>
           <h1 className="font-display text-ivory" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Products</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {lowCount > 0 && (
             <span className="font-display text-[0.44rem] tracking-[0.14em] uppercase text-[rgba(200,80,80,0.72)] bg-[rgba(200,80,80,0.08)] border border-[rgba(200,80,80,0.20)] px-3 py-1.5 rounded-full">
               {lowCount} low stock
             </span>
           )}
+          <button onClick={openCatModal}
+            className="font-display text-[0.44rem] tracking-[0.16em] uppercase px-4 py-2.5 border border-[rgba(196,163,115,0.28)] text-[rgba(245,237,224,0.55)] rounded-[4px] hover:border-brass hover:text-brass transition-colors duration-150">
+            + Add Category
+          </button>
           <button onClick={() => openAdd()}
             className="font-display text-[0.44rem] tracking-[0.16em] uppercase px-5 py-2.5 border border-brass text-brass bg-[rgba(196,163,115,0.05)] rounded-[4px] hover:bg-[rgba(196,163,115,0.12)] transition-colors duration-150">
             + Add Product
@@ -908,6 +940,67 @@ export default function AdminProductsPage() {
               className="flex-1 font-display text-[0.44rem] tracking-[0.16em] uppercase py-2.5 border border-brass text-brass bg-[rgba(196,163,115,0.06)] rounded-[3px] hover:bg-[rgba(196,163,115,0.14)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               {drawerSaving ? "Saving…" : editingProd ? "Save Changes" : "Add Product"}
             </button>
+          </div>
+        </div>
+      </>
+    )}
+
+    {/* ── Add Category Modal ── */}
+    {catModal && (
+      <>
+        <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm" onClick={closeCatModal} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <div className="w-full max-w-sm pointer-events-auto rounded-[8px] border border-[rgba(196,163,115,0.18)] overflow-hidden"
+            style={{ background: '#1a0a12' }}>
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(196,163,115,0.10)]">
+              <div>
+                <p className="font-display text-[0.40rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.40)] mb-0.5">Management</p>
+                <p className="font-display text-ivory text-[0.85rem] tracking-wide">Add Category</p>
+              </div>
+              <button onClick={closeCatModal} className="w-8 h-8 flex items-center justify-center text-[rgba(245,237,224,0.35)] hover:text-ivory hover:bg-[rgba(255,255,255,0.05)] rounded-full transition-colors text-xl leading-none">×</button>
+            </div>
+
+            {/* Modal body */}
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className={LABEL}>Category Name *</label>
+                <input
+                  className={FIELD}
+                  value={catModalName}
+                  onChange={e => { setCatModalName(e.target.value); setCatModalSlug(slugify(e.target.value)); }}
+                  placeholder="Dhoop Sticks"
+                  autoFocus
+                  onKeyDown={e => { if (e.key === "Enter") saveCatModal(); if (e.key === "Escape") closeCatModal(); }}
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Slug (auto-generated, editable)</label>
+                <input
+                  className={FIELD}
+                  value={catModalSlug}
+                  onChange={e => setCatModalSlug(e.target.value)}
+                  placeholder="dhoop-sticks"
+                  onKeyDown={e => { if (e.key === "Enter") saveCatModal(); if (e.key === "Escape") closeCatModal(); }}
+                />
+                <p className="mt-1 font-display text-[0.34rem] tracking-[0.10em] uppercase text-[rgba(196,163,115,0.28)]">
+                  Used in URLs — lowercase, hyphens only
+                </p>
+              </div>
+            </div>
+
+            {/* Modal footer */}
+            <div className="flex gap-2 px-6 py-4 border-t border-[rgba(196,163,115,0.08)]">
+              <button onClick={closeCatModal}
+                className="font-display text-[0.42rem] tracking-[0.14em] uppercase px-4 py-2.5 border border-[rgba(196,163,115,0.18)] text-[rgba(245,237,224,0.38)] rounded-[3px] hover:border-[rgba(196,163,115,0.35)] hover:text-[rgba(245,237,224,0.62)] transition-colors">
+                Cancel
+              </button>
+              <button onClick={saveCatModal} disabled={catModalSaving}
+                className="flex-1 font-display text-[0.44rem] tracking-[0.16em] uppercase py-2.5 border border-brass text-brass bg-[rgba(196,163,115,0.06)] rounded-[3px] hover:bg-[rgba(196,163,115,0.14)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                {catModalSaving ? "Creating…" : "Create Category"}
+              </button>
+            </div>
           </div>
         </div>
       </>
