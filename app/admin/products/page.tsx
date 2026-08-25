@@ -124,7 +124,8 @@ export default function AdminProductsPage() {
   const [drawerSaving, setDrawerSaving] = useState(false);
   const [drawerImages, setDrawerImages] = useState<DbProductImage[]>([]);
   const [imgsLoading,  setImgsLoading]  = useState(false);
-  const [imgUploading, setImgUploading] = useState(false);
+  const [imgUploading,       setImgUploading]       = useState(false);
+  const [imgUploadProgress, setImgUploadProgress] = useState("");
   const imgFileRef = useRef<HTMLInputElement>(null);
 
   /* Category creation */
@@ -397,23 +398,32 @@ export default function AdminProductsPage() {
   }
 
   /* ── Product image management ── */
-  async function uploadDrawerImage(file: File) {
+  async function uploadDrawerImages(files: FileList) {
     if (!editingProd) { showToast("Save the product first before uploading images."); return; }
+    if (!CLOUD_NAME || !UPLOAD_PRESET) { showToast("Cloudinary not configured — check NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in .env.local"); return; }
     setImgUploading(true);
-    try {
-      const url = await uploadToCloudinary(file, `products/${editingProd.id}_img_${Date.now()}`);
-      const isPrimary = drawerImages.length === 0;
-      const { data, error } = await supabase.from("product_images").insert({
-        product_id: editingProd.id, url, display_order: drawerImages.length, is_primary: isPrimary, alt_text: null,
-      }).select().single();
-      if (error) throw new Error(error.message);
-      setDrawerImages(prev => [...prev, data as DbProductImage]);
-      if (isPrimary) {
-        await supabase.from("products").update({ image_url: url }).eq("id", editingProd.id);
-        setProducts(prev => prev.map(p => p.id === editingProd.id ? { ...p, image_url: url } : p));
-      }
-    } catch (err) { showToast(err instanceof Error ? err.message : "Upload failed"); }
-    finally { setImgUploading(false); if (imgFileRef.current) imgFileRef.current.value = ""; }
+    // Use a local cursor so sequential uploads see correct display_order
+    let current = [...drawerImages];
+    for (let i = 0; i < files.length; i++) {
+      setImgUploadProgress(`${i + 1} / ${files.length}`);
+      try {
+        const url = await uploadToCloudinary(files[i], `products/${editingProd.id}_img_${Date.now()}_${i}`);
+        const isPrimary = current.length === 0;
+        const { data, error } = await supabase.from("product_images").insert({
+          product_id: editingProd.id, url, display_order: current.length, is_primary: isPrimary, alt_text: null,
+        }).select().single();
+        if (error) { showToast(`Image ${i + 1} error: ${error.message}`); continue; }
+        current = [...current, data as DbProductImage];
+        setDrawerImages([...current]);
+        if (isPrimary) {
+          await supabase.from("products").update({ image_url: url }).eq("id", editingProd.id);
+          setProducts(prev => prev.map(p => p.id === editingProd.id ? { ...p, image_url: url } : p));
+        }
+      } catch (err) { showToast(`Image ${i + 1}: ${err instanceof Error ? err.message : "Upload failed"}`); }
+    }
+    setImgUploading(false);
+    setImgUploadProgress("");
+    if (imgFileRef.current) imgFileRef.current.value = "";
   }
 
   async function setPrimaryImage(img: DbProductImage) {
@@ -907,8 +917,8 @@ export default function AdminProductsPage() {
                   <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass">Images</p>
                   <label className={["font-display text-[0.38rem] tracking-[0.12em] uppercase px-3 py-1.5 border rounded-[3px] cursor-pointer transition-colors",
                     imgUploading ? "border-[rgba(196,163,115,0.18)] text-[rgba(196,163,115,0.30)] cursor-not-allowed" : "border-[rgba(196,163,115,0.25)] text-[rgba(245,237,224,0.50)] hover:border-brass hover:text-brass"].join(" ")}>
-                    {imgUploading ? "Uploading…" : "+ Upload"}
-                    <input ref={imgFileRef} type="file" accept="image/*" className="hidden" disabled={imgUploading} onChange={e => { const f = e.target.files?.[0]; if (f) uploadDrawerImage(f); }} />
+                    {imgUploading ? `Uploading ${imgUploadProgress}…` : "+ Upload"}
+                    <input ref={imgFileRef} type="file" accept="image/*" multiple className="hidden" disabled={imgUploading} onChange={e => { const files = e.target.files; if (files && files.length > 0) uploadDrawerImages(files); }} />
                   </label>
                 </div>
                 {imgsLoading ? <div className="h-20 flex items-center justify-center"><div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" /></div>
