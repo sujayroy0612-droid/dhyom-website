@@ -79,7 +79,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const cols =
     "id,name,type,subcategory,collection,fragrance,price,description,bullet_points,image_url,image_urls,category,stock,is_visible,created_at";
 
-  const [productRes, relatedRes, catVisRes, collVisRes] = await Promise.all([
+  const [productRes, relatedRes, catVisRes, collVisRes, imagesRes] = await Promise.all([
     supabase.from("products").select(cols).eq("id", id).single(),
     supabase
       .from("products")
@@ -99,11 +99,22 @@ export default async function ProductDetailPage({ params }: PageProps) {
       .eq("category", category)
       .eq("subcategory", subcategory)
       .single(),
+    supabase
+      .from("product_images")
+      .select("url, display_order, is_primary")
+      .eq("product_id", id)
+      .order("display_order"),
   ]);
 
   if (productRes.error || !productRes.data) notFound();
 
   const product = productRes.data as DbProduct;
+
+  // Build gallery images: prefer product_images table, fall back to image_url + image_urls
+  const productImgs = (imagesRes.data ?? []) as { url: string; display_order: number; is_primary: boolean }[];
+  const galleryImages: string[] = productImgs.length > 0
+    ? productImgs.map(i => i.url)
+    : [product.image_url, ...(product.image_urls ?? [])].filter((u): u is string => !!u);
   if (product.category !== category) notFound();
   if (!product.is_visible) notFound();
   if (catVisRes.data?.is_visible === false) notFound();
@@ -157,7 +168,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             {/* ── Left: image gallery ── */}
             <div className="w-full lg:w-1/2 flex-shrink-0">
               <ProductGallery
-                images={[product.image_url, ...(product.image_urls ?? [])].filter(Boolean) as string[]}
+                images={galleryImages}
                 alt={product.name}
               />
             </div>

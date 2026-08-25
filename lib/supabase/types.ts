@@ -25,6 +25,36 @@ export interface DbProduct {
   is_visible: boolean;
   is_featured: boolean;
   created_at: string;
+  // Extended fields (added via Supabase migration)
+  sku: string | null;
+  short_description: string | null;
+  long_description: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  weight_grams: number | null;
+  length_cm: number | null;
+  width_cm: number | null;
+  height_cm: number | null;
+  hsn_code: string | null;
+}
+
+export interface DbProductImage {
+  id: string;
+  product_id: string;
+  url: string;
+  display_order: number;
+  is_primary: boolean;
+  alt_text: string | null;
+  created_at: string;
+}
+
+export interface DbCategory {
+  id: string;
+  name: string;
+  slug: string;
+  parent_id: string | null;
+  display_order: number;
+  created_at: string;
 }
 
 export type OrderStatus =
