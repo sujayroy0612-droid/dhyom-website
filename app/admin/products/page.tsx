@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
-import type { DbProductImage } from "@/lib/supabase/types";
 
 const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
@@ -35,12 +34,16 @@ interface Product {
   id: string; name: string; category: string; type: string;
   subcategory: string | null; collection: string | null; fragrance: string | null;
   stock: number; price: number; mrp: number | null; image_url: string | null;
+  image_urls: string[] | null;
   bullet_points: string | null; is_visible: boolean; is_featured: boolean;
   sku: string | null; short_description: string | null; long_description: string | null;
   meta_title: string | null; meta_description: string | null;
   weight_grams: number | null; length_cm: number | null;
   width_cm: number | null; height_cm: number | null; hsn_code: string | null;
 }
+
+// Drawer uses this instead of the product_images table
+interface DrawerImage { url: string; isPrimary: boolean; }
 
 interface DrawerForm {
   name: string; category: string; type: string;
@@ -122,8 +125,7 @@ export default function AdminProductsPage() {
   const [editingProd,  setEditingProd]  = useState<Product | null>(null);
   const [drawerForm,   setDrawerForm]   = useState<DrawerForm>(EMPTY_DRAWER);
   const [drawerSaving, setDrawerSaving] = useState(false);
-  const [drawerImages, setDrawerImages] = useState<DbProductImage[]>([]);
-  const [imgsLoading,  setImgsLoading]  = useState(false);
+  const [drawerImages, setDrawerImages] = useState<DrawerImage[]>([]);
   const [imgUploading,       setImgUploading]       = useState(false);
   const [imgUploadProgress, setImgUploadProgress] = useState("");
   const [imgError,           setImgError]           = useState("");
@@ -149,7 +151,7 @@ export default function AdminProductsPage() {
   useEffect(() => {
     supabase
       .from("products")
-      .select("id,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code")
+      .select("id,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,image_urls,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code")
       .order("category").order("name")
       .then(({ data }) => {
         const prods = (data ?? []) as Product[];
@@ -282,12 +284,16 @@ export default function AdminProductsPage() {
   function collapseAll() { setExpandedCats(new Set<string>()); setExpandedSubs(new Set<string>()); }
 
   /* ── Drawer ── */
-  async function openEdit(product: Product) {
+  function openEdit(product: Product) {
     setEditingProd(product); setDrawerForm(productToDrawer(product));
-    setShowNewCat(false); setDrawerOpen(true); setImgsLoading(true);
-    const { data } = await supabase.from("product_images").select("*").eq("product_id", product.id).order("display_order");
-    setDrawerImages((data ?? []) as DbProductImage[]);
-    setImgsLoading(false);
+    setShowNewCat(false); setDrawerOpen(true); setImgError("");
+    // Build image list from existing product columns — no separate table query needed
+    const imgs: DrawerImage[] = [];
+    if (product.image_url) imgs.push({ url: product.image_url, isPrimary: true });
+    for (const u of (product.image_urls ?? [])) {
+      if (u && u !== product.image_url) imgs.push({ url: u, isPrimary: false });
+    }
+    setDrawerImages(imgs);
   }
 
   function openAdd(defaultCategory?: string, defaultSub?: string) {
@@ -398,13 +404,24 @@ export default function AdminProductsPage() {
     setDrawerSaving(false);
   }
 
-  /* ── Product image management ── */
+  /* ── Product image management (uses products.image_url + image_urls — no product_images table) ── */
+
+  // Sync current drawerImages state back to the products table
+  async function syncImages(next: DrawerImage[], prodId: string) {
+    const primary   = next.find(i => i.isPrimary)?.url ?? null;
+    const extras    = next.filter(i => !i.isPrimary).map(i => i.url);
+    const { error } = await supabase.from("products")
+      .update({ image_url: primary, image_urls: extras.length ? extras : [] })
+      .eq("id", prodId);
+    if (error) setImgError("Failed to save image order: " + error.message);
+    else setProducts(prev => prev.map(p => p.id === prodId ? { ...p, image_url: primary, image_urls: extras } : p));
+  }
+
   async function uploadDrawerImages(files: FileList) {
     if (!editingProd) { setImgError("Save the product first, then upload images."); return; }
     setImgError(""); setImgUploading(true);
     let current = [...drawerImages];
 
-    // Get the current session token to authenticate the API route
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token ?? "";
 
@@ -415,7 +432,6 @@ export default function AdminProductsPage() {
         const fd = new FormData();
         fd.append("file", files[i]);
         fd.append("productId", editingProd.id);
-        fd.append("displayOrder", String(current.length));
         fd.append("isPrimary", String(isPrimary));
 
         const res = await fetch("/api/admin/upload-product-image", {
@@ -430,14 +446,9 @@ export default function AdminProductsPage() {
           continue;
         }
 
-        const { image, url } = await res.json() as { image: DbProductImage; url: string };
-        current = [...current, image];
+        const { url } = await res.json() as { url: string };
+        current = [...current, { url, isPrimary }];
         setDrawerImages([...current]);
-
-        // If primary, sync image_url in local products state
-        if (isPrimary) {
-          setProducts(prev => prev.map(p => p.id === editingProd!.id ? { ...p, image_url: url } : p));
-        }
       } catch (err) {
         setImgError(`Image ${i + 1}: ${err instanceof Error ? err.message : "Upload failed"}`);
       }
@@ -448,29 +459,20 @@ export default function AdminProductsPage() {
     if (imgFileRef.current) imgFileRef.current.value = "";
   }
 
-  async function setPrimaryImage(img: DbProductImage) {
+  async function setPrimaryImage(idx: number) {
     if (!editingProd) return;
-    await supabase.from("product_images").update({ is_primary: false }).eq("product_id", editingProd.id);
-    await supabase.from("product_images").update({ is_primary: true }).eq("id", img.id);
-    await supabase.from("products").update({ image_url: img.url }).eq("id", editingProd.id);
-    setDrawerImages(prev => prev.map(i => ({ ...i, is_primary: i.id === img.id })));
-    setProducts(prev => prev.map(p => p.id === editingProd.id ? { ...p, image_url: img.url } : p));
+    const next = drawerImages.map((img, i) => ({ ...img, isPrimary: i === idx }));
+    setDrawerImages(next);
+    await syncImages(next, editingProd.id);
   }
 
-  async function deleteImage(img: DbProductImage) {
+  async function deleteImage(idx: number) {
     if (!editingProd || !confirm("Delete this image?")) return;
-    const { error } = await supabase.from("product_images").delete().eq("id", img.id);
-    if (error) { showToast("Error: " + error.message); return; }
-    const remaining = drawerImages.filter(i => i.id !== img.id);
-    setDrawerImages(remaining);
-    if (img.is_primary && remaining.length > 0) {
-      const next = remaining[0];
-      await supabase.from("product_images").update({ is_primary: true }).eq("id", next.id);
-      await supabase.from("products").update({ image_url: next.url }).eq("id", editingProd.id);
-      setDrawerImages(prev => prev.filter(i => i.id !== img.id).map((i, idx) => idx === 0 ? { ...i, is_primary: true } : i));
-      setProducts(prev => prev.map(p => p.id === editingProd.id ? { ...p, image_url: next.url } : p));
-    }
-    if (remaining.length === 0) setProducts(prev => prev.map(p => p.id === editingProd.id ? { ...p, image_url: null } : p));
+    const wasPrimary = drawerImages[idx].isPrimary;
+    let next = drawerImages.filter((_, i) => i !== idx);
+    if (wasPrimary && next.length > 0) next = [{ ...next[0], isPrimary: true }, ...next.slice(1)];
+    setDrawerImages(next);
+    await syncImages(next, editingProd.id);
   }
 
   /* ── Computed ── */
@@ -949,22 +951,21 @@ export default function AdminProductsPage() {
                     <button onClick={() => setImgError("")} className="text-[rgba(220,80,80,0.55)] hover:text-[rgba(220,80,80,0.90)] text-base leading-none flex-shrink-0">×</button>
                   </div>
                 )}
-                {imgsLoading ? <div className="h-20 flex items-center justify-center"><div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" /></div>
-                : drawerImages.length === 0 ? (
+                {drawerImages.length === 0 ? (
                   <div className="border border-dashed border-[rgba(196,163,115,0.15)] rounded-[6px] p-5 text-center">
                     <p className="font-display text-[0.36rem] uppercase text-[rgba(196,163,115,0.22)]">No images yet — click + Upload to add up to 5 images</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
-                    {drawerImages.map(img => (
-                      <div key={img.id} className="relative group">
-                        <div className={`aspect-square rounded-[4px] overflow-hidden border relative ${img.is_primary ? "border-brass" : "border-[rgba(196,163,115,0.18)]"}`}>
+                    {drawerImages.map((img, idx) => (
+                      <div key={img.url} className="relative group">
+                        <div className={`aspect-square rounded-[4px] overflow-hidden border relative ${img.isPrimary ? "border-brass" : "border-[rgba(196,163,115,0.18)]"}`}>
                           <Image src={img.url} alt="" fill className="object-cover" sizes="160px" />
-                          {img.is_primary && <div className="absolute top-1 left-1 bg-brass/90 text-[#1a0a12] font-display text-[0.26rem] uppercase px-1.5 py-0.5 rounded-sm">Primary</div>}
+                          {img.isPrimary && <div className="absolute top-1 left-1 bg-brass/90 text-[#1a0a12] font-display text-[0.26rem] uppercase px-1.5 py-0.5 rounded-sm">Primary</div>}
                         </div>
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-[4px] flex items-center justify-center gap-1">
-                          {!img.is_primary && <button onClick={() => setPrimaryImage(img)} className="font-display text-[0.26rem] uppercase px-2 py-1 bg-brass text-[#1a0a12] rounded-[2px]">Set Primary</button>}
-                          <button onClick={() => deleteImage(img)} className="font-display text-[0.26rem] uppercase px-2 py-1 bg-[rgba(200,60,60,0.80)] text-ivory rounded-[2px]">Delete</button>
+                          {!img.isPrimary && <button onClick={() => setPrimaryImage(idx)} className="font-display text-[0.26rem] uppercase px-2 py-1 bg-brass text-[#1a0a12] rounded-[2px]">Set Primary</button>}
+                          <button onClick={() => deleteImage(idx)} className="font-display text-[0.26rem] uppercase px-2 py-1 bg-[rgba(200,60,60,0.80)] text-ivory rounded-[2px]">Delete</button>
                         </div>
                       </div>
                     ))}

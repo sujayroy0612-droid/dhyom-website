@@ -26,11 +26,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const formData    = await req.formData();
-  const file        = formData.get("file") as File | null;
-  const productId   = formData.get("productId") as string | null;
-  const displayOrder = Number(formData.get("displayOrder") ?? "0");
-  const isPrimary    = formData.get("isPrimary") === "true";
+  const formData  = await req.formData();
+  const file      = formData.get("file") as File | null;
+  const productId = formData.get("productId") as string | null;
 
   if (!file || !productId) {
     return NextResponse.json({ error: "Missing file or productId" }, { status: 400 });
@@ -38,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   const sb = adminClient();
 
-  // Create storage bucket if it doesn't exist yet (public read)
+  // Create bucket if it doesn't exist yet (public read)
   await sb.storage.createBucket(BUCKET, { public: true }).catch(() => {});
 
   const ext  = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
@@ -54,19 +52,6 @@ export async function POST(req: NextRequest) {
 
   const { data: { publicUrl } } = sb.storage.from(BUCKET).getPublicUrl(path);
 
-  // Insert into product_images table using service-role key (bypasses schema cache / RLS issues)
-  const { data: imgRow, error: dbErr } = await sb
-    .from("product_images")
-    .insert({ product_id: productId, url: publicUrl, display_order: displayOrder, is_primary: isPrimary, alt_text: null })
-    .select()
-    .single();
-
-  if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
-
-  // If this is the primary image, update products.image_url too
-  if (isPrimary) {
-    await sb.from("products").update({ image_url: publicUrl }).eq("id", productId);
-  }
-
-  return NextResponse.json({ image: imgRow, url: publicUrl });
+  // Return just the URL — the client writes image_url / image_urls on products directly
+  return NextResponse.json({ url: publicUrl });
 }
