@@ -194,7 +194,7 @@ function buildHtml(data: {
  *   WHATSAPP_TEMPLATE_NAME env var and update the components payload to pass
  *   4 parameters: order_number, total_amount, payment_type, customer_name.
  * ──────────────────────────────────────────────────────────────────────── */
-async function sendWhatsAppOrderAlert(ctx: {
+async function sendWhatsAppOrderAlert(_ctx: {
   orderNumber: string;
   customerName: string;
   total: number;
