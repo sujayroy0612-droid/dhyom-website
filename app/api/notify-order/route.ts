@@ -194,12 +194,9 @@ function buildHtml(data: {
  *   WHATSAPP_TEMPLATE_NAME env var and update the components payload to pass
  *   4 parameters: order_number, total_amount, payment_type, customer_name.
  * ──────────────────────────────────────────────────────────────────────── */
-async function sendWhatsAppOrderAlert(_ctx: {
-  orderNumber: string;
-  customerName: string;
-  total: number;
-  paymentType?: string;
-}): Promise<void> {
+// TODO: add (ctx: { orderNumber, customerName, total, paymentType }) param
+// when order_alert_dhyom template is approved and components payload is wired in.
+async function sendWhatsAppOrderAlert(): Promise<void> {
   const token      = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const recipient  = process.env.WHATSAPP_RECIPIENT_NUMBER;
@@ -294,12 +291,12 @@ export async function POST(req: NextRequest) {
     if (error) {
       console.error("[notify-order] Resend error:", error);
       // Still attempt WhatsApp even if email failed — do NOT await, fire-and-forget
-      void sendWhatsAppOrderAlert({ orderNumber, customerName, total, paymentType });
+      void sendWhatsAppOrderAlert();
       return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
     }
 
     // Fire WhatsApp alert alongside the email — failure here never breaks the response
-    await sendWhatsAppOrderAlert({ orderNumber, customerName, total, paymentType });
+    await sendWhatsAppOrderAlert();
 
     return NextResponse.json({ ok: true });
   } catch (err) {
