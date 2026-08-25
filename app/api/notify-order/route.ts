@@ -185,6 +185,72 @@ function buildHtml(data: {
 </html>`;
 }
 
+/* ── WhatsApp Cloud API alert ─────────────────────────────────────────────
+ * Uses the hello_world template (no parameters) while the account is in
+ * test mode. The recipient number must first be added via the Meta developer
+ * sandbox UI before it will receive messages.
+ *
+ * TODO: When custom template order_alert_dhyom is approved by Meta, swap
+ *   WHATSAPP_TEMPLATE_NAME env var and update the components payload to pass
+ *   4 parameters: order_number, total_amount, payment_type, customer_name.
+ * ──────────────────────────────────────────────────────────────────────── */
+async function sendWhatsAppOrderAlert(ctx: {
+  orderNumber: string;
+  customerName: string;
+  total: number;
+  paymentType?: string;
+}): Promise<void> {
+  const token      = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const recipient  = process.env.WHATSAPP_RECIPIENT_NUMBER;
+  const template   = process.env.WHATSAPP_TEMPLATE_NAME ?? "hello_world";
+  const langCode   = process.env.WHATSAPP_TEMPLATE_LANGUAGE ?? "en_US";
+
+  if (!token || !phoneNumId || !recipient) {
+    console.warn("[notify-order/whatsapp] Env vars not set — skipping WhatsApp alert");
+    return;
+  }
+
+  const url  = `https://graph.facebook.com/v22.0/${phoneNumId}/messages`;
+  const body = {
+    messaging_product: "whatsapp",
+    to: recipient,
+    type: "template",
+    template: {
+      name: template,
+      language: { code: langCode },
+      // No components needed for hello_world (zero parameters).
+      // When switching to order_alert_dhyom, add:
+      // components: [{ type: "body", parameters: [
+      //   { type: "text", text: ctx.orderNumber },
+      //   { type: "text", text: `₹${ctx.total}` },
+      //   { type: "text", text: ctx.paymentType ?? "online" },
+      //   { type: "text", text: ctx.customerName },
+      // ]}]
+    },
+  };
+
+  try {
+    const res = await fetch(url, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body:    JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      console.error("[notify-order/whatsapp] API error:", res.status, JSON.stringify(errBody));
+      return;
+    }
+
+    const data = await res.json();
+    console.log("[notify-order/whatsapp] Sent — message id:", (data as { messages?: { id: string }[] }).messages?.[0]?.id);
+  } catch (err) {
+    // Never let WhatsApp errors block or fail the order flow
+    console.error("[notify-order/whatsapp] Fetch error:", err);
+  }
+}
+
 export async function POST(req: NextRequest) {
   // Only accept calls from our own server (verify-payment sends CRON_SECRET as Bearer)
   const cronSecret = process.env.CRON_SECRET;
@@ -227,8 +293,13 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("[notify-order] Resend error:", error);
+      // Still attempt WhatsApp even if email failed — do NOT await, fire-and-forget
+      void sendWhatsAppOrderAlert({ orderNumber, customerName, total, paymentType });
       return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
     }
+
+    // Fire WhatsApp alert alongside the email — failure here never breaks the response
+    await sendWhatsAppOrderAlert({ orderNumber, customerName, total, paymentType });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
