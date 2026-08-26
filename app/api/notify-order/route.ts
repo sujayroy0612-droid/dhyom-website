@@ -186,17 +186,23 @@ function buildHtml(data: {
 }
 
 /* ── WhatsApp Cloud API alert ─────────────────────────────────────────────
- * Uses the hello_world template (no parameters) while the account is in
- * test mode. The recipient number must first be added via the Meta developer
- * sandbox UI before it will receive messages.
+ * Live template   : WHATSAPP_TEMPLATE_NAME=hello_world (no parameters)
+ * Pending template: WHATSAPP_TEMPLATE_NAME_PENDING=order_alert_dhyom
  *
- * TODO: When custom template order_alert_dhyom is approved by Meta, swap
- *   WHATSAPP_TEMPLATE_NAME env var and update the components payload to pass
- *   4 parameters: order_number, total_amount, payment_type, customer_name.
+ * TODO: Once order_alert_dhyom is approved by Meta (check WhatsApp Manager
+ *   > Message templates > Test WhatsApp Business Account), change
+ *   WHATSAPP_TEMPLATE_NAME to 'order_alert_dhyom' in .env.local and Vercel,
+ *   then this function will automatically send real order_number,
+ *   total_amount, and customer_name instead of the empty hello_world message.
+ *
+ * The function already builds the 3-parameter components payload for
+ * order_alert_dhyom. Switching the env var is the only action required.
  * ──────────────────────────────────────────────────────────────────────── */
-// TODO: add (ctx: { orderNumber, customerName, total, paymentType }) param
-// when order_alert_dhyom template is approved and components payload is wired in.
-async function sendWhatsAppOrderAlert(): Promise<void> {
+async function sendWhatsAppOrderAlert(ctx: {
+  orderNumber: string;
+  total: number;
+  customerName: string;
+}): Promise<void> {
   const token      = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const recipient  = process.env.WHATSAPP_RECIPIENT_NUMBER;
@@ -208,6 +214,22 @@ async function sendWhatsAppOrderAlert(): Promise<void> {
     return;
   }
 
+  // hello_world has zero parameters — components must be omitted entirely.
+  // Any other template (e.g. order_alert_dhyom) gets 3 body parameters:
+  //   {{1}} order_number  {{2}} total_amount  {{3}} customer_name
+  const components = template === "hello_world"
+    ? undefined
+    : [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: ctx.orderNumber },
+            { type: "text", text: `₹${Number(ctx.total).toLocaleString("en-IN")}` },
+            { type: "text", text: ctx.customerName },
+          ],
+        },
+      ];
+
   const url  = `https://graph.facebook.com/v22.0/${phoneNumId}/messages`;
   const body = {
     messaging_product: "whatsapp",
@@ -216,14 +238,7 @@ async function sendWhatsAppOrderAlert(): Promise<void> {
     template: {
       name: template,
       language: { code: langCode },
-      // No components needed for hello_world (zero parameters).
-      // When switching to order_alert_dhyom, add:
-      // components: [{ type: "body", parameters: [
-      //   { type: "text", text: ctx.orderNumber },
-      //   { type: "text", text: `₹${ctx.total}` },
-      //   { type: "text", text: ctx.paymentType ?? "online" },
-      //   { type: "text", text: ctx.customerName },
-      // ]}]
+      ...(components ? { components } : {}),
     },
   };
 
@@ -241,7 +256,10 @@ async function sendWhatsAppOrderAlert(): Promise<void> {
     }
 
     const data = await res.json();
-    console.log("[notify-order/whatsapp] Sent — message id:", (data as { messages?: { id: string }[] }).messages?.[0]?.id);
+    console.log(
+      `[notify-order/whatsapp] Sent (template: ${template}) — message id:`,
+      (data as { messages?: { id: string }[] }).messages?.[0]?.id,
+    );
   } catch (err) {
     // Never let WhatsApp errors block or fail the order flow
     console.error("[notify-order/whatsapp] Fetch error:", err);
@@ -291,12 +309,12 @@ export async function POST(req: NextRequest) {
     if (error) {
       console.error("[notify-order] Resend error:", error);
       // Still attempt WhatsApp even if email failed — do NOT await, fire-and-forget
-      void sendWhatsAppOrderAlert();
+      void sendWhatsAppOrderAlert({ orderNumber, total, customerName });
       return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
     }
 
     // Fire WhatsApp alert alongside the email — failure here never breaks the response
-    await sendWhatsAppOrderAlert();
+    await sendWhatsAppOrderAlert({ orderNumber, total, customerName });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
