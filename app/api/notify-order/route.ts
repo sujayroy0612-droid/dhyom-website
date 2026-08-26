@@ -200,7 +200,7 @@ async function sendWhatsAppOrderAlert(ctx: {
   const phoneNumId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const recipient  = process.env.WHATSAPP_RECIPIENT_NUMBER;
   const template   = process.env.WHATSAPP_TEMPLATE_NAME ?? "order_alert_dhyom";
-  const langCode   = process.env.WHATSAPP_TEMPLATE_LANGUAGE ?? "en_US";
+  const langCode   = process.env.WHATSAPP_TEMPLATE_LANGUAGE ?? "en";
 
   if (!token || !phoneNumId || !recipient) {
     console.warn("[notify-order/whatsapp] Env vars not set — skipping WhatsApp alert");
