@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 import { createAndShipOrder } from "@/lib/shiprocket";
+import React from "react";
+import { pdf } from "@react-pdf/renderer";
+import { InvoicePdf } from "@/lib/invoice-pdf";
 
 const FOUNDER_EMAIL = "dhyomecom@gmail.com";
 
@@ -305,7 +308,8 @@ function buildCustomerHtml(data: {
     <td style="padding:24px 32px 0;">
       <p style="margin:0 0 8px;color:rgba(245,237,224,0.90);font-size:16px;line-height:1.6;">Namaste, ${data.customerName.split(" ")[0]} 🙏</p>
       <p style="margin:0 0 24px;color:rgba(245,237,224,0.60);font-size:14px;line-height:1.7;">
-        Thank you for your order. We have received your payment and your sacred items are being prepared with care.${invoiceNumber ? " Your GST invoice is attached to this email." : ""}
+        Thank you for your order. We have received your payment and your sacred items are being prepared with care.
+        ${invoiceNumber ? ` Your GST invoice is attached to this email. You can also <a href="https://www.dhyom.in/invoice/${data.orderNumber}" style="color:#c4a373;">view it online</a>.` : ""}
       </p>
     </td>
   </tr>
@@ -431,9 +435,6 @@ async function sendCustomerConfirmation(data: {
   let pdfAttachment: { filename: string; content: string } | undefined;
   if (invoiceNumber) {
     try {
-      const { pdf }        = await import("@react-pdf/renderer");
-      const { InvoicePdf } = await import("@/lib/invoice-pdf");
-      const React          = (await import("react")).default;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pdfEl: any = React.createElement(InvoicePdf, {
         orderNumber:     data.orderNumber,
@@ -453,7 +454,6 @@ async function sendCustomerConfirmation(data: {
         paymentMethod:   data.paymentType === "partial_cod" ? "cod" : "online",
         paymentStatus:   "paid",
       });
-      // toBuffer() type includes ReadableStream but at runtime returns Buffer
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rawBuffer = await pdf(pdfEl).toBuffer() as any as Buffer;
       pdfAttachment = {
