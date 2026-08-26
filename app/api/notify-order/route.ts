@@ -414,7 +414,7 @@ async function sendCustomerConfirmation(data: {
           const gst_amount    = Math.round((sub - taxable_value) * 100) / 100;
           const total_amount  = Math.round((sub + sf) * 100) / 100;
           const { data: inv, error: invErr } = await sb.from("invoices")
-            .insert({ invoice_number: invNum, order_id: orderRow.id, taxable_value, gst_amount, total_amount })
+            .insert({ invoice_number: invNum, order_id: orderRow.id, order_number: data.orderNumber, taxable_value, gst_amount, total_amount })
             .select("invoice_number, created_at").single();
           if (invErr) console.error("[notify-order/customer-email] Invoice insert error:", invErr);
           invoiceNumber = inv?.invoice_number ?? null;
@@ -431,33 +431,34 @@ async function sendCustomerConfirmation(data: {
   let pdfAttachment: { filename: string; content: string } | undefined;
   if (invoiceNumber) {
     try {
-      const { renderToBuffer } = await import("@react-pdf/renderer");
-      const { InvoicePdf }     = await import("@/lib/invoice-pdf");
-      const React              = (await import("react")).default;
-      const buffer = await renderToBuffer(
-        React.createElement(InvoicePdf, {
-          orderNumber:     data.orderNumber,
-          invoiceNumber,
-          invoiceDate,
-          orderDate:       now,
-          customerName:    data.customerName,
-          phone:           data.phone,
-          shippingStreet:  data.shippingStreet,
-          shippingCity:    data.shippingCity,
-          shippingState:   data.shippingState,
-          shippingPincode: data.shippingPincode,
-          items:           data.items,
-          subtotal:        data.subtotal,
-          shippingFee:     data.shippingFee ?? 0,
-          total:           data.total,
-          paymentMethod:   data.paymentType === "partial_cod" ? "cod" : "online",
-          paymentStatus:   "paid",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        }) as any,
-      );
+      const { pdf }        = await import("@react-pdf/renderer");
+      const { InvoicePdf } = await import("@/lib/invoice-pdf");
+      const React          = (await import("react")).default;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pdfEl: any = React.createElement(InvoicePdf, {
+        orderNumber:     data.orderNumber,
+        invoiceNumber:   invoiceNumber!,
+        invoiceDate,
+        orderDate:       now,
+        customerName:    data.customerName,
+        phone:           data.phone,
+        shippingStreet:  data.shippingStreet,
+        shippingCity:    data.shippingCity,
+        shippingState:   data.shippingState,
+        shippingPincode: data.shippingPincode,
+        items:           data.items,
+        subtotal:        data.subtotal,
+        shippingFee:     data.shippingFee ?? 0,
+        total:           data.total,
+        paymentMethod:   data.paymentType === "partial_cod" ? "cod" : "online",
+        paymentStatus:   "paid",
+      });
+      // toBuffer() type includes ReadableStream but at runtime returns Buffer
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rawBuffer = await pdf(pdfEl).toBuffer() as any as Buffer;
       pdfAttachment = {
         filename: `Dhyom_Invoice_${invoiceNumber}.pdf`,
-        content:  buffer.toString("base64"),
+        content:  Buffer.from(rawBuffer).toString("base64"),
       };
       console.log(`[notify-order/customer-email] PDF ready: ${invoiceNumber}`);
     } catch (err) {
