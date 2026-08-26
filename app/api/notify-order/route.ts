@@ -407,14 +407,19 @@ async function sendCustomerConfirmation(data: {
       } else {
         const { data: invNum } = await sb.rpc("generate_invoice_number");
         if (invNum) {
-          const taxable_value = Math.round(Number(data.subtotal) * 100) / 100;
-          const gst_amount    = Math.round(taxable_value * 5) / 100;
-          const total_amount  = Math.round((taxable_value + gst_amount + Number(data.shippingFee ?? 0)) * 100) / 100;
-          const { data: inv } = await sb.from("invoices")
-            .insert({ invoice_number: invNum, order_id: orderRow.id, order_number: data.orderNumber, taxable_value, gst_amount, total_amount })
+          // subtotal is GST-inclusive; back-calculate taxable (excl. GST) for record
+          const sub           = Number(data.subtotal ?? 0);
+          const sf            = Number(data.shippingFee ?? 0);
+          const taxable_value = Math.round((sub / 1.05) * 100) / 100;
+          const gst_amount    = Math.round((sub - taxable_value) * 100) / 100;
+          const total_amount  = Math.round((sub + sf) * 100) / 100;
+          const { data: inv, error: invErr } = await sb.from("invoices")
+            .insert({ invoice_number: invNum, order_id: orderRow.id, taxable_value, gst_amount, total_amount })
             .select("invoice_number, created_at").single();
+          if (invErr) console.error("[notify-order/customer-email] Invoice insert error:", invErr);
           invoiceNumber = inv?.invoice_number ?? null;
           invoiceDate   = inv?.created_at ?? now;
+          console.log(`[notify-order/customer-email] Invoice created: ${invoiceNumber ?? "FAILED"}`);
         }
       }
     }

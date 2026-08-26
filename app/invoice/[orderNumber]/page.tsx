@@ -75,6 +75,13 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
           html, body { background: white !important; color: #111 !important; margin: 0; padding: 0; }
           .no-print { display: none !important; }
           .page-wrap { box-shadow: none !important; }
+          /* Hide global chrome: announcement bar (fixed), header, footer, floating buttons */
+          header,
+          footer,
+          [style*="position: fixed"],
+          [style*="position:fixed"] { display: none !important; }
+          /* Remove announcement-bar offset from main */
+          main { padding-top: 0 !important; }
         }
         body { font-family: Arial, Helvetica, sans-serif; background: #f5f5f5; color: #111; }
         .page-wrap { color: #111 !important; }
