@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingIncludes: {
+    "/api/notify-order": ["./node_modules/pdfkit/**/*"],
+  },
   experimental: {
     serverComponentsExternalPackages: ["@react-pdf/renderer", "pdfkit"],
   },
