@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { PrintButton } from "./PrintButton";
+import { fetchSiteAssets } from "@/lib/supabase/site-assets";
 
 function adminClient() {
   return createClient(
@@ -43,8 +45,12 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
   const { orderNumber } = params;
   const sb = adminClient();
 
-  const oRes = await sb.from("orders").select("*").eq("order_number", orderNumber).single();
+  const [oRes, assets] = await Promise.all([
+    sb.from("orders").select("*").eq("order_number", orderNumber).single(),
+    fetchSiteAssets().catch(() => ({})),
+  ]);
   if (!oRes.data) notFound();
+  const logoUrl = (assets as Record<string, string | null>).logo ?? null;
 
   const iRes = await sb.from("invoices").select("*").eq("order_id", oRes.data.id).maybeSingle();
   if (!iRes.data) notFound();
@@ -89,7 +95,7 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
 
       <PrintButton orderNumber={o.order_number} />
 
-      <div className="no-print" style={{ height: "48px", background: "#f5f5f5" }} />
+      <div className="no-print" style={{ height: "64px", background: "#f5f5f5" }} />
       <div style={{ minHeight: "100vh", background: "#f5f5f5", paddingBottom: "40px" }}>
 
       {/* ─── A4 page wrapper ─────────────────────────────── */}
@@ -102,7 +108,16 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
         {/* ════════════════════════════════════════════════
             TAX INVOICE
         ════════════════════════════════════════════════ */}
-        <div style={{ padding: "6px 14px 10px" }}>
+        <div style={{ padding: "12px 14px 10px" }}>
+
+          {/* Brand logo */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "10px", paddingBottom: "8px", borderBottom: "1px solid #e0e0e0" }}>
+            {logoUrl ? (
+              <Image src={logoUrl} alt="Dhyom" width={140} height={44} style={{ objectFit: "contain" }} />
+            ) : (
+              <span style={{ fontFamily: "'Cinzel', serif", fontSize: "22px", letterSpacing: "6px", color: "#1a0a12", fontWeight: "bold" }}>DHYOM</span>
+            )}
+          </div>
 
           {/* Invoice header row */}
           <div style={{ borderBottom: "1px solid #ccc", paddingBottom: "6px", marginBottom: "6px" }}>
