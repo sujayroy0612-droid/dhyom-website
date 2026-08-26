@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
 import { createAndShipOrder } from "@/lib/shiprocket";
-import React from "react";
-import { pdf } from "@react-pdf/renderer";
-import { InvoicePdf } from "@/lib/invoice-pdf";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 const FOUNDER_EMAIL = "dhyomecom@gmail.com";
 
@@ -370,6 +368,191 @@ function buildCustomerHtml(data: {
 </html>`;
 }
 
+/* ── pdf-lib invoice generator ───────────────────────────────────────────── */
+interface InvoiceItem { name: string; label?: string; price: number; quantity: number }
+
+async function buildInvoicePdf(d: {
+  orderNumber: string; invoiceNumber: string; invoiceDate: string; orderDate: string;
+  customerName: string; phone: string;
+  shippingStreet: string; shippingCity: string; shippingState: string; shippingPincode: string;
+  items: InvoiceItem[]; shippingFee: number; total: number;
+  paymentMethod: string;
+}): Promise<Uint8Array> {
+  const doc  = await PDFDocument.create();
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const reg  = await doc.embedFont(StandardFonts.Helvetica);
+
+  const W = 595.28, H = 841.89;
+  const page = doc.addPage([W, H]);
+  const black = rgb(0, 0, 0);
+  const grey  = rgb(0.6, 0.6, 0.6);
+  const lgrey = rgb(0.9, 0.9, 0.9);
+
+  const SELLER_NAME  = "Sujay, trading as Yukti";
+  const SELLER_SHORT = "Yukti";
+  const SELLER_ADDR  = "Ground Floor, Road Number 8A, near Ideal Public School, Rajiv Nagar, Patna, Bihar – 800024";
+  const SELLER_GSTIN = "10EFQPS4606H1ZC";
+  const SELLER_PAN   = "EFQPS4606H";
+
+  function r2(n: number) { return Math.round(n * 100) / 100; }
+  function fmtDate(iso: string) {
+    const d = new Date(iso);
+    return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+  }
+  function inr(n: number) { return n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function line(x1: number, y1: number, x2: number, y2: number, w = 0.5) {
+    page.drawLine({ start: { x: x1, y: y1 }, end: { x: x2, y: y2 }, thickness: w, color: black });
+  }
+  function rect(x: number, y: number, w: number, h: number, fill?: ReturnType<typeof rgb>) {
+    page.drawRectangle({ x, y, width: w, height: h, color: fill, borderColor: black, borderWidth: 0.5 });
+  }
+  function text(t: string, x: number, y: number, size: number, font = reg, color = black) {
+    page.drawText(t, { x, y, size, font, color });
+  }
+
+  const mx = 28, my = H - 28; // margins
+  let cy = my; // cursor y (top-down)
+
+  // ── Header ──────────────────────────────────────────────────────────────
+  rect(mx, cy - 22, 100, 18, lgrey);
+  text("TAX INVOICE", mx + 4, cy - 16, 9, bold);
+  text(`Order ID: ${d.orderNumber}`, mx + 108, cy - 10, 8);
+  text(`Order Date: ${fmtDate(d.orderDate)}`, mx + 108, cy - 20, 8);
+  const rightX = W - 28;
+  text(`Invoice No: ${d.invoiceNumber}`, rightX - 160, cy - 10, 8);
+  text(`Invoice Date: ${fmtDate(d.invoiceDate)}`, rightX - 160, cy - 20, 8);
+  text(`GSTIN: ${SELLER_GSTIN}`, rightX - 160, cy - 30, 8);
+  text(`PAN: ${SELLER_PAN}`, rightX - 160, cy - 40, 8);
+  cy -= 50;
+  line(mx, cy, W - mx, cy);
+
+  // ── Address + Sold By block ──────────────────────────────────────────────
+  const blockH = 80;
+  const midX = mx + (W - 2*mx) * 0.58;
+  rect(mx, cy - blockH, W - 2*mx, blockH);
+  line(midX, cy, midX, cy - blockH);
+  // Left: shipping
+  text("SHIPPING / BILLING ADDRESS", mx + 4, cy - 10, 6, bold, grey);
+  text(d.customerName, mx + 4, cy - 20, 9, bold);
+  text(d.shippingStreet, mx + 4, cy - 32, 8);
+  text(`${d.shippingCity}, ${d.shippingState} – ${d.shippingPincode}`, mx + 4, cy - 43, 8);
+  if (d.phone) text(`Ph: ${d.phone}`, mx + 4, cy - 54, 8);
+  // Right: sold by
+  text("SOLD BY", midX + 4, cy - 10, 6, bold, grey);
+  text(SELLER_SHORT, midX + 4, cy - 20, 9, bold);
+  text("Patna, Bihar", midX + 4, cy - 30, 8);
+  text(`GSTIN: ${SELLER_GSTIN}`, midX + 4, cy - 40, 8);
+  cy -= blockH + 6;
+
+  // ── Line items table ─────────────────────────────────────────────────────
+  const isIntra = d.shippingState?.toLowerCase().trim() === "bihar";
+  const cols = isIntra
+    ? [80, 28, 55, 65, 50, 50, 40, 55]   // product, qty, amount, taxable, cgst, sgst, cess, total
+    : [100, 28, 60, 70, 0, 0, 45, 60];   // product, qty, amount, taxable, igst, cess, total
+
+  const headers = isIntra
+    ? ["Product", "Qty", "Amount (₹)", "Taxable (₹)", "CGST 2.5%", "SGST 2.5%", "CESS", "Total (₹)"]
+    : ["Product", "Qty", "Amount (₹)", "Taxable (₹)", "IGST 5%", "CESS", "Total (₹)"];
+  const colWidths = isIntra ? cols : [100, 28, 60, 70, 55, 45, 60];
+  const tableW = W - 2*mx;
+  const rowH = 14;
+  // compute x positions
+  const xs: number[] = [mx];
+  for (let i = 0; i < colWidths.length - 1; i++) xs.push(xs[i] + colWidths[i]);
+
+  // Header row
+  page.drawRectangle({ x: mx, y: cy - rowH, width: tableW, height: rowH, color: lgrey });
+  for (let i = 0; i < headers.length; i++) {
+    text(headers[i], xs[i] + 2, cy - rowH + 4, 6, bold);
+    if (i > 0) line(xs[i], cy, xs[i], cy - rowH);
+  }
+  line(mx, cy, W - mx, cy);
+  line(mx, cy - rowH, W - mx, cy - rowH);
+  line(mx, cy, mx, cy - rowH);
+  line(W - mx, cy, W - mx, cy - rowH);
+  cy -= rowH;
+
+  // Item rows
+  const lineItems = d.items.map((item: InvoiceItem) => {
+    const gross   = r2(item.price * item.quantity);
+    const taxable = r2(gross / 1.05);
+    const tax     = r2(gross - taxable);
+    return { name: item.name, label: item.label, quantity: item.quantity, gross, taxable, tax };
+  });
+
+  for (const item of lineItems) {
+    const itemH = 18;
+    line(mx, cy, W - mx, cy);
+    // border sides
+    line(mx, cy, mx, cy - itemH);
+    line(W - mx, cy, W - mx, cy - itemH);
+    for (let i = 1; i < xs.length; i++) line(xs[i], cy, xs[i], cy - itemH);
+
+    text(item.name.slice(0, 22), xs[0] + 2, cy - 8, 7.5, bold);
+    if (item.label) text(item.label.slice(0, 26), xs[0] + 2, cy - 16, 6, reg, grey);
+    text(String(item.quantity), xs[1] + 2, cy - 8, 7.5);
+    text(inr(item.gross), xs[2] + 2, cy - 8, 7.5);
+    text(inr(item.taxable), xs[3] + 2, cy - 8, 7.5);
+    if (isIntra) {
+      text(inr(r2(item.tax / 2)), xs[4] + 2, cy - 8, 7.5);
+      text(inr(r2(item.tax - r2(item.tax / 2))), xs[5] + 2, cy - 8, 7.5);
+      text("0.00", xs[6] + 2, cy - 8, 7.5);
+      text(inr(item.gross), xs[7] + 2, cy - 8, 7.5);
+    } else {
+      text(inr(item.tax), xs[4] + 2, cy - 8, 7.5);
+      text("0.00", xs[5] + 2, cy - 8, 7.5);
+      text(inr(item.gross), xs[6] + 2, cy - 8, 7.5);
+    }
+    cy -= itemH;
+  }
+
+  // Shipping row
+  if (d.shippingFee > 0) {
+    const itemH = 14;
+    line(mx, cy, W - mx, cy);
+    line(mx, cy, mx, cy - itemH);
+    line(W - mx, cy, W - mx, cy - itemH);
+    for (let i = 1; i < xs.length; i++) line(xs[i], cy, xs[i], cy - itemH);
+    text("Shipping", xs[0] + 2, cy - 9, 7.5, reg, grey);
+    text("1", xs[1] + 2, cy - 9, 7.5);
+    text(inr(d.shippingFee), xs[2] + 2, cy - 9, 7.5);
+    text(inr(d.shippingFee), xs[3] + 2, cy - 9, 7.5);
+    const zeroIdx = isIntra ? [4,5,6] : [4,5];
+    for (const i of zeroIdx) text("0.00", xs[i] + 2, cy - 9, 7.5);
+    text(inr(d.shippingFee), xs[xs.length - 1] + 2, cy - 9, 7.5);
+    cy -= itemH;
+  }
+
+  // Total row
+  line(mx, cy, W - mx, cy);
+  page.drawRectangle({ x: mx, y: cy - rowH, width: tableW, height: rowH, color: lgrey });
+  text(`TOTAL  ₹${inr(d.total)}  (All values in INR)`, mx + 4, cy - rowH + 4, 7.5, bold);
+  line(mx, cy - rowH, W - mx, cy - rowH);
+  line(mx, cy, mx, cy - rowH);
+  line(W - mx, cy, W - mx, cy - rowH);
+  cy -= rowH + 12;
+
+  // ── Footer ───────────────────────────────────────────────────────────────
+  // Word-wrap seller address (~90 chars per line at 7pt)
+  const addrLine1 = `Seller: ${SELLER_NAME},`;
+  const addrLine2 = SELLER_ADDR;
+  text(addrLine1, mx, cy, 7);
+  text(addrLine2.slice(0, 90), mx, cy - 10, 7);
+  if (addrLine2.length > 90) text(addrLine2.slice(90), mx, cy - 20, 7);
+
+  // Signature block (right side)
+  text(SELLER_SHORT, W - 90, cy, 9, bold);
+  line(W - 100, cy - 22, W - mx, cy - 22, 0.5);
+  text("Authorized Signature", W - 100, cy - 30, 6, reg, grey);
+  cy -= 38;
+
+  // Payment line
+  const pmtMethod = d.paymentMethod === "cod" ? "Cash on Delivery" : "Online Payment (Razorpay)";
+  text(`Payment: ${pmtMethod}  |  This is a computer-generated invoice.`, mx, cy, 7, reg, grey);
+
+  return await doc.save();
+}
+
 async function sendCustomerConfirmation(data: {
   orderNumber:       string;
   customerName:      string;
@@ -431,14 +614,13 @@ async function sendCustomerConfirmation(data: {
     console.error("[notify-order/customer-email] Invoice error:", err);
   }
 
-  // ── 2. Generate PDF (fail gracefully — email still sends without it) ──────
+  // ── 2. Generate PDF via pdf-lib (pure-JS, no font files needed) ─────────
   let pdfAttachment: { filename: string; content: string } | undefined;
   if (invoiceNumber) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfEl: any = React.createElement(InvoicePdf, {
+      const pdfBytes = await buildInvoicePdf({
         orderNumber:     data.orderNumber,
-        invoiceNumber:   invoiceNumber!,
+        invoiceNumber:   invoiceNumber,
         invoiceDate,
         orderDate:       now,
         customerName:    data.customerName,
@@ -448,19 +630,15 @@ async function sendCustomerConfirmation(data: {
         shippingState:   data.shippingState,
         shippingPincode: data.shippingPincode,
         items:           data.items,
-        subtotal:        data.subtotal,
         shippingFee:     data.shippingFee ?? 0,
         total:           data.total,
         paymentMethod:   data.paymentType === "partial_cod" ? "cod" : "online",
-        paymentStatus:   "paid",
       });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rawBuffer = await pdf(pdfEl).toBuffer() as any as Buffer;
       pdfAttachment = {
         filename: `Dhyom_Invoice_${invoiceNumber}.pdf`,
-        content:  Buffer.from(rawBuffer).toString("base64"),
+        content:  Buffer.from(pdfBytes).toString("base64"),
       };
-      console.log(`[notify-order/customer-email] PDF ready: ${invoiceNumber}`);
+      console.log(`[notify-order/customer-email] PDF ready: ${invoiceNumber} (${pdfBytes.length} bytes)`);
     } catch (err) {
       console.error("[notify-order/customer-email] PDF failed — sending without attachment:", err);
     }

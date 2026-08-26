@@ -105,19 +105,21 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
         <div style={{ padding: "6px 14px 10px" }}>
 
           {/* Invoice header row */}
-          <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "start", gap: "10px", borderBottom: "1px solid #ccc", paddingBottom: "6px", marginBottom: "6px" }}>
-            <div style={{ fontWeight: "bold", fontSize: "13px", letterSpacing: "1px", border: "1.5px solid #1a0a12", padding: "3px 10px", whiteSpace: "nowrap" as const }}>
-              TAX INVOICE
+          <div style={{ borderBottom: "1px solid #ccc", paddingBottom: "6px", marginBottom: "6px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap" as const, gap: "6px" }}>
+              <div style={{ fontWeight: "bold", fontSize: "13px", letterSpacing: "1px", border: "1.5px solid #1a0a12", padding: "3px 10px", whiteSpace: "nowrap" as const, flexShrink: 0 }}>
+                TAX INVOICE
+              </div>
+              <div style={{ fontSize: "10px", lineHeight: "1.55", textAlign: "right" as const }}>
+                <div><strong>Invoice No:</strong> {inv.invoice_number}</div>
+                <div><strong>Invoice Date:</strong> {invDate}</div>
+                <div><strong>GSTIN:</strong> {SELLER_GSTIN}</div>
+                <div><strong>PAN:</strong> {SELLER_PAN}</div>
+              </div>
             </div>
-            <div style={{ fontSize: "10px", lineHeight: "1.55" }}>
+            <div style={{ fontSize: "10px", lineHeight: "1.55", marginTop: "4px" }}>
               <div><strong>Order ID:</strong> {o.order_number}</div>
               <div><strong>Order Date:</strong> {ordDate}</div>
-            </div>
-            <div style={{ fontSize: "10px", lineHeight: "1.55", textAlign: "right" as const }}>
-              <div><strong>Invoice No:</strong> {inv.invoice_number}</div>
-              <div><strong>Invoice Date:</strong> {invDate}</div>
-              <div><strong>GSTIN:</strong> {SELLER_GSTIN}</div>
-              <div><strong>PAN:</strong> {SELLER_PAN}</div>
             </div>
           </div>
 
