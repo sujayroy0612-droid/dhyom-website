@@ -74,7 +74,7 @@ export default function ProductCard({
         </div>
 
         {description && (
-          <p className="font-body font-light italic text-[rgba(245,237,224,0.42)] text-[0.88rem] leading-relaxed">
+          <p className="font-body font-light italic text-[rgba(245,237,224,0.42)] text-[0.88rem] leading-relaxed line-clamp-3">
             {description}
           </p>
         )}
