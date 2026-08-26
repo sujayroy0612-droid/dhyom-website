@@ -43,14 +43,14 @@ interface RzpSuccess { razorpay_payment_id: string; razorpay_order_id: string; r
 
 interface CheckoutForm {
   firstName: string; lastName: string; email: string; phone: string;
-  street: string; city: string; state: string; pincode: string;
+  street: string; landmark: string; city: string; state: string; pincode: string;
   notes: string;
 }
 type FormErrors = Partial<Record<keyof CheckoutForm, string>>;
 
 const BLANK: CheckoutForm = {
   firstName: "", lastName: "", email: "", phone: "",
-  street: "", city: "", state: "", pincode: "", notes: "",
+  street: "", landmark: "", city: "", state: "", pincode: "", notes: "",
 };
 
 function generateOrderNumber(): string {
@@ -74,12 +74,13 @@ function loadRazorpay(): Promise<boolean> {
 function validate(f: CheckoutForm): FormErrors {
   const e: FormErrors = {};
   if (!f.firstName.trim()) e.firstName = "First name is required.";
-  if (!f.lastName.trim()) e.lastName = "Last name is required.";
+  // lastName is optional
   if (!f.email.trim()) { e.email = "Email address is required."; }
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) { e.email = "Enter a valid email address."; }
   if (!f.phone.trim()) { e.phone = "Phone number is required."; }
   else if (!/^\d{10}$/.test(f.phone.replace(/\s/g, ""))) { e.phone = "Enter a valid 10-digit number."; }
   if (!f.street.trim()) e.street = "Street address is required.";
+  if (!f.landmark.trim()) e.landmark = "Landmark is required.";
   if (!f.city.trim()) e.city = "City is required.";
   if (!f.state) e.state = "Please select a state.";
   if (!f.pincode.trim()) { e.pincode = "Pincode is required."; }
@@ -237,6 +238,16 @@ export default function CheckoutPage() {
     const errs = validate(form);
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
+      const missing: string[] = [];
+      if (errs.firstName) missing.push("First Name");
+      if (errs.email)     missing.push("Email");
+      if (errs.phone)     missing.push("Phone Number");
+      if (errs.street)    missing.push("Street Address");
+      if (errs.landmark)  missing.push("Landmark");
+      if (errs.city)      missing.push("City");
+      if (errs.state)     missing.push("State");
+      if (errs.pincode)   missing.push("Pincode");
+      alert(`Please fill in the required fields:\n\n• ${missing.join("\n• ")}`);
       document.querySelector<HTMLElement>("[data-err]")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
@@ -252,8 +263,8 @@ export default function CheckoutPage() {
       last_name: form.lastName.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
-      address: `${form.street.trim()}, ${form.city.trim()}, ${form.state} - ${form.pincode.trim()}`,
-      shipping_street: form.street.trim(),
+      address: `${form.street.trim()}, Near ${form.landmark.trim()}, ${form.city.trim()}, ${form.state} - ${form.pincode.trim()}`,
+      shipping_street: `${form.street.trim()}, Near ${form.landmark.trim()}`,
       shipping_city: form.city.trim(),
       shipping_state: form.state,
       shipping_pincode: form.pincode.trim(),
@@ -466,8 +477,8 @@ export default function CheckoutPage() {
                   <Field label="First Name" error={errors.firstName}>
                     <input type="text" value={form.firstName} onChange={(e) => set("firstName", e.target.value)} placeholder="Aarav" autoComplete="given-name" className={errors.firstName ? inputError : inputNormal} data-err={errors.firstName ? "1" : undefined} />
                   </Field>
-                  <Field label="Last Name" error={errors.lastName}>
-                    <input type="text" value={form.lastName} onChange={(e) => set("lastName", e.target.value)} placeholder="Sharma" autoComplete="family-name" className={errors.lastName ? inputError : inputNormal} />
+                  <Field label="Last Name (optional)" error={errors.lastName}>
+                    <input type="text" value={form.lastName} onChange={(e) => set("lastName", e.target.value)} placeholder="Sharma" autoComplete="family-name" className={inputNormal} />
                   </Field>
                   <Field label="Email" error={errors.email}>
                     <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="you@example.com" autoComplete="email" className={errors.email ? inputError : inputNormal} />
@@ -526,7 +537,7 @@ export default function CheckoutPage() {
                         type="radio"
                         name="savedAddress"
                         checked={selectedAddressId === null}
-                        onChange={() => { setSelectedAddressId(null); setForm((prev) => ({ ...prev, street: "", city: "", state: "", pincode: "" })); }}
+                        onChange={() => { setSelectedAddressId(null); setForm((prev) => ({ ...prev, street: "", landmark: "", city: "", state: "", pincode: "" })); }}
                         className="accent-[#C4A373]"
                       />
                       <span className="font-body font-light text-[rgba(245,237,224,0.55)] text-[0.88rem]">Use a different address</span>
@@ -537,7 +548,10 @@ export default function CheckoutPage() {
 
                 <div className="flex flex-col gap-5">
                   <Field label="Street Address" error={errors.street}>
-                    <input type="text" value={form.street} onChange={(e) => set("street", e.target.value)} placeholder="Flat / house / block, street, area" autoComplete="street-address" className={errors.street ? inputError : inputNormal} />
+                    <input type="text" value={form.street} onChange={(e) => set("street", e.target.value)} placeholder="Flat / house / block, street, area" autoComplete="street-address" className={errors.street ? inputError : inputNormal} data-err={errors.street ? "1" : undefined} />
+                  </Field>
+                  <Field label="Landmark *" error={errors.landmark}>
+                    <input type="text" value={form.landmark} onChange={(e) => set("landmark", e.target.value)} placeholder="Near temple, school, hospital, etc." autoComplete="off" className={errors.landmark ? inputError : inputNormal} data-err={errors.landmark ? "1" : undefined} />
                   </Field>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <Field label="City" error={errors.city}>
