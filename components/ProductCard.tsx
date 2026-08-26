@@ -32,7 +32,7 @@ export default function ProductCard({
   return (
     <Link
       href={`/shop/${category}/${subcategorySlug}/${id}`}
-      className="group bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_16px_48px_rgba(15,5,8,0.55)]"
+      className="group bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden flex flex-col h-full transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_16px_48px_rgba(15,5,8,0.55)]"
     >
       {/* Image */}
       <div className="aspect-square bg-[#270b1b] flex items-center justify-center overflow-hidden flex-shrink-0 relative">
@@ -73,11 +73,9 @@ export default function ProductCard({
           </h3>
         </div>
 
-        {description && (
-          <p className="font-body font-light italic text-[rgba(245,237,224,0.42)] text-[0.88rem] leading-relaxed line-clamp-3">
-            {description}
-          </p>
-        )}
+        <p className="font-body font-light italic text-[rgba(245,237,224,0.42)] text-[0.88rem] leading-relaxed line-clamp-3 min-h-[4.3rem]">
+          {description ?? ""}
+        </p>
 
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-[rgba(196,163,115,0.10)]">
           <span
