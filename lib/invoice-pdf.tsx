@@ -100,7 +100,6 @@ export function InvoicePdf(props: InvoicePdfProps) {
   // Table border helpers
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tbl: any = { ...s.cell, borderLeftWidth: 0, borderTopWidth: 0 };
-  const tblFirst = { ...tbl, borderLeftWidth: 1, borderLeftColor: "#bbb" };
 
   return (
     <Document>
