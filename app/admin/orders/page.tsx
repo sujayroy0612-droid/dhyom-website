@@ -26,6 +26,13 @@ interface Order {
   payment_status: string;
   order_status: string;
   created_at: string;
+  // Shiprocket fulfillment
+  shiprocket_order_id:    string | null;
+  shiprocket_shipment_id: string | null;
+  awb_number:             string | null;
+  courier_name:           string | null;
+  tracking_url:           string | null;
+  label_url:              string | null;
 }
 
 interface InvoiceRecord {
@@ -452,7 +459,7 @@ export default function OrdersPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 font-display text-[0.52rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.30)] hover:bg-[rgba(196,163,115,0.07)] hover:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 transition-all duration-150"
                   >
-                    Print Invoice + Label ↗
+                    Print Invoice ↗
                   </a>
                 </div>
               </Section>
@@ -469,6 +476,39 @@ export default function OrdersPage() {
                 )}
               </Section>
             )}
+
+            {/* Shiprocket fulfillment */}
+            <Section title="Fulfillment">
+              {selected.awb_number ? (
+                <>
+                  <Row label="AWB"     value={selected.awb_number} bold />
+                  <Row label="Courier" value={selected.courier_name ?? "—"} />
+                  {selected.shiprocket_order_id && (
+                    <Row label="SR Order ID" value={selected.shiprocket_order_id} />
+                  )}
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {selected.tracking_url && (
+                      <a
+                        href={selected.tracking_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 font-display text-[0.52rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.30)] hover:bg-[rgba(196,163,115,0.07)] hover:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 transition-all duration-150"
+                      >
+                        Track Shipment ↗
+                      </a>
+                    )}
+                  </div>
+                </>
+              ) : selected.shiprocket_order_id ? (
+                <p className="font-body font-light text-[rgba(220,150,60,0.75)] text-[0.72rem]">
+                  SR order created (ID: {selected.shiprocket_order_id}) — AWB assignment pending.
+                </p>
+              ) : (
+                <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-[0.72rem] italic">
+                  Not yet pushed to Shiprocket. This happens automatically after payment.
+                </p>
+              )}
+            </Section>
 
             {/* Status update */}
             <Section title="Update Status">

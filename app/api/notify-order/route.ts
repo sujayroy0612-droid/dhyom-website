@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@supabase/supabase-js";
+import { createAndShipOrder } from "@/lib/shiprocket";
 
 const FOUNDER_EMAIL = "dhyomecom@gmail.com";
 
@@ -38,10 +39,11 @@ async function tagAsBuyer(email: string) {
 }
 
 interface OrderItem {
-  name: string;
-  label?: string;
+  id?:      string;
+  name:     string;
+  label?:   string;
   quantity: number;
-  price: number;
+  price:    number;
 }
 
 function inr(n: number) {
@@ -266,6 +268,348 @@ async function sendWhatsAppOrderAlert(ctx: {
   }
 }
 
+/* ── Customer order confirmation email + PDF invoice ──────────────────────
+ * Sends a branded confirmation email to the customer with GST invoice PDF.
+ * PDF generation uses @react-pdf/renderer (pure JS, no Chromium — Vercel safe).
+ * PDF failure is caught and the email sends without attachment.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+function buildCustomerHtml(data: {
+  orderNumber:       string;
+  customerName:      string;
+  items:             OrderItem[];
+  subtotal:          number;
+  shippingFee:       number;
+  total:             number;
+  paymentType?:      string | null;
+  amountPaidOnline?: number | null;
+  amountDueCod?:     number | null;
+  shippingStreet:    string;
+  shippingCity:      string;
+  shippingState:     string;
+  shippingPincode:   string;
+}, invoiceNumber: string | null): string {
+  const isCod = data.paymentType === "partial_cod";
+  const sf    = Number(data.shippingFee ?? 0);
+
+  const itemRows = data.items.map(item => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid rgba(196,163,115,0.10);vertical-align:top;">
+        <div style="color:#f5ede0;font-size:14px;font-family:Georgia,serif;font-weight:bold;">${item.name}</div>
+        ${item.label ? `<div style="color:#c4a373;font-size:12px;margin-top:2px;">${item.label}</div>` : ""}
+        <div style="color:rgba(245,237,224,0.45);font-size:12px;margin-top:2px;">Qty: ${item.quantity}</div>
+      </td>
+      <td style="padding:10px 0;border-bottom:1px solid rgba(196,163,115,0.10);text-align:right;vertical-align:top;color:#f5ede0;font-size:14px;white-space:nowrap;">
+        ${inr(item.price * item.quantity)}
+      </td>
+    </tr>`).join("");
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0d0508;font-family:Georgia,serif;color:#f5ede0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0d0508;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#1a0a12;border:1px solid rgba(196,163,115,0.15);border-radius:4px;overflow:hidden;">
+  <tr>
+    <td style="background:#120710;padding:28px 32px;border-bottom:1px solid rgba(196,163,115,0.12);">
+      <p style="margin:0 0 4px;color:rgba(196,163,115,0.45);font-size:10px;letter-spacing:3px;text-transform:uppercase;font-family:Arial,sans-serif;">Order Confirmed</p>
+      <h1 style="margin:0;color:#c4a373;font-size:22px;letter-spacing:2px;font-family:Georgia,serif;font-weight:normal;">${data.orderNumber}</h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px 32px 0;">
+      <p style="margin:0 0 8px;color:rgba(245,237,224,0.90);font-size:16px;line-height:1.6;">Namaste, ${data.customerName.split(" ")[0]} 🙏</p>
+      <p style="margin:0 0 24px;color:rgba(245,237,224,0.60);font-size:14px;line-height:1.7;">
+        Thank you for your order. We have received your payment and your sacred items are being prepared with care.${invoiceNumber ? " Your GST invoice is attached to this email." : ""}
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 32px 24px;">
+      <p style="margin:0 0 12px;color:rgba(196,163,115,0.50);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;font-family:Arial,sans-serif;border-bottom:1px solid rgba(196,163,115,0.12);padding-bottom:8px;">Your Order</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${itemRows}
+        ${sf > 0 ? `<tr>
+          <td style="padding:10px 0;border-bottom:1px solid rgba(196,163,115,0.10);color:rgba(245,237,224,0.50);font-size:13px;">Shipping</td>
+          <td style="padding:10px 0;border-bottom:1px solid rgba(196,163,115,0.10);text-align:right;color:rgba(245,237,224,0.50);font-size:13px;">${inr(sf)}</td>
+        </tr>` : ""}
+        <tr>
+          <td style="padding:14px 0 0;color:#f5ede0;font-size:15px;font-weight:bold;">Total</td>
+          <td style="padding:14px 0 0;text-align:right;color:#c4a373;font-size:17px;font-weight:bold;">${inr(data.total)}</td>
+        </tr>
+        ${isCod ? `<tr><td colspan="2" style="padding:8px 0 0;">
+          <div style="background:rgba(220,150,60,0.10);border:1px solid rgba(220,150,60,0.30);border-radius:4px;padding:10px 14px;margin-top:4px;">
+            <p style="margin:0 0 2px;color:rgba(220,150,60,0.65);font-size:10px;letter-spacing:2px;text-transform:uppercase;font-family:Arial,sans-serif;">COD Amount to Collect</p>
+            <p style="margin:0;color:rgba(220,150,60,0.95);font-size:18px;font-weight:bold;">${inr(data.amountDueCod ?? 0)}</p>
+            <p style="margin:4px 0 0;color:rgba(220,150,60,0.55);font-size:12px;">${inr(data.amountPaidOnline ?? 0)} already paid online. Please keep the remaining amount ready in cash at delivery.</p>
+          </div>
+        </td></tr>` : ""}
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 32px 24px;">
+      <p style="margin:0 0 10px;color:rgba(196,163,115,0.50);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;font-family:Arial,sans-serif;border-bottom:1px solid rgba(196,163,115,0.12);padding-bottom:8px;">Shipping To</p>
+      <p style="margin:0;color:rgba(245,237,224,0.70);font-size:14px;line-height:1.7;">
+        ${data.customerName}<br>${data.shippingStreet}<br>${data.shippingCity}, ${data.shippingState} – ${data.shippingPincode}
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:0 32px 24px;">
+      <div style="background:rgba(196,163,115,0.05);border:1px solid rgba(196,163,115,0.12);border-radius:4px;padding:16px 20px;">
+        <p style="margin:0 0 10px;color:#c4a373;font-size:13px;font-weight:bold;">📦 Expected Delivery: 5–7 Business Days</p>
+        <p style="margin:0 0 8px;color:rgba(245,237,224,0.55);font-size:12px;line-height:1.6;">Your order will be dispatched within 1–2 business days of payment confirmation.</p>
+        <p style="margin:0;color:rgba(245,237,224,0.55);font-size:12px;line-height:1.6;">
+          🔄 <strong style="color:rgba(245,237,224,0.70);">7-Day Replacement Policy:</strong> If your item arrives damaged or defective, contact us within 7 days at <a href="mailto:dhyomecom@gmail.com" style="color:#c4a373;">dhyomecom@gmail.com</a> with your order number and a photo.
+        </p>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:20px 32px;background:#120710;border-top:1px solid rgba(196,163,115,0.10);">
+      <p style="margin:0;color:rgba(245,237,224,0.25);font-size:11px;line-height:1.6;text-align:center;">
+        Dhyom — Sacred Home &amp; Pooja Décor<br>
+        <a href="https://www.dhyom.in" style="color:rgba(196,163,115,0.45);text-decoration:none;">www.dhyom.in</a>
+      </p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+}
+
+async function sendCustomerConfirmation(data: {
+  orderNumber:       string;
+  customerName:      string;
+  email:             string;
+  phone:             string;
+  items:             OrderItem[];
+  subtotal:          number;
+  shippingFee:       number;
+  total:             number;
+  paymentType?:      string | null;
+  amountPaidOnline?: number | null;
+  amountDueCod?:     number | null;
+  shippingStreet:    string;
+  shippingCity:      string;
+  shippingState:     string;
+  shippingPincode:   string;
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || !data.email) return;
+
+  const resend    = new Resend(apiKey);
+  const fromEmail = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
+  const now       = new Date().toISOString();
+
+  // ── 1. Get or create invoice ──────────────────────────────────────────────
+  let invoiceNumber: string | null = null;
+  let invoiceDate                  = now;
+  try {
+    const sb = adminClient();
+    const { data: orderRow } = await sb
+      .from("orders").select("id").eq("order_number", data.orderNumber).single();
+    if (orderRow) {
+      const { data: existing } = await sb
+        .from("invoices").select("invoice_number, created_at")
+        .eq("order_id", orderRow.id).maybeSingle();
+      if (existing) {
+        invoiceNumber = existing.invoice_number;
+        invoiceDate   = existing.created_at ?? now;
+      } else {
+        const { data: invNum } = await sb.rpc("generate_invoice_number");
+        if (invNum) {
+          const taxable_value = Math.round(Number(data.subtotal) * 100) / 100;
+          const gst_amount    = Math.round(taxable_value * 5) / 100;
+          const total_amount  = Math.round((taxable_value + gst_amount + Number(data.shippingFee ?? 0)) * 100) / 100;
+          const { data: inv } = await sb.from("invoices")
+            .insert({ invoice_number: invNum, order_id: orderRow.id, order_number: data.orderNumber, taxable_value, gst_amount, total_amount })
+            .select("invoice_number, created_at").single();
+          invoiceNumber = inv?.invoice_number ?? null;
+          invoiceDate   = inv?.created_at ?? now;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[notify-order/customer-email] Invoice error:", err);
+  }
+
+  // ── 2. Generate PDF (fail gracefully — email still sends without it) ──────
+  let pdfAttachment: { filename: string; content: string } | undefined;
+  if (invoiceNumber) {
+    try {
+      const { renderToBuffer } = await import("@react-pdf/renderer");
+      const { InvoicePdf }     = await import("@/lib/invoice-pdf");
+      const React              = (await import("react")).default;
+      const buffer = await renderToBuffer(
+        React.createElement(InvoicePdf, {
+          orderNumber:     data.orderNumber,
+          invoiceNumber,
+          invoiceDate,
+          orderDate:       now,
+          customerName:    data.customerName,
+          phone:           data.phone,
+          shippingStreet:  data.shippingStreet,
+          shippingCity:    data.shippingCity,
+          shippingState:   data.shippingState,
+          shippingPincode: data.shippingPincode,
+          items:           data.items,
+          subtotal:        data.subtotal,
+          shippingFee:     data.shippingFee ?? 0,
+          total:           data.total,
+          paymentMethod:   data.paymentType === "partial_cod" ? "cod" : "online",
+          paymentStatus:   "paid",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        }) as any,
+      );
+      pdfAttachment = {
+        filename: `Dhyom_Invoice_${invoiceNumber}.pdf`,
+        content:  buffer.toString("base64"),
+      };
+      console.log(`[notify-order/customer-email] PDF ready: ${invoiceNumber}`);
+    } catch (err) {
+      console.error("[notify-order/customer-email] PDF failed — sending without attachment:", err);
+    }
+  }
+
+  // ── 3. Send ───────────────────────────────────────────────────────────────
+  try {
+    const emailPayload: Parameters<typeof resend.emails.send>[0] = {
+      from:    `Dhyom <${fromEmail}>`,
+      to:      data.email,
+      subject: `Your Dhyom Order Confirmation — ${data.orderNumber}`,
+      html:    buildCustomerHtml(data, invoiceNumber),
+    };
+    if (pdfAttachment) emailPayload.attachments = [pdfAttachment];
+    const { error: custErr } = await resend.emails.send(emailPayload);
+    if (custErr) {
+      console.error("[notify-order/customer-email] Resend error:", custErr);
+    } else {
+      console.log(`[notify-order/customer-email] Sent → ${data.email} | invoice: ${invoiceNumber ?? "none"} | PDF: ${pdfAttachment ? "yes" : "no"}`);
+    }
+  } catch (err) {
+    console.error("[notify-order/customer-email] Send error:", err);
+  }
+}
+
+/* ── Shiprocket automated fulfillment ────────────────────────────────────
+ * Called after email + WhatsApp — fully fail-safe, never blocks the response.
+ * Saves shiprocket_order_id, awb_number, courier_name, tracking_url, label_url
+ * back to the orders row (matched by order_number).
+ * ──────────────────────────────────────────────────────────────────────── */
+async function dispatchToShiprocket(data: {
+  orderNumber:     string;
+  orderDate:       string;
+  firstName:       string;
+  lastName:        string;
+  email:           string;
+  phone:           string;
+  shippingStreet:  string;
+  shippingCity:    string;
+  shippingState:   string;
+  shippingPincode: string;
+  items:           OrderItem[];
+  total:           number;
+  paymentType:     string | null | undefined;
+  amountDueCod:    number | null | undefined;
+}): Promise<void> {
+  const srEnabled = process.env.SHIPROCKET_EMAIL && process.env.SHIPROCKET_PASSWORD;
+  if (!srEnabled) {
+    console.warn("[notify-order/shiprocket] Env vars not set — skipping Shiprocket");
+    return;
+  }
+
+  try {
+    // Fetch per-product dimensions from the products table.
+    // Weight = sum of (weight_grams × qty); dims = max across all items.
+    // Falls back to Shiprocket defaults if any field is null.
+    let weightKg: number | undefined;
+    let lengthCm: number | undefined;
+    let breadthCm: number | undefined;
+    let heightCm: number | undefined;
+
+    const productIds = data.items.map(i => i.id).filter(Boolean) as string[];
+    if (productIds.length > 0) {
+      const sb = adminClient();
+      const { data: prods } = await sb
+        .from("products")
+        .select("id, weight_grams, length_cm, width_cm, height_cm")
+        .in("id", productIds);
+
+      if (prods && prods.length > 0) {
+        const byId = new Map(prods.map(p => [p.id as string, p]));
+        let totalGrams = 0;
+        let hasWeight = false;
+        let maxL = 0, maxW = 0, maxH = 0, hasDims = false;
+
+        for (const item of data.items) {
+          const p = byId.get(item.id ?? "");
+          if (!p) continue;
+          if (p.weight_grams) {
+            totalGrams += (p.weight_grams as number) * item.quantity;
+            hasWeight = true;
+          }
+          if (p.length_cm) { maxL = Math.max(maxL, p.length_cm as number); hasDims = true; }
+          if (p.width_cm)  { maxW = Math.max(maxW, p.width_cm  as number); }
+          if (p.height_cm) { maxH = Math.max(maxH, p.height_cm as number); }
+        }
+
+        if (hasWeight) weightKg = Math.max(0.1, totalGrams / 1000);
+        if (hasDims)   { lengthCm = maxL || 15; breadthCm = maxW || 10; heightCm = maxH || 8; }
+      }
+    }
+
+    const result = await createAndShipOrder({
+      orderNumber:     data.orderNumber,
+      orderDate:       data.orderDate,
+      firstName:       data.firstName,
+      lastName:        data.lastName,
+      email:           data.email,
+      phone:           data.phone,
+      shippingStreet:  data.shippingStreet,
+      shippingCity:    data.shippingCity,
+      shippingState:   data.shippingState,
+      shippingPincode: data.shippingPincode,
+      items:           data.items,
+      total:           data.total,
+      paymentType:     (data.paymentType as "online" | "partial_cod" | null) ?? null,
+      amountDueCod:    data.amountDueCod,
+      weightKg,
+      lengthCm,
+      breadthCm,
+      heightCm,
+    });
+
+    console.log(
+      `[notify-order/shiprocket] Created — SR order: ${result.shiprocketOrderId}, AWB: ${result.awbNumber}, courier: ${result.courierName}`,
+    );
+
+    // Persist tracking fields back to orders table
+    const sb = adminClient();
+    const { error: updateErr } = await sb
+      .from("orders")
+      .update({
+        shiprocket_order_id:   result.shiprocketOrderId,
+        shiprocket_shipment_id: result.shipmentId,
+        awb_number:            result.awbNumber,
+        courier_name:          result.courierName,
+        tracking_url:          result.trackingUrl,
+        label_url:             result.labelUrl,
+      })
+      .eq("order_number", data.orderNumber);
+
+    if (updateErr) {
+      console.error("[notify-order/shiprocket] DB update error:", updateErr);
+    }
+  } catch (err) {
+    console.error("[notify-order/shiprocket] Error:", err);
+  }
+}
+
 export async function POST(req: NextRequest) {
   // Only accept calls from our own server (verify-payment sends CRON_SECRET as Bearer)
   const cronSecret = process.env.CRON_SECRET;
@@ -278,7 +622,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { orderNumber, customerName, phone, email, address, items, total, paymentStatus, paymentType, amountPaidOnline, amountDueCod } = body;
+    const {
+      orderNumber, customerName, phone, email, address, items, total,
+      paymentStatus, paymentType, amountPaidOnline, amountDueCod,
+      firstName, lastName, shippingStreet, shippingCity, shippingState, shippingPincode,
+      subtotal, shippingFee,
+    } = body;
 
     if (!orderNumber) {
       return NextResponse.json({ error: "orderNumber required" }, { status: 400 });
@@ -308,13 +657,77 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("[notify-order] Resend error:", error);
-      // Still attempt WhatsApp even if email failed — do NOT await, fire-and-forget
       void sendWhatsAppOrderAlert({ orderNumber, total, customerName });
+      await dispatchToShiprocket({
+        orderNumber,
+        orderDate: new Date().toISOString(),
+        firstName:       firstName  ?? customerName?.split(" ")[0] ?? "",
+        lastName:        lastName   ?? customerName?.split(" ").slice(1).join(" ") ?? "",
+        email,
+        phone,
+        shippingStreet:  shippingStreet  ?? address ?? "",
+        shippingCity:    shippingCity    ?? "",
+        shippingState:   shippingState   ?? "",
+        shippingPincode: shippingPincode ?? "",
+        items:      items ?? [],
+        total,
+        paymentType,
+        amountDueCod,
+      });
+      await sendCustomerConfirmation({
+        orderNumber, customerName, email, phone,
+        items:           items ?? [],
+        subtotal:        subtotal ?? 0,
+        shippingFee:     shippingFee ?? 0,
+        total, paymentType, amountPaidOnline, amountDueCod,
+        shippingStreet:  shippingStreet  ?? address ?? "",
+        shippingCity:    shippingCity    ?? "",
+        shippingState:   shippingState   ?? "",
+        shippingPincode: shippingPincode ?? "",
+      });
       return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
     }
 
     // Fire WhatsApp alert alongside the email — failure here never breaks the response
     await sendWhatsAppOrderAlert({ orderNumber, total, customerName });
+
+    // Dispatch to Shiprocket — awaited so the Lambda stays alive until it completes.
+    // Safe to await here: verify-payment already returned ok to the customer.
+    await dispatchToShiprocket({
+      orderNumber,
+      orderDate: new Date().toISOString(),
+      firstName:       firstName  ?? customerName?.split(" ")[0] ?? "",
+      lastName:        lastName   ?? customerName?.split(" ").slice(1).join(" ") ?? "",
+      email,
+      phone,
+      shippingStreet:  shippingStreet  ?? address ?? "",
+      shippingCity:    shippingCity    ?? "",
+      shippingState:   shippingState   ?? "",
+      shippingPincode: shippingPincode ?? "",
+      items:      items ?? [],
+      total,
+      paymentType,
+      amountDueCod,
+    });
+
+    // Send branded confirmation email to customer with GST invoice PDF.
+    await sendCustomerConfirmation({
+      orderNumber,
+      customerName,
+      email,
+      phone,
+      items:           items ?? [],
+      subtotal:        subtotal ?? 0,
+      shippingFee:     shippingFee ?? 0,
+      total,
+      paymentType,
+      amountPaidOnline,
+      amountDueCod,
+      shippingStreet:  shippingStreet  ?? address ?? "",
+      shippingCity:    shippingCity    ?? "",
+      shippingState:   shippingState   ?? "",
+      shippingPincode: shippingPincode ?? "",
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

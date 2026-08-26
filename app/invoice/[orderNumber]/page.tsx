@@ -46,26 +46,17 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
   const oRes = await sb.from("orders").select("*").eq("order_number", orderNumber).single();
   if (!oRes.data) notFound();
 
-  const [iRes, logoRes] = await Promise.all([
-    sb.from("invoices").select("*").eq("order_id", oRes.data.id).maybeSingle(),
-    sb.from("site_assets").select("image_url").eq("key", "logo").maybeSingle(),
-  ]);
+  const iRes = await sb.from("invoices").select("*").eq("order_id", oRes.data.id).maybeSingle();
   if (!iRes.data) notFound();
 
-  const o        = oRes.data as Order;
-  const inv      = iRes.data as Invoice;
-  const logoUrl  = logoRes.data?.image_url ?? null;
-  const items    = o.items as OrderItem[];
+  const o     = oRes.data as Order;
+  const inv   = iRes.data as Invoice;
+  const items = o.items as OrderItem[];
 
   const isIntraState = o.shipping_state?.toLowerCase().trim() === "bihar";
   const invDate      = fmtDate(inv.invoice_date ?? inv.created_at);
   const ordDate      = fmtDate(o.created_at);
   const totalQty     = items.reduce((s, i) => s + i.quantity, 0);
-  const printedAt    = (() => {
-    const now = new Date();
-    return `${now.getHours().toString().padStart(2,"0")}${now.getMinutes().toString().padStart(2,"0")} hrs, ${now.toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"2-digit"})}`;
-  })();
-
   /* Per-item GST (GST-inclusive pricing: back-calculate taxable value) */
   const lineItems = items.map(item => {
     const gross    = r2(item.price * item.quantity);
@@ -103,97 +94,7 @@ export default async function InvoicePage({ params }: { params: { orderNumber: s
       }}>
 
         {/* ════════════════════════════════════════════════
-            TOP HALF — SHIPPING LABEL
-        ════════════════════════════════════════════════ */}
-        <div style={{ padding: "6px 14px 4px" }}>
-
-          {/* Header bar */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #1a0a12", paddingBottom: "4px", marginBottom: "6px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt="Dhyom" style={{ height: "28px", objectFit: "contain" }} />
-              ) : (
-                <span style={{ fontSize: "16px", fontWeight: "bold", letterSpacing: "4px" }}>DHYOM</span>
-              )}
-              <span style={{ fontSize: "9px", color: "#666", letterSpacing: "2px", textTransform: "uppercase" }}>Shipping Label</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span style={{ fontSize: "10px", color: "#444" }}>Order: <strong>{o.order_number}</strong></span>
-              <span style={{
-                fontSize: "11px", fontWeight: "bold", padding: "3px 10px", borderRadius: "3px", letterSpacing: "1px",
-                background: o.payment_method === "cod" ? "#c0392b" : "#1a7a3a",
-                color: "white",
-              }}>
-                {o.payment_method === "cod" ? "COD" : "PREPAID"}
-              </span>
-            </div>
-          </div>
-
-          {/* Shipping label sticker — compact square, all-in-one */}
-          <div style={{ width: "240px", border: "2px solid #111", marginBottom: "6px", fontSize: "9.5px", lineHeight: "1.5" }}>
-
-            {/* TO */}
-            <div style={{ padding: "5px 9px 7px", borderBottom: "1.5px solid #111" }}>
-              <div style={{ fontSize: "6.5px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "3px" }}>To</div>
-              <div style={{ fontWeight: "bold", fontSize: "12px" }}>{o.first_name} {o.last_name}</div>
-              <div style={{ fontSize: "9.5px" }}>{o.shipping_street}</div>
-              <div style={{ fontSize: "9.5px" }}>{o.shipping_city}, {o.shipping_state}</div>
-              <div style={{ fontWeight: "bold", fontSize: "12px", marginTop: "2px" }}>PIN – {o.shipping_pincode}</div>
-              <div style={{ fontSize: "9.5px", marginTop: "2px" }}>Ph: {o.phone}</div>
-            </div>
-
-            {/* FROM */}
-            <div style={{ padding: "5px 9px 6px", borderBottom: "1.5px solid #111", background: "#f5f5f5" }}>
-              <div style={{ fontSize: "6.5px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "3px" }}>From</div>
-              <div style={{ fontWeight: "bold", fontSize: "9.5px" }}>{SELLER_SHORT}</div>
-              <div style={{ fontSize: "8.5px" }}>Rajiv Nagar, Road No. 8A, Anand Niketan,</div>
-              <div style={{ fontSize: "8.5px" }}>PATNA – 800024, Bihar</div>
-              <div style={{ fontSize: "8px", color: "#555", marginTop: "2px" }}>GSTIN: {SELLER_GSTIN}</div>
-            </div>
-
-            {/* Items */}
-            <div style={{ padding: "5px 9px 6px" }}>
-              <div style={{ fontSize: "6.5px", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" as const, color: "#555", marginBottom: "3px" }}>Description</div>
-              <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                <thead>
-                  <tr>
-                    <th style={{ ...th, textAlign: "left", fontSize: "8px" }}>Item</th>
-                    <th style={{ ...th, width: "28px", fontSize: "8px" }}>Qty</th>
-                    <th style={{ ...th, width: "50px", fontSize: "8px" }}>Amt</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.map((item, i) => (
-                    <tr key={i}>
-                      <td style={{ ...td, fontSize: "8.5px" }}>
-                        <span style={{ fontWeight: "bold" }}>{item.name}</span>
-                        {item.label && <div style={{ color: "#666", fontSize: "8px" }}>{item.label}</div>}
-                      </td>
-                      <td style={{ ...td, textAlign: "center", fontSize: "8.5px" }}>{item.quantity}</td>
-                      <td style={{ ...td, textAlign: "right", fontSize: "8.5px" }}>₹{inr(item.gross)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "7.5px", color: "#888", marginTop: "5px" }}>
-                <span>Not for resale.</span>
-                <span>Printed {printedAt}</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* ════════ TEAR LINE ════════ */}
-        <div style={{ margin: "6px 0", borderTop: "2px dashed #444", position: "relative", textAlign: "center" }}>
-          <span style={{ background: "white", padding: "0 10px", fontSize: "9px", color: "#555", position: "relative", top: "-8px", letterSpacing: "1px" }}>
-            ✂ &nbsp;&nbsp; TEAR HERE &nbsp;&nbsp; ✂
-          </span>
-        </div>
-
-        {/* ════════════════════════════════════════════════
-            BOTTOM HALF — TAX INVOICE
+            TAX INVOICE
         ════════════════════════════════════════════════ */}
         <div style={{ padding: "6px 14px 10px" }}>
 
