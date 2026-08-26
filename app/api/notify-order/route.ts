@@ -188,17 +188,8 @@ function buildHtml(data: {
 }
 
 /* ── WhatsApp Cloud API alert ─────────────────────────────────────────────
- * Live template   : WHATSAPP_TEMPLATE_NAME=hello_world (no parameters)
- * Pending template: WHATSAPP_TEMPLATE_NAME_PENDING=order_alert_dhyom
- *
- * TODO: Once order_alert_dhyom is approved by Meta (check WhatsApp Manager
- *   > Message templates > Test WhatsApp Business Account), change
- *   WHATSAPP_TEMPLATE_NAME to 'order_alert_dhyom' in .env.local and Vercel,
- *   then this function will automatically send real order_number,
- *   total_amount, and customer_name instead of the empty hello_world message.
- *
- * The function already builds the 3-parameter components payload for
- * order_alert_dhyom. Switching the env var is the only action required.
+ * Template: order_alert_dhyom (Meta-approved)
+ * Parameters: {{1}} order number  {{2}} total amount  {{3}} customer name
  * ──────────────────────────────────────────────────────────────────────── */
 async function sendWhatsAppOrderAlert(ctx: {
   orderNumber: string;
@@ -208,29 +199,13 @@ async function sendWhatsAppOrderAlert(ctx: {
   const token      = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const recipient  = process.env.WHATSAPP_RECIPIENT_NUMBER;
-  const template   = process.env.WHATSAPP_TEMPLATE_NAME ?? "hello_world";
+  const template   = process.env.WHATSAPP_TEMPLATE_NAME ?? "order_alert_dhyom";
   const langCode   = process.env.WHATSAPP_TEMPLATE_LANGUAGE ?? "en_US";
 
   if (!token || !phoneNumId || !recipient) {
     console.warn("[notify-order/whatsapp] Env vars not set — skipping WhatsApp alert");
     return;
   }
-
-  // hello_world has zero parameters — components must be omitted entirely.
-  // Any other template (e.g. order_alert_dhyom) gets 3 body parameters:
-  //   {{1}} order_number  {{2}} total_amount  {{3}} customer_name
-  const components = template === "hello_world"
-    ? undefined
-    : [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: ctx.orderNumber },
-            { type: "text", text: `₹${Number(ctx.total).toLocaleString("en-IN")}` },
-            { type: "text", text: ctx.customerName },
-          ],
-        },
-      ];
 
   const url  = `https://graph.facebook.com/v22.0/${phoneNumId}/messages`;
   const body = {
@@ -240,7 +215,16 @@ async function sendWhatsAppOrderAlert(ctx: {
     template: {
       name: template,
       language: { code: langCode },
-      ...(components ? { components } : {}),
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: ctx.orderNumber },
+            { type: "text", text: Number(ctx.total).toLocaleString("en-IN") },
+            { type: "text", text: ctx.customerName },
+          ],
+        },
+      ],
     },
   };
 
