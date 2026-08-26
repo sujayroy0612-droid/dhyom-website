@@ -367,8 +367,6 @@ function buildCustomerHtml(data: {
 </html>`;
 }
 
-interface InvoiceItem { name: string; label?: string; price: number; quantity: number }
-
 async function sendCustomerConfirmation(data: {
   orderNumber:       string;
   customerName:      string;
@@ -391,26 +389,22 @@ async function sendCustomerConfirmation(data: {
 
   const resend    = new Resend(apiKey);
   const fromEmail = process.env.RESEND_FROM_EMAIL ?? "hello@dhyom.in";
-  const now       = new Date().toISOString();
 
   // ── 1. Get or create invoice ──────────────────────────────────────────────
   let invoiceNumber: string | null = null;
-  let invoiceDate                  = now;
   try {
     const sb = adminClient();
     const { data: orderRow } = await sb
       .from("orders").select("id").eq("order_number", data.orderNumber).single();
     if (orderRow) {
       const { data: existing } = await sb
-        .from("invoices").select("invoice_number, created_at")
+        .from("invoices").select("invoice_number")
         .eq("order_id", orderRow.id).maybeSingle();
       if (existing) {
         invoiceNumber = existing.invoice_number;
-        invoiceDate   = existing.created_at ?? now;
       } else {
         const { data: invNum } = await sb.rpc("generate_invoice_number");
         if (invNum) {
-          // subtotal is GST-inclusive; back-calculate taxable (excl. GST) for record
           const sub           = Number(data.subtotal ?? 0);
           const sf            = Number(data.shippingFee ?? 0);
           const taxable_value = Math.round((sub / 1.05) * 100) / 100;
@@ -418,10 +412,9 @@ async function sendCustomerConfirmation(data: {
           const total_amount  = Math.round((sub + sf) * 100) / 100;
           const { data: inv, error: invErr } = await sb.from("invoices")
             .insert({ invoice_number: invNum, order_id: orderRow.id, order_number: data.orderNumber, taxable_value, gst_amount, total_amount })
-            .select("invoice_number, created_at").single();
+            .select("invoice_number").single();
           if (invErr) console.error("[notify-order/customer-email] Invoice insert error:", invErr);
           invoiceNumber = inv?.invoice_number ?? null;
-          invoiceDate   = inv?.created_at ?? now;
           console.log(`[notify-order/customer-email] Invoice created: ${invoiceNumber ?? "FAILED"}`);
         }
       }
