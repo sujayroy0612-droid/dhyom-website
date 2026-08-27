@@ -157,7 +157,16 @@ export default function OrdersPage() {
 
   async function updateStatus(order: Order, newStatus: string) {
     setUpdating(p => ({ ...p, [order.id]: true }));
-    await supabase.from("orders").update({ order_status: newStatus }).eq("id", order.id);
+    const res = await fetch("/api/admin/update-order-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: order.id, order_status: newStatus }),
+    });
+    if (!res.ok) {
+      console.error("[updateStatus] failed:", await res.text());
+      setUpdating(p => ({ ...p, [order.id]: false }));
+      return;
+    }
     setOrders(prev => prev.map(o => o.id === order.id ? { ...o, order_status: newStatus } : o));
     if (selected?.id === order.id) setSelected(s => s ? { ...s, order_status: newStatus } : null);
 
