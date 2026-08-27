@@ -32,7 +32,7 @@ export default function ShippingPolicyPage() {
       {divider}
 
       <Section title="Shipping Charges">
-        <p>Shipping is free on all orders of ₹999 or above. A flat fee of ₹99 applies to orders below ₹999.</p>
+        <p>Shipping is free on all orders of ₹1,500 or above. Below ₹1,500, shipping is calculated live based on your delivery pincode and the actual courier rate — you see the exact charge at checkout before placing your order.</p>
       </Section>
 
       {divider}

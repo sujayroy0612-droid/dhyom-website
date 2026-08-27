@@ -9,7 +9,7 @@ import { useCart, CartItem } from "@/lib/cart/CartContext";
 import { supabase } from "@/lib/supabase/client";
 
 const DEFAULT_SHIPPING = 99;
-const DEFAULT_FREE_THRESHOLD = 999;
+const DEFAULT_FREE_THRESHOLD = 1500;
 
 interface BumpProduct {
   id: string;

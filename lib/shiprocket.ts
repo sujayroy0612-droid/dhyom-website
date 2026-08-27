@@ -1,5 +1,63 @@
 const SHIPROCKET_BASE = "https://apiv2.shiprocket.in/v1/external";
 
+export interface ShippingRate {
+  courierId:   number;
+  courierName: string;
+  rate:        number; // total freight charge in ₹ (includes COD charges if applicable)
+}
+
+export async function checkShippingRate(
+  pickupPincode:   string,
+  deliveryPincode: string,
+  weightKg:        number,
+  isCod:           boolean,
+): Promise<ShippingRate> {
+  const token = await getToken();
+  const params = new URLSearchParams({
+    pickup_postcode:   pickupPincode,
+    delivery_postcode: deliveryPincode,
+    weight:            weightKg.toFixed(2),
+    cod:               isCod ? "1" : "0",
+  });
+
+  const res = await fetch(`${SHIPROCKET_BASE}/courier/serviceability/?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Shiprocket serviceability check failed (${res.status})`);
+  }
+
+  const json = (await res.json()) as {
+    status: number;
+    data?: {
+      available_courier_companies?: Array<{
+        courier_company_id: number;
+        courier_name:       string;
+        freight_charge?:    number;
+        rate?:              number;
+        cod_charges?:       number;
+      }>;
+    };
+  };
+
+  const companies = json.data?.available_courier_companies;
+  if (!companies?.length) {
+    throw new Error("No serviceable couriers for this route");
+  }
+
+  // Pick cheapest: freight_charge (or rate) + cod_charges for COD orders
+  const sorted = companies
+    .map(c => ({
+      courierId:   c.courier_company_id,
+      courierName: c.courier_name,
+      rate:        (c.freight_charge ?? c.rate ?? 999) + (isCod ? (c.cod_charges ?? 0) : 0),
+    }))
+    .sort((a, b) => a.rate - b.rate);
+
+  return sorted[0];
+}
+
 // Module-level token cache — reused across warm Lambda instances.
 // Cold starts trigger re-auth; token is valid 240 hours.
 let _cachedToken: string | null = null;
@@ -54,6 +112,8 @@ export interface ShiprocketOrderInput {
   lengthCm?: number;
   breadthCm?: number;
   heightCm?: number;
+  // Preferred courier from rate check — passed to AWB assign to match quoted rate
+  courierId?: number;
 }
 
 export interface ShiprocketResult {
@@ -142,7 +202,10 @@ export async function createAndShipOrder(input: ShiprocketOrderInput): Promise<S
   const assignRes = await fetch(`${SHIPROCKET_BASE}/courier/assign/awb`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ shipment_id: shipmentId }),
+    body: JSON.stringify({
+      shipment_id: shipmentId,
+      ...(input.courierId ? { courier_id: input.courierId } : {}),
+    }),
   });
 
   if (assignRes.ok) {

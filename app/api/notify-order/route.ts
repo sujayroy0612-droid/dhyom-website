@@ -447,20 +447,21 @@ async function sendCustomerConfirmation(data: {
  * back to the orders row (matched by order_number).
  * ──────────────────────────────────────────────────────────────────────── */
 async function dispatchToShiprocket(data: {
-  orderNumber:     string;
-  orderDate:       string;
-  firstName:       string;
-  lastName:        string;
-  email:           string;
-  phone:           string;
-  shippingStreet:  string;
-  shippingCity:    string;
-  shippingState:   string;
-  shippingPincode: string;
-  items:           OrderItem[];
-  total:           number;
-  paymentType:     string | null | undefined;
-  amountDueCod:    number | null | undefined;
+  orderNumber:       string;
+  orderDate:         string;
+  firstName:         string;
+  lastName:          string;
+  email:             string;
+  phone:             string;
+  shippingStreet:    string;
+  shippingCity:      string;
+  shippingState:     string;
+  shippingPincode:   string;
+  items:             OrderItem[];
+  total:             number;
+  paymentType:       string | null | undefined;
+  amountDueCod:      number | null | undefined;
+  preferredCourierId?: number | null;
 }): Promise<void> {
   const srEnabled = process.env.SHIPROCKET_EMAIL && process.env.SHIPROCKET_PASSWORD;
   if (!srEnabled) {
@@ -527,6 +528,7 @@ async function dispatchToShiprocket(data: {
       lengthCm,
       breadthCm,
       heightCm,
+      courierId:       data.preferredCourierId ?? undefined,
     });
 
     console.log(
@@ -571,7 +573,7 @@ export async function POST(req: NextRequest) {
       orderNumber, customerName, phone, email, address, items, total,
       paymentStatus, paymentType, amountPaidOnline, amountDueCod,
       firstName, lastName, shippingStreet, shippingCity, shippingState, shippingPincode,
-      subtotal, shippingFee,
+      subtotal, shippingFee, preferredCourierId,
     } = body;
 
     if (!orderNumber) {
@@ -618,6 +620,7 @@ export async function POST(req: NextRequest) {
         total,
         paymentType,
         amountDueCod,
+        preferredCourierId: preferredCourierId ? Number(preferredCourierId) : null,
       });
       await sendCustomerConfirmation({
         orderNumber, customerName, email, phone,
@@ -653,6 +656,7 @@ export async function POST(req: NextRequest) {
       total,
       paymentType,
       amountDueCod,
+      preferredCourierId: preferredCourierId ? Number(preferredCourierId) : null,
     });
 
     // Send branded confirmation email to customer with GST invoice PDF.
