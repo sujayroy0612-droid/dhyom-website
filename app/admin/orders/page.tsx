@@ -33,6 +33,7 @@ interface Order {
   courier_name:           string | null;
   tracking_url:           string | null;
   label_url:              string | null;
+  shipping_status:        string | null;
 }
 
 interface InvoiceRecord {
@@ -41,6 +42,34 @@ interface InvoiceRecord {
 }
 
 const STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
+
+const SHIPPING_STATUS_LABELS: Record<string, string> = {
+  pickup_scheduled:  "Pickup Scheduled",
+  pickup_error:      "Pickup Error",
+  picked_up:         "Picked Up",
+  in_transit:        "In Transit",
+  out_for_delivery:  "Out for Delivery",
+  delivered:         "Delivered",
+  delivery_failed:   "Delivery Failed",
+  rto_initiated:     "RTO Initiated",
+  rto_delivered:     "RTO Delivered",
+  lost:              "Lost",
+  cancelled:         "Cancelled",
+};
+
+const SHIPPING_STATUS_COLORS: Record<string, string> = {
+  pickup_scheduled:  "text-[rgba(180,140,60,0.85)]  bg-[rgba(180,140,60,0.08)]",
+  pickup_error:      "text-[rgba(200,80,80,0.85)]   bg-[rgba(200,80,80,0.08)]",
+  picked_up:         "text-[rgba(100,160,220,0.85)] bg-[rgba(100,160,220,0.08)]",
+  in_transit:        "text-[rgba(80,160,220,0.85)]  bg-[rgba(80,160,220,0.08)]",
+  out_for_delivery:  "text-[rgba(140,100,220,0.85)] bg-[rgba(140,100,220,0.08)]",
+  delivered:         "text-[rgba(80,200,120,0.85)]  bg-[rgba(80,200,120,0.08)]",
+  delivery_failed:   "text-[rgba(200,80,80,0.85)]   bg-[rgba(200,80,80,0.08)]",
+  rto_initiated:     "text-[rgba(220,100,60,0.85)]  bg-[rgba(220,100,60,0.08)]",
+  rto_delivered:     "text-[rgba(200,80,80,0.75)]   bg-[rgba(200,80,80,0.06)]",
+  lost:              "text-[rgba(200,80,80,0.85)]   bg-[rgba(200,80,80,0.08)]",
+  cancelled:         "text-[rgba(200,80,80,0.75)]   bg-[rgba(200,80,80,0.06)]",
+};
 
 const STATUS_COLORS: Record<string, string> = {
   pending:    "text-[rgba(220,160,60,0.85)]   bg-[rgba(220,160,60,0.08)]",
@@ -265,7 +294,7 @@ export default function OrdersPage() {
       {/* Table */}
       <div className="bg-[#1e0c17] border border-[rgba(196,163,115,0.12)] rounded-[6px] overflow-hidden mb-4">
         {/* Header */}
-        <div className="hidden lg:grid grid-cols-[32px_1fr_140px_110px_110px_130px_120px] gap-3 px-5 py-3 border-b border-[rgba(196,163,115,0.08)]">
+        <div className="hidden lg:grid grid-cols-[32px_1fr_120px_100px_110px_120px_110px_110px] gap-3 px-5 py-3 border-b border-[rgba(196,163,115,0.08)]">
           <input
             type="checkbox"
             checked={orders.length > 0 && checkedIds.size === orders.length}
@@ -273,8 +302,8 @@ export default function OrdersPage() {
             className="accent-[#C4A373] mt-0.5"
             title="Select all"
           />
-          {["Order / Customer", "Total", "Payment", "Status", "Update Status", "Date"].map(h => (
-            <span key={h} className="font-display text-[0.42rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.35)]">{h}</span>
+          {["Order / Customer", "Total", "Payment", "Status", "Shipping", "Update Status", "Date"].map(h => (
+            <span key={h} className="font-display text-[0.42rem] tracking-[0.16em] uppercase text-[rgba(196,163,113,0.35)]">{h}</span>
           ))}
         </div>
 
@@ -289,7 +318,7 @@ export default function OrdersPage() {
             {orders.map(o => (
               <div
                 key={o.id}
-                className={`grid grid-cols-1 lg:grid-cols-[32px_1fr_140px_110px_110px_130px_120px] gap-2 lg:gap-3 items-center px-5 py-3.5 hover:bg-[rgba(196,163,115,0.03)] transition-colors ${checkedIds.has(o.id) ? "bg-[rgba(210,80,80,0.04)]" : ""}`}
+                className={`grid grid-cols-1 lg:grid-cols-[32px_1fr_120px_100px_110px_120px_110px_110px] gap-2 lg:gap-3 items-center px-5 py-3.5 hover:bg-[rgba(196,163,115,0.03)] transition-colors ${checkedIds.has(o.id) ? "bg-[rgba(210,80,80,0.04)]" : ""}`}
               >
                 <input
                   type="checkbox"
@@ -329,6 +358,15 @@ export default function OrdersPage() {
                 <span className={`font-display text-[0.43rem] tracking-[0.12em] uppercase px-2 py-1 rounded-[3px] w-fit ${STATUS_COLORS[o.order_status] ?? "text-[rgba(245,237,224,0.40)]"}`}>
                   {o.order_status}
                 </span>
+
+                {/* Shiprocket live shipping status */}
+                {o.shipping_status ? (
+                  <span className={`font-display text-[0.40rem] tracking-[0.10em] uppercase px-2 py-1 rounded-[3px] w-fit whitespace-nowrap ${SHIPPING_STATUS_COLORS[o.shipping_status] ?? "text-[rgba(245,237,224,0.35)] bg-[rgba(245,237,224,0.04)]"}`}>
+                    {SHIPPING_STATUS_LABELS[o.shipping_status] ?? o.shipping_status.replace(/_/g, " ")}
+                  </span>
+                ) : (
+                  <span className="font-display text-[0.40rem] tracking-[0.08em] uppercase text-[rgba(245,237,224,0.18)]">—</span>
+                )}
 
                 <select
                   value={o.order_status}
