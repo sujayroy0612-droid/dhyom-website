@@ -58,25 +58,30 @@ function toOrderStatus(shippingStatus: string): string | null {
   }
 }
 
+// GET — lets Shiprocket verify the URL is reachable
+export async function GET() {
+  return NextResponse.json({ ok: true, service: "dhyom-fulfillment-webhook" });
+}
+
 export async function POST(req: NextRequest) {
   // ── 1. Verify token ────────────────────────────────────────────────────────
   const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN;
-  if (!expectedToken) {
-    console.error("[shiprocket-webhook] SHIPROCKET_WEBHOOK_TOKEN not set");
-    return NextResponse.json({ error: "misconfigured" }, { status: 500 });
-  }
 
-  // Accept token in any of the locations Shiprocket may send it
-  const authHeader  = req.headers.get("authorization") ?? "";
-  const headerToken = req.headers.get("x-webhook-token")
-                   ?? req.headers.get("x-api-key")
-                   ?? "";
-  const queryToken  = new URL(req.url).searchParams.get("token") ?? "";
-  const incoming    = authHeader.replace(/^bearer\s+/i, "") || headerToken || queryToken;
+  if (expectedToken) {
+    // Accept token from x-api-key, x-webhook-token, Authorization: Bearer, or ?token=
+    const authHeader  = req.headers.get("authorization") ?? "";
+    const headerToken = req.headers.get("x-api-key")
+                     ?? req.headers.get("x-webhook-token")
+                     ?? "";
+    const queryToken  = new URL(req.url).searchParams.get("token") ?? "";
+    const incoming    = authHeader.replace(/^bearer\s+/i, "") || headerToken || queryToken;
 
-  if (!incoming || incoming !== expectedToken) {
-    console.warn("[shiprocket-webhook] Unauthorized request — token mismatch");
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!incoming || incoming !== expectedToken) {
+      console.warn("[fulfillment-webhook] Unauthorized — token mismatch");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } else {
+    console.warn("[fulfillment-webhook] SHIPROCKET_WEBHOOK_TOKEN not set — accepting without verification");
   }
 
   // ── 2. Parse payload ───────────────────────────────────────────────────────
