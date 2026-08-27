@@ -66,9 +66,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "misconfigured" }, { status: 500 });
   }
 
-  // Accept token in Authorization header (Bearer) OR x-webhook-token header OR ?token= query param
-  const authHeader = req.headers.get("authorization") ?? "";
-  const headerToken = req.headers.get("x-webhook-token") ?? "";
+  // Accept token in any of the locations Shiprocket may send it
+  const authHeader  = req.headers.get("authorization") ?? "";
+  const headerToken = req.headers.get("x-webhook-token")
+                   ?? req.headers.get("x-api-key")
+                   ?? "";
   const queryToken  = new URL(req.url).searchParams.get("token") ?? "";
   const incoming    = authHeader.replace(/^bearer\s+/i, "") || headerToken || queryToken;
 
