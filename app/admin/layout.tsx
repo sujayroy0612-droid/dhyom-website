@@ -12,6 +12,7 @@ const NAV_MAIN = [
   { label: "Shipping",     href: "/admin/shipping",            icon: "⬡" },
   { label: "Brand Assets", href: "/admin/upload-brand-images", icon: "◈" },
   { label: "Analytics",    href: "/admin/analytics",           icon: "↗" },
+  { label: "Reports",      href: "/admin/reports",             icon: "◎" },
 ];
 
 

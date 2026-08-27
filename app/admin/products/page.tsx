@@ -40,6 +40,7 @@ interface Product {
   meta_title: string | null; meta_description: string | null;
   weight_grams: number | null; length_cm: number | null;
   width_cm: number | null; height_cm: number | null; hsn_code: string | null;
+  cost_price: number | null; packaging_cost: number | null;
 }
 
 // Drawer uses this instead of the product_images table
@@ -53,6 +54,7 @@ interface DrawerForm {
   bullet_points: string; sku: string; short_description: string;
   long_description: string; meta_title: string; meta_description: string;
   weight_grams: string; length_cm: string; width_cm: string; height_cm: string; hsn_code: string;
+  cost_price: string; packaging_cost: string;
 }
 
 const EMPTY_DRAWER: DrawerForm = {
@@ -61,6 +63,7 @@ const EMPTY_DRAWER: DrawerForm = {
   bullet_points: "", sku: "", short_description: "", long_description: "",
   meta_title: "", meta_description: "", weight_grams: "",
   length_cm: "", width_cm: "", height_cm: "", hsn_code: "",
+  cost_price: "", packaging_cost: "",
 };
 
 function productToDrawer(p: Product): DrawerForm {
@@ -78,6 +81,8 @@ function productToDrawer(p: Product): DrawerForm {
     width_cm: p.width_cm != null ? String(p.width_cm) : "",
     height_cm: p.height_cm != null ? String(p.height_cm) : "",
     hsn_code: p.hsn_code ?? "",
+    cost_price:     p.cost_price     != null ? String(p.cost_price)     : "",
+    packaging_cost: p.packaging_cost != null ? String(p.packaging_cost) : "",
   };
 }
 
@@ -151,7 +156,7 @@ export default function AdminProductsPage() {
   useEffect(() => {
     supabase
       .from("products")
-      .select("id,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,image_urls,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code")
+      .select("id,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,image_urls,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code,cost_price,packaging_cost")
       .order("category").order("name")
       .then(({ data }) => {
         const prods = (data ?? []) as Product[];
@@ -367,11 +372,13 @@ export default function AdminProductsPage() {
       long_description:  drawerForm.long_description.trim()  || null,
       meta_title:        drawerForm.meta_title.trim()        || null,
       meta_description:  drawerForm.meta_description.trim()  || null,
-      weight_grams: drawerForm.weight_grams ? Number(drawerForm.weight_grams) : null,
-      length_cm:    drawerForm.length_cm    ? Number(drawerForm.length_cm)    : null,
-      width_cm:     drawerForm.width_cm     ? Number(drawerForm.width_cm)     : null,
-      height_cm:    drawerForm.height_cm    ? Number(drawerForm.height_cm)    : null,
-      hsn_code:     drawerForm.hsn_code.trim() || null,
+      weight_grams:    drawerForm.weight_grams    ? Number(drawerForm.weight_grams)    : null,
+      length_cm:       drawerForm.length_cm       ? Number(drawerForm.length_cm)       : null,
+      width_cm:        drawerForm.width_cm        ? Number(drawerForm.width_cm)        : null,
+      height_cm:       drawerForm.height_cm       ? Number(drawerForm.height_cm)       : null,
+      hsn_code:        drawerForm.hsn_code.trim() || null,
+      cost_price:      drawerForm.cost_price      ? Number(drawerForm.cost_price)      : 0,
+      packaging_cost:  drawerForm.packaging_cost  ? Number(drawerForm.packaging_cost)  : 0,
     };
 
     if (editingProd) {
@@ -1004,6 +1011,22 @@ export default function AdminProductsPage() {
                     <input type="number" className={FIELD} value={drawerForm.width_cm} onChange={e => setDrawerForm(f => ({ ...f, width_cm: e.target.value }))} placeholder="10" />
                     <input type="number" className={FIELD} value={drawerForm.height_cm} onChange={e => setDrawerForm(f => ({ ...f, height_cm: e.target.value }))} placeholder="12" />
                   </div>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass mb-3">Cost (P&amp;L)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL}>Cost Price (COGS) ₹</label>
+                  <input type="number" min="0" step="0.01" className={FIELD} value={drawerForm.cost_price} onChange={e => setDrawerForm(f => ({ ...f, cost_price: e.target.value }))} placeholder="0" />
+                  <p className="mt-1 text-[0.62rem] text-[rgba(245,237,224,0.25)]">Your purchase / manufacturing cost per unit</p>
+                </div>
+                <div>
+                  <label className={LABEL}>Packaging Cost ₹</label>
+                  <input type="number" min="0" step="0.01" className={FIELD} value={drawerForm.packaging_cost} onChange={e => setDrawerForm(f => ({ ...f, packaging_cost: e.target.value }))} placeholder="0" />
+                  <p className="mt-1 text-[0.62rem] text-[rgba(245,237,224,0.25)]">Box, wrap, sticker — per unit shipped</p>
                 </div>
               </div>
             </section>
