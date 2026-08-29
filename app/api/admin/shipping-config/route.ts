@@ -13,7 +13,7 @@ export async function GET() {
   const sb = adminClient();
   const [zonesRes, ratesRes] = await Promise.all([
     sb.from("shipping_zones").select("id,pincode_prefix,zone_name").order("zone_name").order("pincode_prefix"),
-    sb.from("shipping_rates").select("id,zone_name,min_weight_g,max_weight_g,rate").order("min_weight_g").order("zone_name"),
+    sb.from("shipping_rates").select("id,zone_name,min_weight_grams,max_weight_grams,rate").order("min_weight_grams").order("zone_name"),
   ]);
   if (zonesRes.error) return NextResponse.json({ error: zonesRes.error.message }, { status: 500 });
   if (ratesRes.error) return NextResponse.json({ error: ratesRes.error.message }, { status: 500 });
@@ -49,10 +49,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "add_rate_tier") {
-    const { zone_name, min_weight_g, max_weight_g, rate } = body;
+    const { zone_name, min_weight_grams, max_weight_grams, rate } = body;
     const { error } = await sb.from("shipping_rates").insert({
-      zone_name, min_weight_g: Number(min_weight_g),
-      max_weight_g: max_weight_g != null ? Number(max_weight_g) : null,
+      zone_name, min_weight_grams: Number(min_weight_grams),
+      max_weight_grams: max_weight_grams != null ? Number(max_weight_grams) : null,
       rate: Number(rate),
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

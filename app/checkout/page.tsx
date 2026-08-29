@@ -191,14 +191,14 @@ export default function CheckoutPage() {
 
   // ── Shipping zone/rate lookup (loaded once — instant client-side calc) ────
   interface ShippingZone { pincode_prefix: string; zone_name: string; }
-  interface ShippingRateRow { zone_name: string; min_weight_g: number; max_weight_g: number | null; rate: number; }
+  interface ShippingRateRow { zone_name: string; min_weight_grams: number; max_weight_grams: number | null; rate: number; }
   const [shippingZones,   setShippingZones]   = useState<ShippingZone[]>([]);
   const [shippingRates,   setShippingRates]   = useState<ShippingRateRow[]>([]);
   const [productWeights,  setProductWeights]  = useState<Map<string, number | null>>(new Map());
 
   useEffect(() => {
     supabase.from("shipping_zones").select("pincode_prefix,zone_name").then(({ data }) => setShippingZones(data ?? []));
-    supabase.from("shipping_rates").select("zone_name,min_weight_g,max_weight_g,rate").order("min_weight_g").then(({ data }) => setShippingRates(data ?? []));
+    supabase.from("shipping_rates").select("zone_name,min_weight_grams,max_weight_grams,rate").order("min_weight_grams").then(({ data }) => setShippingRates(data ?? []));
   }, []);
 
   useEffect(() => {
@@ -217,8 +217,8 @@ export default function CheckoutPage() {
     const totalG = items.reduce((sum, item) => sum + (productWeights.get(item.id) ?? 200) * item.quantity, 0);
     const row    = shippingRates.find(r =>
       r.zone_name === zone &&
-      r.min_weight_g <= totalG &&
-      (r.max_weight_g == null || totalG <= r.max_weight_g)
+      r.min_weight_grams <= totalG &&
+      (r.max_weight_grams == null || totalG <= r.max_weight_grams)
     );
     return row ? row.rate : null;
   }

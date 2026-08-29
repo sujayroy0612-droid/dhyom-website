@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 
 interface ShippingZone { id: string; pincode_prefix: string; zone_name: string; }
-interface ShippingRate { id: string; zone_name: string; min_weight_g: number; max_weight_g: number | null; rate: number; }
+interface ShippingRate { id: string; zone_name: string; min_weight_grams: number; max_weight_grams: number | null; rate: number; }
 
 function fmt(g: number, max: number | null) {
   const lo = g >= 1000 ? `${g / 1000}kg` : `${g}g`;
@@ -75,11 +75,11 @@ export default function ShippingRatesPage() {
   // Unique zone names (columns) and weight tiers (rows) derived from rates
   const zoneNames = Array.from(new Set(rates.map(r => r.zone_name))).sort();
   const tiers = Array.from(
-    new Map(rates.map(r => [`${r.min_weight_g}:${r.max_weight_g}`, r])).values()
-  ).sort((a, b) => a.min_weight_g - b.min_weight_g);
+    new Map(rates.map(r => [`${r.min_weight_grams}:${r.max_weight_grams}`, r])).values()
+  ).sort((a, b) => a.min_weight_grams - b.min_weight_grams);
 
   function getRate(zone: string, tier: ShippingRate) {
-    return rates.find(r => r.zone_name === zone && r.min_weight_g === tier.min_weight_g && r.max_weight_g === tier.max_weight_g);
+    return rates.find(r => r.zone_name === zone && r.min_weight_grams === tier.min_weight_grams && r.max_weight_grams === tier.max_weight_grams);
   }
 
   async function saveRate(id: string, rate: number) {
@@ -161,9 +161,9 @@ export default function ShippingRatesPage() {
                 </thead>
                 <tbody>
                   {tiers.map((tier, i) => (
-                    <tr key={`${tier.min_weight_g}-${tier.max_weight_g}`} className={i % 2 === 0 ? "bg-transparent" : "bg-[rgba(196,163,115,0.03)]"}>
+                    <tr key={`${tier.min_weight_grams}-${tier.max_weight_grams}`} className={i % 2 === 0 ? "bg-transparent" : "bg-[rgba(196,163,115,0.03)]"}>
                       <td className="px-4 py-3 font-body font-light text-[rgba(245,237,224,0.55)] text-[0.85rem] whitespace-nowrap border-[rgba(196,163,115,0.08)]">
-                        {fmt(tier.min_weight_g, tier.max_weight_g)}
+                        {fmt(tier.min_weight_grams, tier.max_weight_grams)}
                       </td>
                       {zoneNames.map(z => {
                         const r = getRate(z, tier);
