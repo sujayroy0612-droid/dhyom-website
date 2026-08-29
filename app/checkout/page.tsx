@@ -189,39 +189,45 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, []);
 
-  // ── Live Shiprocket rate state ──────────────────────────────────────────────
-  interface RateInfo { shipping_fee: number; actual_rate: number; courier_id?: number; courier_name?: string; is_fallback: boolean; }
-  const [rateInfo,    setRateInfo]    = useState<RateInfo | null>(null);
-  const [rateLoading, setRateLoading] = useState(false);
+  // ── Shipping zone/rate lookup (loaded once — instant client-side calc) ────
+  interface ShippingZone { pincode_prefix: string; zone_name: string; }
+  interface ShippingRateRow { zone_name: string; min_weight_g: number; max_weight_g: number | null; rate: number; }
+  const [shippingZones,   setShippingZones]   = useState<ShippingZone[]>([]);
+  const [shippingRates,   setShippingRates]   = useState<ShippingRateRow[]>([]);
+  const [productWeights,  setProductWeights]  = useState<Map<string, number | null>>(new Map());
 
   useEffect(() => {
-    const pincode = form.pincode.trim();
-    if (step !== "form" || !/^\d{6}$/.test(pincode) || items.length === 0) return;
+    supabase.from("shipping_zones").select("pincode_prefix,zone_name").then(({ data }) => setShippingZones(data ?? []));
+    supabase.from("shipping_rates").select("zone_name,min_weight_g,max_weight_g,rate").order("min_weight_g").then(({ data }) => setShippingRates(data ?? []));
+  }, []);
 
-    const timer = setTimeout(async () => {
-      setRateLoading(true);
-      try {
-        const res = await fetch("/api/checkout/shipping-rate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            delivery_pincode: pincode,
-            cart_items: items.map(i => ({ id: i.id, quantity: i.quantity })),
-            is_cod: paymentType === "partial_cod",
-          }),
-        });
-        if (res.ok) setRateInfo(await res.json());
-      } catch { /* silent — fallback rate already showing */ }
-      finally { setRateLoading(false); }
-    }, 800);
+  useEffect(() => {
+    if (!hydrated || items.length === 0) return;
+    const ids = items.map(i => i.id).filter(Boolean);
+    if (!ids.length) return;
+    supabase.from("products").select("id,weight_grams").in("id", ids).then(({ data }) => {
+      setProductWeights(new Map((data ?? []).map((p: { id: string; weight_grams: number | null }) => [p.id, p.weight_grams])));
+    });
+  }, [hydrated]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    return () => clearTimeout(timer);
-  }, [form.pincode, paymentType, step]); // eslint-disable-line react-hooks/exhaustive-deps
+  function calcShippingRate(pincode: string): number | null {
+    if (!shippingZones.length || !shippingRates.length) return null;
+    const prefix = pincode.slice(0, 2);
+    const zone   = shippingZones.find(z => z.pincode_prefix === prefix)?.zone_name ?? "National";
+    const totalG = items.reduce((sum, item) => sum + (productWeights.get(item.id) ?? 200) * item.quantity, 0);
+    const row    = shippingRates.find(r =>
+      r.zone_name === zone &&
+      r.min_weight_g <= totalG &&
+      (r.max_weight_g == null || totalG <= r.max_weight_g)
+    );
+    return row ? row.rate : null;
+  }
 
   const isFreeShip     = freeShippingThreshold > 0 && subtotal >= freeShippingThreshold;
-  const baseRate       = rateInfo?.shipping_fee ?? shippingFee; // live rate or fallback
+  const calculatedRate = /^\d{6}$/.test(form.pincode.trim()) ? calcShippingRate(form.pincode.trim()) : null;
+  const baseRate       = calculatedRate ?? shippingFee;
   const shippingCost   = isFreeShip ? 0 : baseRate;
-  const actualShippingCost = rateInfo?.actual_rate ?? baseRate; // real cost even if customer pays ₹0
+  const actualShippingCost = baseRate;
   const codFeeApplied  = paymentType === "partial_cod" ? COD_FEE : 0;
   const fullPaymentTotal = subtotal + shippingCost;
   const total          = fullPaymentTotal + codFeeApplied;
@@ -304,7 +310,7 @@ export default function CheckoutPage() {
       subtotal,
       shipping_fee: shippingCost,
       actual_shipping_cost: actualShippingCost,
-      preferred_courier_id: rateInfo?.courier_id ? String(rateInfo.courier_id) : null,
+      preferred_courier_id: null,
       discount: 0,
       total,
       payment_method: "online",
@@ -367,7 +373,7 @@ export default function CheckoutPage() {
                 paymentType,
                 amountPaidOnline:     amountToCharge,
                 amountDueCod,
-                preferredCourierId:   rateInfo?.courier_id ?? null,
+                preferredCourierId:   null,
               },
             }),
           });
@@ -678,14 +684,9 @@ export default function CheckoutPage() {
                     <span className="font-display text-ivory" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>₹{subtotal.toLocaleString("en-IN")}</span>
                   </div>
                   <div className="flex justify-between items-baseline">
-                    <span className="font-body font-light text-[rgba(245,237,224,0.48)] text-[0.87rem]">
-                      Shipping
-                      {rateLoading && <span className="ml-1.5 font-display text-[0.44rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.45)] animate-pulse">Calculating…</span>}
-                    </span>
+                    <span className="font-body font-light text-[rgba(245,237,224,0.48)] text-[0.87rem]">Shipping</span>
                     {isFreeShip ? (
                       <span className="font-display text-[rgba(100,215,100,0.80)]" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>FREE</span>
-                    ) : rateLoading ? (
-                      <span className="font-display text-[rgba(245,237,224,0.35)]" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>···</span>
                     ) : (
                       <span className="font-display text-ivory" style={{ fontSize: "0.87rem", letterSpacing: "0.04em" }}>₹{shippingCost.toLocaleString("en-IN")}</span>
                     )}
