@@ -127,7 +127,7 @@ export default function ShippingRatesPage() {
         <p className="font-display text-[0.44rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.38)] mb-2">Admin</p>
         <h1 className="font-display text-ivory" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Shipping Rates</h1>
         <p className="font-body font-light text-[rgba(245,237,224,0.38)] text-[0.88rem] mt-2">
-          Click any rate to edit it inline. Zone assignment is by the first 2 digits of the customer's pincode.
+          Click any rate to edit it inline. Zone assignment is by the first 2 digits of the customer&apos;s pincode.
         </p>
       </div>
 
@@ -189,7 +189,7 @@ export default function ShippingRatesPage() {
           <div>
             <h2 className="font-display text-[0.54rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.50)] mb-4">Pincode Prefix Mappings</h2>
             <p className="font-body font-light text-[rgba(245,237,224,0.35)] text-[0.82rem] mb-5">
-              The first 2 digits of a customer's pincode determine their zone. Unmatched pincodes default to <span className="text-[rgba(245,237,224,0.55)]">National</span>.
+              The first 2 digits of a customer&apos;s pincode determine their zone. Unmatched pincodes default to <span className="text-[rgba(245,237,224,0.55)]">National</span>.
             </p>
 
             <div className="flex flex-col gap-6">
