@@ -98,6 +98,8 @@ export default function OrdersPage() {
   const [deleting,        setDeleting]        = useState(false);
   const [checkedIds,      setCheckedIds]      = useState<Set<string>>(new Set());
   const [bulkDeleting,    setBulkDeleting]    = useState(false);
+  const [bulkSyncing,     setBulkSyncing]     = useState(false);
+  const [bulkSyncResult,  setBulkSyncResult]  = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -193,6 +195,31 @@ export default function OrdersPage() {
     setUpdating(p => ({ ...p, [order.id]: false }));
   }
 
+  function deriveOrderStatus(shippingStatus: string | null): string | null {
+    switch (shippingStatus) {
+      case "picked_up": case "in_transit": case "out_for_delivery": return "shipped";
+      case "delivered": return "delivered";
+      case "rto_initiated": case "rto_delivered": case "cancelled": return "cancelled";
+      default: return null;
+    }
+  }
+
+  async function syncOrderStatus(order: Order) {
+    const derived = deriveOrderStatus(order.shipping_status);
+    if (!derived || derived === order.order_status) return;
+    await updateStatus(order, derived);
+  }
+
+  async function bulkSyncAll() {
+    setBulkSyncing(true);
+    setBulkSyncResult(null);
+    const res = await fetch("/api/admin/sync-order-statuses", { method: "POST" });
+    const data = await res.json() as { fixed: number; results: { id: string; from: string; to: string; ok: boolean }[] };
+    setBulkSyncResult(`Synced ${data.fixed} order${data.fixed === 1 ? "" : "s"}`);
+    if (data.fixed > 0) await load();
+    setBulkSyncing(false);
+  }
+
   async function callDeleteApi(ids: string[]): Promise<boolean> {
     const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch("/api/admin/delete-orders", {
@@ -251,9 +278,24 @@ export default function OrdersPage() {
 
   return (
     <div className="px-8 pt-8 pb-16">
-      <div className="mb-6">
-        <p className="font-display text-[0.44rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.35)] mb-1">Management</p>
-        <h1 className="font-display text-ivory" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Orders</h1>
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <p className="font-display text-[0.44rem] tracking-[0.24em] uppercase text-[rgba(196,163,115,0.35)] mb-1">Management</p>
+          <h1 className="font-display text-ivory" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Orders</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          {bulkSyncResult && (
+            <span className="font-body font-light text-[rgba(80,200,120,0.70)] text-[0.75rem]">{bulkSyncResult}</span>
+          )}
+          <button
+            onClick={bulkSyncAll}
+            disabled={bulkSyncing}
+            title="Auto-correct order_status for all orders where Shiprocket shipping_status disagrees"
+            className="font-display text-[0.46rem] tracking-[0.14em] uppercase px-3 py-2 border border-[rgba(196,163,115,0.20)] rounded-[3px] text-[rgba(196,163,115,0.55)] hover:text-brass hover:border-[rgba(196,163,115,0.40)] disabled:opacity-40 transition-colors whitespace-nowrap"
+          >
+            {bulkSyncing ? "Syncing…" : "⟳ Sync All Statuses"}
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -568,6 +610,19 @@ export default function OrdersPage() {
                   <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                 ))}
               </select>
+              {(() => {
+                const derived = deriveOrderStatus(selected.shipping_status);
+                if (!derived || derived === selected.order_status) return null;
+                return (
+                  <button
+                    onClick={() => syncOrderStatus(selected)}
+                    disabled={updating[selected.id]}
+                    className="mt-1 w-full text-left font-display text-[0.48rem] tracking-[0.14em] uppercase px-3 py-2.5 rounded-[4px] border border-[rgba(80,160,220,0.30)] text-[rgba(80,160,220,0.75)] hover:bg-[rgba(80,160,220,0.07)] hover:border-[rgba(80,160,220,0.55)] transition-all duration-150 disabled:opacity-40"
+                  >
+                    ⟳ Sync from Shiprocket → {derived.charAt(0).toUpperCase() + derived.slice(1)}
+                  </button>
+                );
+              })()}
             </Section>
 
             {/* Delete */}
