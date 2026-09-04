@@ -70,17 +70,18 @@ export default async function OfflineInvoicePage({ params }: { params: { id: str
 
   const invDate  = fmtDate(o.invoice_date!);
   const saleDate = fmtDate(o.sale_date);
-  const orderTotal = items.reduce((s, i) => s + Number(i.line_total), 0);
-  const totalQty   = items.reduce((s, i) => s + i.quantity, 0);
+  const totalQty = items.reduce((s, i) => s + i.quantity, 0);
 
-  // Back-calculate GST from GST-inclusive unit prices (same logic as online invoice)
+  // Offline pricing: unit_price is the BASE (pre-tax) price; GST 5% is added on top
   const lineItems = items.map(item => {
-    const gross   = r2(Number(item.line_total));
-    const taxable = r2(gross / 1.05);
-    const tax     = r2(gross - taxable);
+    const taxable = r2(Number(item.line_total));          // base amount (what was agreed)
+    const tax     = r2(taxable * 0.05);                   // 5% GST on top
+    const total   = r2(taxable + tax);                    // gross payable
     const name    = item.products?.name ?? item.product_id;
-    return { name, quantity: item.quantity, gross, taxable, tax, total: gross };
+    return { name, quantity: item.quantity, gross: taxable, taxable, tax, total };
   });
+
+  const orderTotal = lineItems.reduce((s, i) => s + i.total, 0);
 
   const paymentModeLabel = o.payment_mode.replace("_", " ");
 
