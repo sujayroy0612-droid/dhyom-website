@@ -35,18 +35,28 @@ export async function GET(req: NextRequest) {
     stockInMap[b.product_id] = (stockInMap[b.product_id] ?? 0) + b.quantity_produced;
   });
 
-  // 3. Offline sales filtered by date
+  // 3. Offline/channel sales filtered by date
   let offQ = sb
     .from("offline_sales_orders")
-    .select("id, sale_date, offline_sales_items(product_id, quantity)");
+    .select("id, channel, sale_date, offline_sales_items(product_id, quantity)");
   if (from) offQ = offQ.gte("sale_date", from);
   if (to)   offQ = offQ.lte("sale_date", to);
   const { data: offOrders } = await offQ;
 
-  const offlineMap: Record<string, number> = {};
-  (offOrders ?? []).forEach((o: { offline_sales_items: { product_id: string; quantity: number }[] }) => {
-    (o.offline_sales_items ?? []).forEach(i => {
-      offlineMap[i.product_id] = (offlineMap[i.product_id] ?? 0) + i.quantity;
+  const amazonMap:   Record<string, number> = {};
+  const flipkartMap: Record<string, number> = {};
+  const meeshoMap:   Record<string, number> = {};
+  const offlineMap:  Record<string, number> = {};
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (offOrders ?? []).forEach((o: any) => {
+    const ch    = o.channel as string;
+    const items = (o.offline_sales_items ?? []) as { product_id: string; quantity: number }[];
+    items.forEach(i => {
+      if      (ch === "amazon")   { amazonMap[i.product_id]   = (amazonMap[i.product_id]   ?? 0) + i.quantity; }
+      else if (ch === "flipkart") { flipkartMap[i.product_id] = (flipkartMap[i.product_id] ?? 0) + i.quantity; }
+      else if (ch === "meesho")   { meeshoMap[i.product_id]   = (meeshoMap[i.product_id]   ?? 0) + i.quantity; }
+      else                        { offlineMap[i.product_id]  = (offlineMap[i.product_id]  ?? 0) + i.quantity; }
     });
   });
 
@@ -73,13 +83,17 @@ export async function GET(req: NextRequest) {
   const ledger = (products ?? []).map((p: {
     id: string; name: string; category: string; stock: number; low_stock_threshold: number;
   }) => {
-    const stockIn    = stockInMap[p.id]  ?? 0;
-    const outOffline = offlineMap[p.id]  ?? 0;
-    const outWebsite = 0; // online orders not yet channel-tagged
+    const stockIn    = stockInMap[p.id]    ?? 0;
+    const outAmazon  = amazonMap[p.id]    ?? 0;
+    const outFlipkart= flipkartMap[p.id]  ?? 0;
+    const outMeesho  = meeshoMap[p.id]    ?? 0;
+    const outOffline = offlineMap[p.id]   ?? 0;
+    const outWebsite = 0;
+    const totalOut   = outAmazon + outFlipkart + outMeesho + outOffline + outWebsite;
     const closing    = p.stock;
     const wip        = wipMap[p.id] ?? 0;
     const total      = closing + wip;
-    const opening    = Math.max(0, closing - stockIn + outOffline + outWebsite);
+    const opening    = Math.max(0, closing - stockIn + totalOut);
 
     let remarks = "";
     if (closing <= p.low_stock_threshold) {
@@ -91,7 +105,7 @@ export async function GET(req: NextRequest) {
     return {
       id: p.id, name: p.name, category: p.category,
       opening, stock_in: stockIn,
-      out_amazon: 0, out_flipkart: 0, out_meesho: 0,
+      out_amazon: outAmazon, out_flipkart: outFlipkart, out_meesho: outMeesho,
       out_website: outWebsite, out_offline: outOffline,
       closing, wip, total,
       reorder: p.low_stock_threshold,

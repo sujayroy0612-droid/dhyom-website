@@ -109,7 +109,9 @@ export default function InventoryPage() {
     (acc, r) => ({
       opening:     acc.opening + r.opening,
       stock_in:    acc.stock_in + r.stock_in,
-      out_amazon:  0, out_flipkart: 0, out_meesho: 0,
+      out_amazon:  acc.out_amazon  + r.out_amazon,
+      out_flipkart:acc.out_flipkart+ r.out_flipkart,
+      out_meesho:  acc.out_meesho  + r.out_meesho,
       out_website: acc.out_website + r.out_website,
       out_offline: acc.out_offline + r.out_offline,
       closing:     acc.closing + r.closing,
@@ -390,11 +392,11 @@ export default function InventoryPage() {
                         <td className={TD + " text-[rgba(100,210,130,0.75)]"}>{row.stock_in > 0 ? `+${fmt(row.stock_in)}` : "0"}</td>
 
                         {/* Stock out columns */}
-                        <td className={TD + " text-[rgba(245,237,224,0.25)] border-l border-[rgba(196,163,115,0.06)]"}>—</td>
-                        <td className={TD + " text-[rgba(245,237,224,0.25)]"}>—</td>
-                        <td className={TD + " text-[rgba(245,237,224,0.25)]"}>—</td>
-                        <td className={TD + " text-[rgba(245,237,224,0.45)]"}>{row.out_website > 0 ? fmt(row.out_website) : "0"}</td>
-                        <td className={TD + " text-[rgba(245,237,224,0.45)]"}>{row.out_offline > 0 ? fmt(row.out_offline) : "0"}</td>
+                        <td className={TD + " text-[rgba(245,237,224,0.55)] border-l border-[rgba(196,163,115,0.06)]"}>{row.out_amazon   > 0 ? fmt(row.out_amazon)   : "0"}</td>
+                        <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_flipkart > 0 ? fmt(row.out_flipkart) : "0"}</td>
+                        <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_meesho   > 0 ? fmt(row.out_meesho)   : "0"}</td>
+                        <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_website  > 0 ? fmt(row.out_website)  : "0"}</td>
+                        <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_offline  > 0 ? fmt(row.out_offline)  : "0"}</td>
 
                         {/* Closing stock — highlighted red if low */}
                         <td className={[
@@ -455,9 +457,9 @@ export default function InventoryPage() {
                     <td className={TD_LEFT + " font-display text-[rgba(196,163,115,0.60)] text-[0.44rem] tracking-[0.16em] uppercase"}>Total</td>
                     <td className={TD + " font-display text-ivory"}>{fmt(totals.opening)}</td>
                     <td className={TD + " font-display text-[rgba(100,210,130,0.75)]"}>{totals.stock_in > 0 ? `+${fmt(totals.stock_in)}` : "0"}</td>
-                    <td className={TD + " text-[rgba(245,237,224,0.20)] border-l border-[rgba(196,163,115,0.06)]"}>—</td>
-                    <td className={TD + " text-[rgba(245,237,224,0.20)]"}>—</td>
-                    <td className={TD + " text-[rgba(245,237,224,0.20)]"}>—</td>
+                    <td className={TD + " font-display text-ivory border-l border-[rgba(196,163,115,0.06)]"}>{fmt(totals.out_amazon)}</td>
+                    <td className={TD + " font-display text-ivory"}>{fmt(totals.out_flipkart)}</td>
+                    <td className={TD + " font-display text-ivory"}>{fmt(totals.out_meesho)}</td>
                     <td className={TD + " font-display text-ivory"}>{fmt(totals.out_website)}</td>
                     <td className={TD + " font-display text-ivory"}>{fmt(totals.out_offline)}</td>
                     <td className={TD + " font-display text-ivory border-l border-[rgba(196,163,115,0.08)]"} style={{ fontSize: "0.90rem" }}>{fmt(totals.closing)}</td>

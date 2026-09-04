@@ -22,7 +22,7 @@ interface SaleOrder {
 
 interface Summary {
   total: number;
-  byChannel: { wholesale: number; corporate_gifting: number; dm_order: number; exhibition: number };
+  byChannel: { wholesale: number; corporate_gifting: number; dm_order: number; exhibition: number; amazon: number; flipkart: number; meesho: number };
 }
 
 // -- Shared UI --------------------------------------------------------------
@@ -48,6 +48,9 @@ const CHANNELS: { value: string; label: string }[] = [
   { value: "corporate_gifting",  label: "Corporate / Gifting" },
   { value: "dm_order",           label: "DM Order (WhatsApp / Insta)" },
   { value: "exhibition",         label: "Exhibition / Pop-up" },
+  { value: "amazon",             label: "Amazon" },
+  { value: "flipkart",           label: "Flipkart" },
+  { value: "meesho",             label: "Meesho" },
 ];
 
 const PAYMENT_MODES: { value: string; label: string }[] = [
@@ -295,11 +298,14 @@ export default function OfflineSalesPage() {
           {summary && (
             <div className="grid grid-cols-5 gap-3">
               {[
-                { label: "Total Offline Revenue", value: fmt(summary.total), highlight: true },
+                { label: "Total Revenue",         value: fmt(summary.total), highlight: true },
                 { label: "Wholesale",             value: fmt(summary.byChannel.wholesale) },
                 { label: "Corporate / Gifting",   value: fmt(summary.byChannel.corporate_gifting) },
                 { label: "DM Orders",             value: fmt(summary.byChannel.dm_order) },
-                { label: "Exhibition",             value: fmt(summary.byChannel.exhibition) },
+                { label: "Exhibition",            value: fmt(summary.byChannel.exhibition) },
+                { label: "Amazon",                value: fmt(summary.byChannel.amazon) },
+                { label: "Flipkart",              value: fmt(summary.byChannel.flipkart) },
+                { label: "Meesho",                value: fmt(summary.byChannel.meesho) },
               ].map(s => (
                 <div key={s.label} className={`rounded-[6px] border px-4 py-3.5 ${s.highlight ? "border-[rgba(196,163,115,0.28)] bg-[rgba(196,163,115,0.06)]" : "border-[rgba(196,163,115,0.10)] bg-[rgba(255,255,255,0.02)]"}`}>
                   <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.45)] mb-1">{s.label}</p>

@@ -53,13 +53,17 @@ export async function GET(req: NextRequest) {
     order_total: (o.offline_sales_items ?? []).reduce((s, i) => s + Number(i.line_total), 0),
   }));
 
+  const byChannel = (ch: string) => withTotals.filter(o => o.channel === ch).reduce((s, o) => s + o.order_total, 0);
   const summary = {
     total: withTotals.reduce((s, o) => s + o.order_total, 0),
     byChannel: {
-      wholesale:         withTotals.filter(o => o.channel === "wholesale").reduce((s, o) => s + o.order_total, 0),
-      corporate_gifting: withTotals.filter(o => o.channel === "corporate_gifting").reduce((s, o) => s + o.order_total, 0),
-      dm_order:          withTotals.filter(o => o.channel === "dm_order").reduce((s, o) => s + o.order_total, 0),
-      exhibition:        withTotals.filter(o => o.channel === "exhibition").reduce((s, o) => s + o.order_total, 0),
+      wholesale:         byChannel("wholesale"),
+      corporate_gifting: byChannel("corporate_gifting"),
+      dm_order:          byChannel("dm_order"),
+      exhibition:        byChannel("exhibition"),
+      amazon:            byChannel("amazon"),
+      flipkart:          byChannel("flipkart"),
+      meesho:            byChannel("meesho"),
     },
   };
 
