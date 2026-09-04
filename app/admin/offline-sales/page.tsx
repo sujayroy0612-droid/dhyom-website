@@ -15,6 +15,7 @@ interface SaleOrder {
   id: string; sale_date: string; channel: string; customer_name: string;
   location?: string; payment_mode: string; payment_status: string;
   amount_paid: number; notes?: string; created_at: string;
+  invoice_number?: string | null; invoice_date?: string | null;
   offline_sales_items: SaleItem[];
   order_total: number;
 }
@@ -94,6 +95,8 @@ export default function OfflineSalesPage() {
   const [filterTo, setFilterTo]           = useState("");
   const [expandedId, setExpandedId]       = useState<string | null>(null);
   const [deleting, setDeleting]           = useState<string | null>(null);
+  const [invoiceGenerating, setInvoiceGenerating] = useState<Set<string>>(new Set());
+  const [invoiceNumbers, setInvoiceNumbers]       = useState<Map<string, string>>(new Map());
 
   // ── Form state ──
   const [fDate, setFDate]       = useState(todayStr());
@@ -131,6 +134,29 @@ export default function OfflineSalesPage() {
   }, [filterFrom, filterTo, filterChannel]);
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
+
+  // Seed invoiceNumbers map from orders once loaded
+  useEffect(() => {
+    setInvoiceNumbers(prev => {
+      const next = new Map(prev);
+      orders.forEach(o => { if (o.invoice_number) next.set(o.id, o.invoice_number); });
+      return next;
+    });
+  }, [orders]);
+
+  async function generateInvoice(orderId: string) {
+    setInvoiceGenerating(prev => new Set(prev).add(orderId));
+    const res = await fetch("/api/admin/generate-offline-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offline_order_id: orderId }),
+    });
+    const d = await res.json();
+    setInvoiceGenerating(prev => { const n = new Set(prev); n.delete(orderId); return n; });
+    if (d.invoice_number) {
+      setInvoiceNumbers(prev => new Map(prev).set(orderId, d.invoice_number));
+    }
+  }
 
   // ── Running total ──
   const runningTotal = lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unit_price) || 0), 0);
@@ -383,6 +409,40 @@ export default function OfflineSalesPage() {
                               <div className="flex items-center gap-6 flex-wrap font-body font-light text-[0.76rem] text-[rgba(245,237,224,0.40)]">
                                 <span>Payment mode: <span className="text-ivory">{o.payment_mode}</span></span>
                                 {o.notes && <span>Notes: <span className="text-ivory">{o.notes}</span></span>}
+                              </div>
+
+                              {/* Invoice actions */}
+                              <div className="flex items-center gap-4 pt-1 border-t border-[rgba(196,163,115,0.08)]">
+                                {(() => {
+                                  const inv = invoiceNumbers.get(o.id) ?? o.invoice_number;
+                                  const generating = invoiceGenerating.has(o.id);
+                                  if (inv) {
+                                    return (
+                                      <>
+                                        <span className="font-display text-[0.40rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)]">Invoice</span>
+                                        <span className="font-display text-brass text-[0.82rem]" style={{ letterSpacing: "0.04em" }}>{inv}</span>
+                                        <a
+                                          href={`/invoice/offline/${o.id}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.60)] hover:text-brass border border-[rgba(196,163,115,0.22)] rounded-[3px] px-3 py-1.5 hover:border-[rgba(196,163,115,0.45)] transition-colors"
+                                        >
+                                          Open / Print ↗
+                                        </a>
+                                      </>
+                                    );
+                                  }
+                                  return (
+                                    <button
+                                      type="button"
+                                      onClick={() => generateInvoice(o.id)}
+                                      disabled={generating}
+                                      className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.60)] hover:text-brass border border-[rgba(196,163,115,0.22)] rounded-[3px] px-3 py-1.5 hover:border-[rgba(196,163,115,0.45)] transition-colors disabled:opacity-40"
+                                    >
+                                      {generating ? "Generating…" : "Generate Invoice"}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </td>
