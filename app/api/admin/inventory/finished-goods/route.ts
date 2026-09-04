@@ -14,7 +14,7 @@ export async function GET() {
   const { data, error } = await sb
     .from("products")
     .select("id, name, category, stock, low_stock_threshold")
-    .order("stock", { ascending: true })
+    .order("stock", { ascending: false })
     .order("name");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ products: data ?? [] });
