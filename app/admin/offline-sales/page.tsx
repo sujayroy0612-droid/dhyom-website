@@ -95,6 +95,7 @@ export default function OfflineSalesPage() {
   const [filterTo, setFilterTo]           = useState("");
   const [expandedId, setExpandedId]       = useState<string | null>(null);
   const [deleting, setDeleting]           = useState<string | null>(null);
+  const [editingOrder, setEditingOrder]   = useState<SaleOrder | null>(null);
   const [invoiceGenerating, setInvoiceGenerating] = useState<Set<string>>(new Set());
   const [invoiceNumbers, setInvoiceNumbers]       = useState<Map<string, string>>(new Map());
 
@@ -172,7 +173,26 @@ export default function OfflineSalesPage() {
   function resetForm() {
     setFDate(todayStr()); setFChannel("wholesale"); setFCustomer(""); setFLocation("");
     setFMode("cash"); setFStatus("paid"); setFAmtPaid(""); setFNotes("");
-    setLines([emptyLine()]); setFormErr("");
+    setLines([emptyLine()]); setFormErr(""); setEditingOrder(null);
+  }
+
+  function loadOrderForEdit(o: SaleOrder) {
+    setFDate(o.sale_date);
+    setFChannel(o.channel);
+    setFCustomer(o.customer_name);
+    setFLocation(o.location ?? "");
+    setFMode(o.payment_mode);
+    setFStatus(o.payment_status);
+    setFAmtPaid(o.payment_status === "partial" ? String(o.amount_paid) : "");
+    setFNotes(o.notes ?? "");
+    setLines(
+      o.offline_sales_items.length > 0
+        ? o.offline_sales_items.map(i => ({ product_id: i.product_id, quantity: i.quantity, unit_price: i.unit_price }))
+        : [emptyLine()]
+    );
+    setFormErr("");
+    setEditingOrder(o);
+    setView("form");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -186,28 +206,31 @@ export default function OfflineSalesPage() {
 
     const amtPaid = fStatus === "paid" ? runningTotal : fStatus === "pending" ? 0 : Number(fAmtPaid);
 
+    const orderPayload = {
+      sale_date:      fDate,
+      channel:        fChannel,
+      customer_name:  fCustomer.trim(),
+      location:       fLocation.trim() || undefined,
+      payment_mode:   fMode,
+      payment_status: fStatus,
+      amount_paid:    amtPaid,
+      notes:          fNotes.trim() || undefined,
+    };
+    const itemsPayload = lines.map(l => ({
+      product_id: l.product_id,
+      quantity:   Number(l.quantity),
+      unit_price: Number(l.unit_price),
+    }));
+
     setSaving(true);
     const res = await fetch("/api/admin/offline-sales", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "create",
-        order: {
-          sale_date:      fDate,
-          channel:        fChannel,
-          customer_name:  fCustomer.trim(),
-          location:       fLocation.trim() || undefined,
-          payment_mode:   fMode,
-          payment_status: fStatus,
-          amount_paid:    amtPaid,
-          notes:          fNotes.trim() || undefined,
-        },
-        items: lines.map(l => ({
-          product_id: l.product_id,
-          quantity:   Number(l.quantity),
-          unit_price: Number(l.unit_price),
-        })),
-      }),
+      body: JSON.stringify(
+        editingOrder
+          ? { action: "update", id: editingOrder.id, order: orderPayload, items: itemsPayload }
+          : { action: "create", order: orderPayload, items: itemsPayload }
+      ),
     });
 
     const d = await res.json();
@@ -259,7 +282,7 @@ export default function OfflineSalesPage() {
             onClick={() => { resetForm(); setView("list"); }}
             className="font-display text-[0.46rem] tracking-[0.16em] uppercase text-[rgba(245,237,224,0.35)] hover:text-[rgba(245,237,224,0.65)] transition-colors"
           >
-            &larr; Back to list
+            &larr; {editingOrder ? "Cancel Edit" : "Back to list"}
           </button>
         )}
       </div>
@@ -353,17 +376,10 @@ export default function OfflineSalesPage() {
                             {o.payment_status}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <span className="text-[rgba(245,237,224,0.25)] text-[0.70rem]">{expandedId === o.id ? "▲" : "▼"}</span>
-                            <button
-                              onClick={e => { e.stopPropagation(); handleDelete(o.id); }}
-                              disabled={deleting === o.id}
-                              className="text-[rgba(210,90,90,0.45)] hover:text-[rgba(210,90,90,0.75)] text-[0.72rem] transition-colors disabled:opacity-30"
-                            >
-                              {deleting === o.id ? "…" : "×"}
-                            </button>
-                          </div>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-[rgba(245,237,224,0.35)] text-[0.72rem] cursor-pointer select-none">
+                            {expandedId === o.id ? "▲" : "▼"}
+                          </span>
                         </td>
                       </tr>
                       {expandedId === o.id && (
@@ -394,6 +410,23 @@ export default function OfflineSalesPage() {
                               <div className="flex items-center gap-6 flex-wrap font-body font-light text-[0.76rem] text-[rgba(245,237,224,0.40)]">
                                 <span>Payment mode: <span className="text-ivory">{o.payment_mode}</span></span>
                                 {o.notes && <span>Notes: <span className="text-ivory">{o.notes}</span></span>}
+                              </div>
+
+                              {/* Order actions — Edit / Delete */}
+                              <div className="flex items-center gap-3 pt-1 border-t border-[rgba(196,163,115,0.08)]">
+                                <button
+                                  onClick={() => loadOrderForEdit(o)}
+                                  className="font-display text-[0.42rem] tracking-[0.14em] uppercase px-4 py-2 rounded-[4px] border border-[rgba(196,163,115,0.28)] text-[rgba(196,163,115,0.70)] hover:bg-[rgba(196,163,115,0.10)] hover:border-[rgba(196,163,115,0.55)] hover:text-brass transition-colors"
+                                >
+                                  Edit Order
+                                </button>
+                                <button
+                                  onClick={e => { e.stopPropagation(); handleDelete(o.id); }}
+                                  disabled={deleting === o.id}
+                                  className="font-display text-[0.42rem] tracking-[0.14em] uppercase px-4 py-2 rounded-[4px] border border-[rgba(210,90,90,0.30)] text-[rgba(210,90,90,0.70)] hover:bg-[rgba(210,90,90,0.08)] hover:border-[rgba(210,90,90,0.60)] hover:text-[rgba(210,90,90,1)] transition-colors disabled:opacity-30"
+                                >
+                                  {deleting === o.id ? "Deleting..." : "Delete Order"}
+                                </button>
                               </div>
 
                               {/* Invoice actions */}
@@ -447,7 +480,9 @@ export default function OfflineSalesPage() {
         <form onSubmit={handleSubmit} className="max-w-2xl flex flex-col gap-6">
 
           <div className="rounded-[6px] border border-[rgba(196,163,115,0.10)] bg-[rgba(255,255,255,0.02)] p-6 flex flex-col gap-5">
-            <p className="font-display text-[0.44rem] tracking-[0.20em] uppercase text-[rgba(196,163,115,0.40)]">Sale Details</p>
+            <p className="font-display text-[0.44rem] tracking-[0.20em] uppercase text-[rgba(196,163,115,0.40)]">
+            {editingOrder ? `Editing — ${editingOrder.customer_name}` : "Sale Details"}
+          </p>
 
             <div className="flex gap-4">
               <Field label="Sale Date" half>
@@ -590,7 +625,7 @@ export default function OfflineSalesPage() {
               type="submit" disabled={saving}
               className="px-6 py-2.5 rounded-[4px] bg-[rgba(196,163,115,0.14)] border border-[rgba(196,163,115,0.28)] text-brass font-display text-[0.48rem] tracking-[0.18em] uppercase hover:bg-[rgba(196,163,115,0.20)] transition-colors disabled:opacity-40"
             >
-              {saving ? "Saving..." : "Save Sale"}
+              {saving ? "Saving..." : editingOrder ? "Update Sale" : "Save Sale"}
             </button>
             <button
               type="button" onClick={() => { resetForm(); setView("list"); }}

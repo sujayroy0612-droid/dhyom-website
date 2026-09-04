@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     .select(`
       id, sale_date, channel, customer_name, location,
       payment_mode, payment_status, amount_paid, notes, created_at,
+      invoice_number, invoice_date,
       offline_sales_items (
         id, product_id, quantity, unit_price, line_total,
         products ( id, name, price )
@@ -126,6 +127,47 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, id: orderRow.id });
+  }
+
+  if (body.action === "update") {
+    const { id, order, items } = body as {
+      id: string;
+      order: {
+        sale_date: string; channel: string; customer_name: string;
+        location?: string; payment_mode: string; payment_status: string;
+        amount_paid: number; notes?: string;
+      };
+      items: { product_id: string; quantity: number; unit_price: number }[];
+    };
+
+    if (!id || !order || !items?.length) {
+      return NextResponse.json({ error: "id, order, and items are required" }, { status: 400 });
+    }
+
+    // Update order row
+    const { error: orderErr } = await sb
+      .from("offline_sales_orders")
+      .update({ ...order })
+      .eq("id", id);
+
+    if (orderErr) return NextResponse.json({ error: orderErr.message }, { status: 500 });
+
+    // Replace items: delete existing then insert new
+    const { error: delErr } = await sb.from("offline_sales_items").delete().eq("order_id", id);
+    if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 });
+
+    const itemRows = items.map(i => ({
+      order_id:   id,
+      product_id: i.product_id,
+      quantity:   i.quantity,
+      unit_price: Number(i.unit_price),
+      line_total: i.quantity * Number(i.unit_price),
+    }));
+
+    const { error: itemsErr } = await sb.from("offline_sales_items").insert(itemRows);
+    if (itemsErr) return NextResponse.json({ error: itemsErr.message }, { status: 500 });
+
+    return NextResponse.json({ ok: true });
   }
 
   return NextResponse.json({ error: "Unknown action" }, { status: 400 });
