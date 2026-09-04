@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// -- Types ------------------------------------------------------------------
 
 interface Product { id: string; name: string; category: string; price: number; }
 
@@ -25,12 +25,14 @@ interface Summary {
   byChannel: { wholesale: number; corporate_gifting: number; dm_order: number; exhibition: number };
 }
 
-// ── Shared UI ─────────────────────────────────────────────────────────────────
+// -- Shared UI --------------------------------------------------------------
 
 const inputCls =
   "w-full bg-[rgba(255,255,255,0.03)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body font-light text-[0.88rem] text-ivory placeholder:text-[rgba(245,237,224,0.22)] focus:outline-none focus:border-[rgba(196,163,115,0.50)] transition-colors";
 
 const selectCls = inputCls + " appearance-none cursor-pointer";
+// Native <option> elements need explicit colors; CSS vars don't reach OS dropdown chrome
+const optStyle: React.CSSProperties = { background: "#1a0a12", color: "#f5ede0" };
 
 function Field({ label, children, half }: { label: string; children: React.ReactNode; half?: boolean }) {
   return (
@@ -68,9 +70,9 @@ function payStatusBadge(v: string) {
   return "text-[rgba(245,237,224,0.35)] bg-[rgba(245,237,224,0.04)]";
 }
 
-function fmt(n: number) { return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 0 })}` }
+function fmt(n: number) { return "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 0 }); }
 
-// ── Form state ────────────────────────────────────────────────────────────────
+// -- Form state -------------------------------------------------------------
 
 type LineItem = { product_id: string; quantity: number; unit_price: number };
 
@@ -78,15 +80,13 @@ const emptyLine = (): LineItem => ({ product_id: "", quantity: 1, unit_price: 0 
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
-// ── Page ──────────────────────────────────────────────────────────────────────
+// -- Page -------------------------------------------------------------------
 
 export default function OfflineSalesPage() {
   const [view, setView] = useState<"list" | "form">("list");
 
-  // ── Products for dropdown ──
   const [products, setProducts] = useState<Product[]>([]);
 
-  // ── List state ──
   const [orders, setOrders]     = useState<SaleOrder[]>([]);
   const [summary, setSummary]   = useState<Summary | null>(null);
   const [loading, setLoading]   = useState(false);
@@ -98,20 +98,18 @@ export default function OfflineSalesPage() {
   const [invoiceGenerating, setInvoiceGenerating] = useState<Set<string>>(new Set());
   const [invoiceNumbers, setInvoiceNumbers]       = useState<Map<string, string>>(new Map());
 
-  // ── Form state ──
-  const [fDate, setFDate]       = useState(todayStr());
-  const [fChannel, setFChannel] = useState("wholesale");
+  const [fDate, setFDate]         = useState(todayStr());
+  const [fChannel, setFChannel]   = useState("wholesale");
   const [fCustomer, setFCustomer] = useState("");
   const [fLocation, setFLocation] = useState("");
-  const [fMode, setFMode]       = useState("cash");
-  const [fStatus, setFStatus]   = useState("paid");
-  const [fAmtPaid, setFAmtPaid] = useState("");
-  const [fNotes, setFNotes]     = useState("");
-  const [lines, setLines]       = useState<LineItem[]>([emptyLine()]);
-  const [saving, setSaving]     = useState(false);
-  const [formErr, setFormErr]   = useState("");
+  const [fMode, setFMode]         = useState("cash");
+  const [fStatus, setFStatus]     = useState("paid");
+  const [fAmtPaid, setFAmtPaid]   = useState("");
+  const [fNotes, setFNotes]       = useState("");
+  const [lines, setLines]         = useState<LineItem[]>([emptyLine()]);
+  const [saving, setSaving]       = useState(false);
+  const [formErr, setFormErr]     = useState("");
 
-  // ── Load products once ──
   useEffect(() => {
     fetch("/api/admin/offline-sales/products")
       .then(r => r.json())
@@ -119,7 +117,6 @@ export default function OfflineSalesPage() {
       .catch(() => {});
   }, []);
 
-  // ── Load orders ──
   const loadOrders = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -135,7 +132,6 @@ export default function OfflineSalesPage() {
 
   useEffect(() => { loadOrders(); }, [loadOrders]);
 
-  // Seed invoiceNumbers map from orders once loaded
   useEffect(() => {
     setInvoiceNumbers(prev => {
       const next = new Map(prev);
@@ -158,10 +154,8 @@ export default function OfflineSalesPage() {
     }
   }
 
-  // ── Running total ──
   const runningTotal = lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unit_price) || 0), 0);
 
-  // ── Line helpers ──
   function updateLine(i: number, patch: Partial<LineItem>) {
     setLines(prev => prev.map((l, idx) => idx === i ? { ...l, ...patch } : l));
   }
@@ -175,14 +169,12 @@ export default function OfflineSalesPage() {
   function addLine() { setLines(prev => [...prev, emptyLine()]); }
   function removeLine(i: number) { setLines(prev => prev.filter((_, idx) => idx !== i)); }
 
-  // ── Reset form ──
   function resetForm() {
     setFDate(todayStr()); setFChannel("wholesale"); setFCustomer(""); setFLocation("");
     setFMode("cash"); setFStatus("paid"); setFAmtPaid(""); setFNotes("");
     setLines([emptyLine()]); setFormErr("");
   }
 
-  // ── Submit ──
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormErr("");
@@ -226,7 +218,6 @@ export default function OfflineSalesPage() {
     loadOrders();
   }
 
-  // ── Delete ──
   async function handleDelete(id: string) {
     if (!confirm("Delete this sale record?")) return;
     setDeleting(id);
@@ -239,22 +230,20 @@ export default function OfflineSalesPage() {
     loadOrders();
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // -- Render ---------------------------------------------------------------
 
   return (
     <div className="p-8 min-h-screen">
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <p className="font-display text-[0.44rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.40)] mb-1">
-            Admin
-          </p>
+          <p className="font-display text-[0.44rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.40)] mb-1">Admin</p>
           <h1 className="font-display text-ivory" style={{ fontSize: "1.35rem", letterSpacing: "0.06em" }}>
             Offline Sales
           </h1>
           <p className="font-body font-light text-[0.78rem] text-[rgba(245,237,224,0.35)] mt-0.5">
-            Wholesale · Corporate · DM orders · Exhibition
+            Wholesale &middot; Corporate &middot; DM orders &middot; Exhibition
           </p>
         </div>
         {view === "list" ? (
@@ -270,12 +259,12 @@ export default function OfflineSalesPage() {
             onClick={() => { resetForm(); setView("list"); }}
             className="font-display text-[0.46rem] tracking-[0.16em] uppercase text-[rgba(245,237,224,0.35)] hover:text-[rgba(245,237,224,0.65)] transition-colors"
           >
-            ← Back to list
+            &larr; Back to list
           </button>
         )}
       </div>
 
-      {/* ══════════ LIST VIEW ══════════════════════════════════════════════ */}
+      {/* LIST VIEW */}
       {view === "list" && (
         <div className="flex flex-col gap-6">
 
@@ -304,19 +293,17 @@ export default function OfflineSalesPage() {
               onChange={e => setFilterChannel(e.target.value)}
               className="bg-[rgba(255,255,255,0.03)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body font-light text-[0.82rem] text-ivory focus:outline-none focus:border-[rgba(196,163,115,0.50)] transition-colors appearance-none cursor-pointer"
             >
-              <option value="">All channels</option>
-              {CHANNELS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              <option value="" style={optStyle}>All channels</option>
+              {CHANNELS.map(c => <option key={c.value} value={c.value} style={optStyle}>{c.label}</option>)}
             </select>
             <input
               type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)}
               className="bg-[rgba(255,255,255,0.03)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body font-light text-[0.82rem] text-ivory focus:outline-none focus:border-[rgba(196,163,115,0.50)] transition-colors"
-              placeholder="From"
             />
-            <span className="text-[rgba(245,237,224,0.25)] text-[0.80rem]">→</span>
+            <span className="text-[rgba(245,237,224,0.25)] text-[0.80rem]">&rarr;</span>
             <input
               type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)}
               className="bg-[rgba(255,255,255,0.03)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body font-light text-[0.82rem] text-ivory focus:outline-none focus:border-[rgba(196,163,115,0.50)] transition-colors"
-              placeholder="To"
             />
             {(filterChannel || filterFrom || filterTo) && (
               <button
@@ -374,7 +361,7 @@ export default function OfflineSalesPage() {
                               disabled={deleting === o.id}
                               className="text-[rgba(210,90,90,0.45)] hover:text-[rgba(210,90,90,0.75)] text-[0.72rem] transition-colors disabled:opacity-30"
                             >
-                              {deleting === o.id ? "…" : "✕"}
+                              {deleting === o.id ? "…" : "×"}
                             </button>
                           </div>
                         </td>
@@ -383,7 +370,6 @@ export default function OfflineSalesPage() {
                         <tr key={`${o.id}-detail`} className="border-b border-[rgba(196,163,115,0.06)] bg-[rgba(196,163,115,0.03)]">
                           <td colSpan={8} className="px-6 py-4">
                             <div className="flex flex-col gap-3">
-                              {/* Items */}
                               <table className="w-full max-w-xl">
                                 <thead>
                                   <tr>
@@ -405,7 +391,6 @@ export default function OfflineSalesPage() {
                                   ))}
                                 </tbody>
                               </table>
-                              {/* Meta */}
                               <div className="flex items-center gap-6 flex-wrap font-body font-light text-[0.76rem] text-[rgba(245,237,224,0.40)]">
                                 <span>Payment mode: <span className="text-ivory">{o.payment_mode}</span></span>
                                 {o.notes && <span>Notes: <span className="text-ivory">{o.notes}</span></span>}
@@ -427,7 +412,7 @@ export default function OfflineSalesPage() {
                                           rel="noopener noreferrer"
                                           className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.60)] hover:text-brass border border-[rgba(196,163,115,0.22)] rounded-[3px] px-3 py-1.5 hover:border-[rgba(196,163,115,0.45)] transition-colors"
                                         >
-                                          Open / Print ↗
+                                          Open / Print &nearr;
                                         </a>
                                       </>
                                     );
@@ -457,7 +442,7 @@ export default function OfflineSalesPage() {
         </div>
       )}
 
-      {/* ══════════ FORM VIEW ══════════════════════════════════════════════ */}
+      {/* FORM VIEW */}
       {view === "form" && (
         <form onSubmit={handleSubmit} className="max-w-2xl flex flex-col gap-6">
 
@@ -470,7 +455,7 @@ export default function OfflineSalesPage() {
               </Field>
               <Field label="Channel" half>
                 <select value={fChannel} onChange={e => setFChannel(e.target.value)} className={selectCls}>
-                  {CHANNELS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  {CHANNELS.map(c => <option key={c.value} value={c.value} style={optStyle}>{c.label}</option>)}
                 </select>
               </Field>
             </div>
@@ -485,7 +470,7 @@ export default function OfflineSalesPage() {
               <Field label="Location (optional)" half>
                 <input
                   type="text" value={fLocation} onChange={e => setFLocation(e.target.value)}
-                  placeholder="City, stall name…" className={inputCls}
+                  placeholder="City, stall name..." className={inputCls}
                 />
               </Field>
             </div>
@@ -505,9 +490,9 @@ export default function OfflineSalesPage() {
                     className={selectCls}
                     required
                   >
-                    <option value="">Select product…</option>
+                    <option value="" style={optStyle}>Select product...</option>
                     {products.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} — ₹{p.price}</option>
+                      <option key={p.id} value={p.id} style={optStyle}>{p.name} &mdash; {"₹"}{p.price}</option>
                     ))}
                   </select>
                 </div>
@@ -520,7 +505,7 @@ export default function OfflineSalesPage() {
                   />
                 </div>
                 <div className="w-28 flex flex-col gap-1.5">
-                  {i === 0 && <label className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.45)]">Unit Price ₹</label>}
+                  {i === 0 && <label className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.45)]">Unit Price {"₹"}</label>}
                   <input
                     type="number" min={0} step="0.01" value={line.unit_price}
                     onChange={e => updateLine(i, { unit_price: Number(e.target.value) })}
@@ -538,7 +523,7 @@ export default function OfflineSalesPage() {
                     type="button" onClick={() => removeLine(i)}
                     className="mb-1.5 text-[rgba(210,90,90,0.45)] hover:text-[rgba(210,90,90,0.75)] text-[0.80rem] transition-colors"
                   >
-                    ✕
+                    &times;
                   </button>
                 )}
               </div>
@@ -564,17 +549,17 @@ export default function OfflineSalesPage() {
             <div className="flex gap-4">
               <Field label="Payment Mode" half>
                 <select value={fMode} onChange={e => setFMode(e.target.value)} className={selectCls}>
-                  {PAYMENT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  {PAYMENT_MODES.map(m => <option key={m.value} value={m.value} style={optStyle}>{m.label}</option>)}
                 </select>
               </Field>
               <Field label="Payment Status" half>
                 <select value={fStatus} onChange={e => setFStatus(e.target.value)} className={selectCls}>
-                  {PAYMENT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  {PAYMENT_STATUSES.map(s => <option key={s.value} value={s.value} style={optStyle}>{s.label}</option>)}
                 </select>
               </Field>
             </div>
             {fStatus === "partial" && (
-              <Field label="Amount Paid (₹)">
+              <Field label="Amount Paid (&#8377;)">
                 <input
                   type="number" min={0} step="0.01" value={fAmtPaid}
                   onChange={e => setFAmtPaid(e.target.value)}
@@ -590,7 +575,7 @@ export default function OfflineSalesPage() {
             <Field label="Notes (optional)">
               <textarea
                 value={fNotes} onChange={e => setFNotes(e.target.value)}
-                rows={3} placeholder="Any extra context…"
+                rows={3} placeholder="Any extra context..."
                 className={inputCls + " resize-none"}
               />
             </Field>
@@ -605,7 +590,7 @@ export default function OfflineSalesPage() {
               type="submit" disabled={saving}
               className="px-6 py-2.5 rounded-[4px] bg-[rgba(196,163,115,0.14)] border border-[rgba(196,163,115,0.28)] text-brass font-display text-[0.48rem] tracking-[0.18em] uppercase hover:bg-[rgba(196,163,115,0.20)] transition-colors disabled:opacity-40"
             >
-              {saving ? "Saving…" : "Save Sale"}
+              {saving ? "Saving..." : "Save Sale"}
             </button>
             <button
               type="button" onClick={() => { resetForm(); setView("list"); }}
