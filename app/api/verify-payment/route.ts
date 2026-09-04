@@ -78,7 +78,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Order could not be saved" }, { status: 500 });
     }
 
-    // ── 4. Fire founder notification (server-to-server, non-blocking) ─────
+    // ── 4. Deduct finished-goods stock for each ordered item ──────────────
+    // base.items is the cart array: [{ id: productId, quantity, ... }]
+    // Non-blocking — a stock deduction failure must never fail the order save.
+    try {
+      const cartItems = base.items as { id: string; quantity: number }[] | undefined;
+      if (Array.isArray(cartItems) && cartItems.length > 0) {
+        await Promise.all(
+          cartItems.map(item =>
+            sb.rpc("decrement_product_stock", { p_product_id: item.id, p_quantity: item.quantity })
+          )
+        );
+      }
+    } catch (stockErr) {
+      console.error("[verify-payment] stock deduction error (non-fatal):", stockErr);
+    }
+
+    // ── 5. Fire founder notification (server-to-server, non-blocking) ─────
     const host     = req.headers.get("host") ?? "dhyom.in";
     const protocol = host.startsWith("localhost") ? "http" : "https";
     void fetch(`${protocol}://${host}/api/notify-order`, {

@@ -11,6 +11,7 @@ const NAV_MAIN = [
   { label: "Products",     href: "/admin/products",            icon: "⊞" },
   { label: "Shipping",      href: "/admin/shipping",            icon: "⬡" },
   { label: "Offline Sales", href: "/admin/offline-sales",      icon: "◉" },
+  { label: "Inventory",    href: "/admin/inventory",           icon: "◫" },
   { label: "Brand Assets",  href: "/admin/upload-brand-images", icon: "◈" },
   { label: "Analytics",    href: "/admin/analytics",           icon: "↗" },
   { label: "Reports",      href: "/admin/reports",             icon: "◎" },
