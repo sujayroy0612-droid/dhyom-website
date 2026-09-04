@@ -59,7 +59,7 @@ export default async function OfflineInvoicePage({ params }: { params: { id: str
 
   const o       = oRes.data;
   const logoUrl = (assets as Record<string, string | null>).logo ?? null;
-  const items   = (o.offline_sales_items ?? []) as {
+  const items = (o.offline_sales_items ?? []) as unknown as {
     id: string; product_id: string; quantity: number; unit_price: number; line_total: number;
     products: { id: string; name: string; price: number } | null;
   }[];
