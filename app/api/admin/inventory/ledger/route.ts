@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+function adminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const from = searchParams.get("from") ?? "";
+  const to   = searchParams.get("to")   ?? "";
+
+  const sb = adminClient();
+
+  // 1. Products
+  const { data: products, error: prodErr } = await sb
+    .from("products")
+    .select("id, name, category, stock, low_stock_threshold")
+    .order("stock", { ascending: false })
+    .order("name");
+  if (prodErr) return NextResponse.json({ error: prodErr.message }, { status: 500 });
+
+  // 2. Production batches (stock in) filtered by date
+  let batchQ = sb.from("production_batches").select("product_id, quantity_produced, batch_date");
+  if (from) batchQ = batchQ.gte("batch_date", from);
+  if (to)   batchQ = batchQ.lte("batch_date", to);
+  const { data: batches } = await batchQ;
+
+  const stockInMap: Record<string, number> = {};
+  (batches ?? []).forEach((b: { product_id: string; quantity_produced: number }) => {
+    stockInMap[b.product_id] = (stockInMap[b.product_id] ?? 0) + b.quantity_produced;
+  });
+
+  // 3. Offline sales filtered by date
+  let offQ = sb
+    .from("offline_sales_orders")
+    .select("id, sale_date, offline_sales_items(product_id, quantity)");
+  if (from) offQ = offQ.gte("sale_date", from);
+  if (to)   offQ = offQ.lte("sale_date", to);
+  const { data: offOrders } = await offQ;
+
+  const offlineMap: Record<string, number> = {};
+  (offOrders ?? []).forEach((o: { offline_sales_items: { product_id: string; quantity: number }[] }) => {
+    (o.offline_sales_items ?? []).forEach(i => {
+      offlineMap[i.product_id] = (offlineMap[i.product_id] ?? 0) + i.quantity;
+    });
+  });
+
+  // 4. WIP: max producible units from current raw material stock
+  const { data: recipes } = await sb
+    .from("product_recipes")
+    .select("product_id, quantity_used, raw_materials(current_stock)");
+
+  const recipeMap: Record<string, { qty: number; stock: number }[]> = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (recipes ?? []).forEach((r: any) => {
+    if (!recipeMap[r.product_id]) recipeMap[r.product_id] = [];
+    const rmStock = Array.isArray(r.raw_materials) ? (r.raw_materials[0]?.current_stock ?? 0) : (r.raw_materials?.current_stock ?? 0);
+    recipeMap[r.product_id].push({ qty: Number(r.quantity_used), stock: Number(rmStock) });
+  });
+
+  const wipMap: Record<string, number> = {};
+  Object.entries(recipeMap).forEach(([pid, ingredients]) => {
+    if (!ingredients.length) return;
+    wipMap[pid] = Math.max(0, Math.min(...ingredients.map(i => Math.floor(i.stock / i.qty))));
+  });
+
+  // 5. Build ledger rows
+  const ledger = (products ?? []).map((p: {
+    id: string; name: string; category: string; stock: number; low_stock_threshold: number;
+  }) => {
+    const stockIn    = stockInMap[p.id]  ?? 0;
+    const outOffline = offlineMap[p.id]  ?? 0;
+    const outWebsite = 0; // online orders not yet channel-tagged
+    const closing    = p.stock;
+    const wip        = wipMap[p.id] ?? 0;
+    const total      = closing + wip;
+    const opening    = Math.max(0, closing - stockIn + outOffline + outWebsite);
+
+    let remarks = "";
+    if (closing <= p.low_stock_threshold) {
+      remarks = wip > 0 ? "Below reorder — production possible" : "Below reorder — plan production";
+    } else if (wip > 0) {
+      remarks = "Raw stock in advance";
+    }
+
+    return {
+      id: p.id, name: p.name, category: p.category,
+      opening, stock_in: stockIn,
+      out_amazon: 0, out_flipkart: 0, out_meesho: 0,
+      out_website: outWebsite, out_offline: outOffline,
+      closing, wip, total,
+      reorder: p.low_stock_threshold,
+      remarks,
+      low: closing <= p.low_stock_threshold,
+    };
+  });
+
+  return NextResponse.json({ ledger });
+}
