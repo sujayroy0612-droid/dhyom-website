@@ -69,17 +69,13 @@ export default function InventoryPage() {
   const [tab, setTab] = useState<Tab>("ledger");
 
   // ── Ledger ──────────────────────────────────────────────────────────────────
-  const [ledger,      setLedger]      = useState<LedgerRow[]>([]);
+  const [ledger,        setLedger]        = useState<LedgerRow[]>([]);
   const [ledgerLoading, setLedgerLoading] = useState(true);
-  const [filterFrom,  setFilterFrom]  = useState(firstOfMonth());
-  const [filterTo,    setFilterTo]    = useState(todayStr());
-  // Inline stock adjust
-  const [adjustingId, setAdjustingId] = useState<string | null>(null);
-  const [adjustDelta, setAdjustDelta] = useState(0);
-  const [savingAdj,   setSavingAdj]   = useState(false);
-  // Inline channel-sales edit: key = `${productId}:${channel}`
-  const [editingCell, setEditingCell] = useState<string | null>(null);
-  const [editingVal,  setEditingVal]  = useState("");
+  const [filterFrom,    setFilterFrom]    = useState(firstOfMonth());
+  const [filterTo,      setFilterTo]      = useState(todayStr());
+  // Single shared edit state — key = `${productId}:${fieldType}`
+  const [editingCell,   setEditingCell]   = useState<string | null>(null);
+  const [editingVal,    setEditingVal]    = useState("");
 
   const loadLedger = useCallback(async () => {
     setLedgerLoading(true);
@@ -94,33 +90,87 @@ export default function InventoryPage() {
 
   useEffect(() => { if (tab === "ledger") loadLedger(); }, [tab, loadLedger]);
 
-  async function applyAdjust(row: LedgerRow) {
-    if (adjustDelta === 0) { setAdjustingId(null); return; }
-    setSavingAdj(true);
-    await fetch("/api/admin/inventory/finished-goods", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "adjust_stock", id: row.id, delta: adjustDelta }),
-    });
-    setSavingAdj(false);
-    setAdjustingId(null);
-    setAdjustDelta(0);
-    loadLedger();
-  }
-
-  async function saveChannelCell(productId: string, channel: string) {
-    const qty = parseInt(editingVal, 10);
-    setEditingCell(null);
-    if (isNaN(qty) || qty < 0) return;
-    await fetch("/api/admin/inventory/channel-sales", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product_id: productId, channel, quantity: qty, period_from: filterFrom, period_to: filterTo }),
-    });
-    loadLedger();
-  }
-
-  function startEditCell(productId: string, channel: string, currentVal: number) {
-    setEditingCell(`${productId}:${channel}`);
+  function startEdit(productId: string, field: string, currentVal: string | number) {
+    setEditingCell(`${productId}:${field}`);
     setEditingVal(String(currentVal));
+  }
+
+  async function commitEdit(productId: string, field: string) {
+    const val = editingVal.trim();
+    setEditingCell(null);
+
+    // Channel sales (amazon / flipkart / meesho / website)
+    if (["amazon","flipkart","meesho","website"].includes(field)) {
+      const qty = parseInt(val, 10);
+      if (isNaN(qty) || qty < 0) return;
+      await fetch("/api/admin/inventory/channel-sales", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: productId, channel: field, quantity: qty, period_from: filterFrom, period_to: filterTo }),
+      });
+      loadLedger(); return;
+    }
+
+    // Closing stock (direct set)
+    if (field === "closing") {
+      const stock = parseInt(val, 10);
+      if (isNaN(stock) || stock < 0) return;
+      await fetch("/api/admin/inventory/finished-goods", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_stock", id: productId, stock }),
+      });
+      loadLedger(); return;
+    }
+
+    // Reorder level
+    if (field === "reorder") {
+      const threshold = parseInt(val, 10);
+      if (isNaN(threshold) || threshold < 0) return;
+      await fetch("/api/admin/inventory/finished-goods", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_threshold", id: productId, threshold }),
+      });
+      loadLedger(); return;
+    }
+
+    // Remarks
+    if (field === "remarks") {
+      await fetch("/api/admin/inventory/finished-goods", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_remarks", id: productId, remarks: val }),
+      });
+      loadLedger(); return;
+    }
+  }
+
+  function EditCell({ productId, field, value, numeric = true, className = "", style = {} }: {
+    productId: string; field: string; value: string | number;
+    numeric?: boolean; className?: string; style?: React.CSSProperties;
+  }) {
+    const key = `${productId}:${field}`;
+    const isEditing = editingCell === key;
+    if (isEditing) {
+      return (
+        <input
+          autoFocus type={numeric ? "number" : "text"} min={numeric ? 0 : undefined}
+          value={editingVal}
+          onChange={e => setEditingVal(e.target.value)}
+          onBlur={() => commitEdit(productId, field)}
+          onKeyDown={e => { if (e.key === "Enter") commitEdit(productId, field); if (e.key === "Escape") setEditingCell(null); }}
+          onClick={e => e.stopPropagation()}
+          className={`bg-[rgba(196,163,115,0.10)] border border-[rgba(196,163,115,0.45)] rounded-[3px] px-1.5 py-0.5 font-body text-[0.80rem] text-ivory focus:outline-none ${numeric ? "w-16 text-center" : "w-full"}`}
+          style={style}
+        />
+      );
+    }
+    return (
+      <span
+        onClick={() => startEdit(productId, field, value)}
+        className={`cursor-pointer hover:text-brass transition-colors ${className}`}
+        title="Click to edit"
+      >
+        {value === "" || value === 0 ? <span className="text-[rgba(245,237,224,0.25)]">0</span> : value}
+      </span>
+    );
   }
 
   // Totals row
@@ -385,7 +435,6 @@ export default function InventoryPage() {
                     <th className={TH + " text-[rgba(196,163,115,0.45)]"} rowSpan={2}>Total<br/>Available</th>
                     <th className={TH + " text-[rgba(196,163,115,0.45)]"} rowSpan={2}>Reorder<br/>Level</th>
                     <th className={TH_LEFT + " text-[rgba(196,163,115,0.45)]"} rowSpan={2} style={{ minWidth: 160 }}>Remarks</th>
-                    <th className={TH + " text-[rgba(196,163,115,0.35)]"} rowSpan={2}>Adjust</th>
                   </tr>
                   <tr className="bg-[#1e0c17] border-b border-[rgba(196,163,115,0.12)]">
                     <th className={TH + " text-[rgba(196,163,115,0.30)] border-l border-[rgba(196,163,115,0.10)]"}>Amazon</th>
@@ -398,7 +447,6 @@ export default function InventoryPage() {
 
                 <tbody className="divide-y divide-[rgba(196,163,115,0.05)]">
                   {ledger.map(row => {
-                    const isAdjusting = adjustingId === row.id;
                     const rowBg = row.low
                       ? "bg-[rgba(200,80,80,0.05)] hover:bg-[rgba(200,80,80,0.08)]"
                       : "bg-[#12060e] hover:bg-[rgba(196,163,115,0.03)]";
@@ -407,87 +455,52 @@ export default function InventoryPage() {
                         <td className={TD_LEFT + " font-display text-ivory"} style={{ fontSize: "0.78rem", letterSpacing: "0.03em" }}>
                           {row.name}
                         </td>
-                        <td className={TD + " text-[rgba(245,237,224,0.45)]"}>{fmt(row.opening)}</td>
+                        <td className={TD + " text-[rgba(245,237,224,0.35)]"}>{fmt(row.opening)}</td>
                         <td className={TD + " text-[rgba(100,210,130,0.75)]"}>{row.stock_in > 0 ? `+${fmt(row.stock_in)}` : "0"}</td>
 
-                        {/* Stock out columns — Amazon/Flipkart/Meesho are click-to-edit */}
-                        {(["amazon","flipkart","meesho"] as const).map((ch, ci) => {
-                          const val    = ch === "amazon" ? row.out_amazon : ch === "flipkart" ? row.out_flipkart : row.out_meesho;
-                          const cellKey = `${row.id}:${ch}`;
-                          const isEditing = editingCell === cellKey;
-                          return (
-                            <td key={ch} className={TD + (ci === 0 ? " border-l border-[rgba(196,163,115,0.06)]" : "")}
-                              style={{ minWidth: 64, cursor: "pointer" }}
-                              onClick={() => !isEditing && startEditCell(row.id, ch, val)}>
-                              {isEditing ? (
-                                <input
-                                  autoFocus
-                                  type="number" min={0} value={editingVal}
-                                  onChange={e => setEditingVal(e.target.value)}
-                                  onBlur={() => saveChannelCell(row.id, ch)}
-                                  onKeyDown={e => { if (e.key === "Enter") saveChannelCell(row.id, ch); if (e.key === "Escape") setEditingCell(null); }}
-                                  className="w-14 text-center bg-[rgba(196,163,115,0.10)] border border-[rgba(196,163,115,0.40)] rounded-[3px] px-1 py-0.5 font-body text-[0.80rem] text-ivory focus:outline-none"
-                                  onClick={e => e.stopPropagation()}
-                                />
-                              ) : (
-                                <span className={`${val > 0 ? "text-[rgba(245,237,224,0.75)]" : "text-[rgba(245,237,224,0.22)]"} hover:text-brass transition-colors`}>
-                                  {val > 0 ? fmt(val) : "0"}
-                                  <span className="ml-1 opacity-0 group-hover:opacity-100 text-[0.55rem]">✎</span>
-                                </span>
-                              )}
-                            </td>
-                          );
-                        })}
-                        <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_website  > 0 ? fmt(row.out_website)  : "0"}</td>
-                        <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_offline  > 0 ? fmt(row.out_offline)  : "0"}</td>
+                        {/* Stock out — Amazon / Flipkart / Meesho / Website: click to edit */}
+                        <td className={TD + " border-l border-[rgba(196,163,115,0.06)]"} style={{ minWidth: 60 }}>
+                          <EditCell productId={row.id} field="amazon"   value={row.out_amazon}   />
+                        </td>
+                        <td className={TD} style={{ minWidth: 60 }}>
+                          <EditCell productId={row.id} field="flipkart" value={row.out_flipkart} />
+                        </td>
+                        <td className={TD} style={{ minWidth: 60 }}>
+                          <EditCell productId={row.id} field="meesho"   value={row.out_meesho}   />
+                        </td>
+                        <td className={TD} style={{ minWidth: 60 }}>
+                          <EditCell productId={row.id} field="website"  value={row.out_website}  />
+                        </td>
+                        <td className={TD + " text-[rgba(245,237,224,0.45)]"}>{row.out_offline > 0 ? fmt(row.out_offline) : "0"}</td>
 
-                        {/* Closing stock — highlighted red if low */}
-                        <td className={[
-                          TD + " font-display border-l border-[rgba(196,163,115,0.08)]",
-                          row.low ? "text-[rgba(200,80,80,0.90)]" : "text-ivory"
-                        ].join(" ")} style={{ fontSize: "0.85rem", letterSpacing: "0.03em" }}>
-                          {fmt(row.closing)}
+                        {/* Closing stock — click to set directly */}
+                        <td className={[TD + " border-l border-[rgba(196,163,115,0.08)]", row.low ? "text-[rgba(200,80,80,0.90)]" : "text-ivory"].join(" ")}
+                          style={{ fontSize: "0.85rem" }}>
+                          <EditCell productId={row.id} field="closing" value={row.closing}
+                            className={row.low ? "text-[rgba(200,80,80,0.90)] hover:text-[rgba(200,80,80,1)]" : "text-ivory"} />
                           {row.low && <span className="block font-display text-[0.34rem] tracking-[0.12em] uppercase text-[rgba(200,80,80,0.65)] mt-0.5">low</span>}
                         </td>
 
-                        {/* WIP — gold tint */}
+                        {/* WIP — read-only (calculated) */}
                         <td className={TD + " border-l border-[rgba(196,163,115,0.08)]"}
                           style={{ background: "rgba(196,163,115,0.03)", color: row.wip > 0 ? "rgba(196,163,115,0.75)" : "rgba(245,237,224,0.20)" }}>
                           {row.wip > 0 ? fmt(row.wip) : "0"}
                         </td>
 
+                        {/* Total — read-only */}
                         <td className={TD + " text-ivory"}>{fmt(row.total)}</td>
-                        <td className={TD + " text-[rgba(196,163,115,0.55)]"}>{fmt(row.reorder)}</td>
-                        <td className={TD_LEFT + " font-body font-light text-[0.72rem] text-[rgba(245,237,224,0.38)] italic"}>
-                          {row.remarks || "—"}
+
+                        {/* Reorder level — click to edit */}
+                        <td className={TD}>
+                          <EditCell productId={row.id} field="reorder" value={row.reorder}
+                            className="text-[rgba(196,163,115,0.60)]" />
                         </td>
 
-                        {/* Inline adjust */}
-                        <td className={TD} onClick={e => e.stopPropagation()}>
-                          {isAdjusting ? (
-                            <div className="flex items-center gap-1 justify-center">
-                              <button onClick={() => setAdjustDelta(d => d - 1)} className="w-5 h-5 text-[rgba(245,237,224,0.55)] hover:text-ivory border border-[rgba(196,163,115,0.20)] rounded text-xs flex items-center justify-center">−</button>
-                              <span className={`w-7 text-center text-xs font-display ${adjustDelta !== 0 ? "text-brass" : "text-[rgba(245,237,224,0.30)]"}`}>
-                                {adjustDelta > 0 ? `+${adjustDelta}` : adjustDelta}
-                              </span>
-                              <button onClick={() => setAdjustDelta(d => d + 1)} className="w-5 h-5 text-[rgba(245,237,224,0.55)] hover:text-ivory border border-[rgba(196,163,115,0.20)] rounded text-xs flex items-center justify-center">+</button>
-                              <button
-                                onClick={() => applyAdjust(row)}
-                                disabled={adjustDelta === 0 || savingAdj}
-                                className="ml-1 font-display text-[0.34rem] tracking-[0.10em] uppercase px-1.5 py-1 border border-[rgba(196,163,115,0.28)] rounded-[3px] text-brass disabled:opacity-30"
-                              >
-                                {savingAdj ? "…" : "OK"}
-                              </button>
-                              <button onClick={() => { setAdjustingId(null); setAdjustDelta(0); }} className="text-[rgba(245,237,224,0.25)] hover:text-[rgba(245,237,224,0.55)] text-xs">×</button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => { setAdjustingId(row.id); setAdjustDelta(0); }}
-                              className="font-display text-[0.34rem] tracking-[0.10em] uppercase px-2 py-1 border border-[rgba(196,163,115,0.18)] rounded-[3px] text-[rgba(196,163,115,0.45)] hover:text-brass hover:border-[rgba(196,163,115,0.40)] transition-colors"
-                            >
-                              ±
-                            </button>
-                          )}
+                        {/* Remarks — click to edit text */}
+                        <td className={TD_LEFT} style={{ minWidth: 160 }}>
+                          <EditCell productId={row.id} field="remarks" value={row.remarks || ""}
+                            numeric={false}
+                            className="font-body font-light text-[0.72rem] text-[rgba(245,237,224,0.38)] italic" />
                         </td>
                       </tr>
                     );
@@ -509,8 +522,7 @@ export default function InventoryPage() {
                     <td className={TD + " font-display border-l border-[rgba(196,163,115,0.08)]"} style={{ background: "rgba(196,163,115,0.04)", color: "rgba(196,163,115,0.70)" }}>{fmt(totals.wip)}</td>
                     <td className={TD + " font-display text-ivory"}>{fmt(totals.total)}</td>
                     <td className={TD + " text-[rgba(245,237,224,0.30)]"}>—</td>
-                    <td className={TD_LEFT}>—</td>
-                    <td className={TD}>—</td>
+                    <td className={TD_LEFT + " text-[rgba(245,237,224,0.30)]"}>—</td>
                   </tr>
                 </tfoot>
               </table>
@@ -518,7 +530,7 @@ export default function InventoryPage() {
           )}
 
           <p className="font-body font-light text-[0.72rem] text-[rgba(245,237,224,0.22)] italic">
-            Amazon / Flipkart / Meesho sales not yet tracked per channel — showing —. Website = dhyom.in online orders. Offline = admin-logged sales.
+            Click any number to edit it. Amazon / Flipkart / Meesho / Website are saved per period. Offline = admin-logged sales (edit via Offline Sales page). Opening Stock, WIP, and Total are calculated automatically.
           </p>
         </div>
       )}

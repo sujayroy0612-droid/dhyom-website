@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   // 1. Products
   const { data: products, error: prodErr } = await sb
     .from("products")
-    .select("id, name, category, stock, low_stock_threshold")
+    .select("id, name, category, stock, low_stock_threshold, custom_remarks")
     .order("stock", { ascending: false })
     .order("name");
   if (prodErr) return NextResponse.json({ error: prodErr.message }, { status: 500 });
@@ -45,11 +45,13 @@ export async function GET(req: NextRequest) {
   const manualAmazonMap:   Record<string, number> = {};
   const manualFlipkartMap: Record<string, number> = {};
   const manualMeeshoMap:   Record<string, number> = {};
+  const manualWebsiteMap:  Record<string, number> = {};
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (manualRows ?? []).forEach((r: any) => {
     if      (r.channel === "amazon")   manualAmazonMap[r.product_id]   = (manualAmazonMap[r.product_id]   ?? 0) + r.quantity;
     else if (r.channel === "flipkart") manualFlipkartMap[r.product_id] = (manualFlipkartMap[r.product_id] ?? 0) + r.quantity;
     else if (r.channel === "meesho")   manualMeeshoMap[r.product_id]   = (manualMeeshoMap[r.product_id]   ?? 0) + r.quantity;
+    else if (r.channel === "website")  manualWebsiteMap[r.product_id]  = (manualWebsiteMap[r.product_id]  ?? 0) + r.quantity;
   });
 
   // 3. Offline/channel sales filtered by date
@@ -97,27 +99,27 @@ export async function GET(req: NextRequest) {
   });
 
   // 5. Build ledger rows
-  const ledger = (products ?? []).map((p: {
-    id: string; name: string; category: string; stock: number; low_stock_threshold: number;
-  }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ledger = (products ?? []).map((p: any) => {
     const stockIn    = stockInMap[p.id]    ?? 0;
     const outAmazon  = (amazonMap[p.id]   ?? 0) + (manualAmazonMap[p.id]   ?? 0);
     const outFlipkart= (flipkartMap[p.id] ?? 0) + (manualFlipkartMap[p.id] ?? 0);
     const outMeesho  = (meeshoMap[p.id]   ?? 0) + (manualMeeshoMap[p.id]   ?? 0);
     const outOffline = offlineMap[p.id]   ?? 0;
-    const outWebsite = 0;
+    const outWebsite = manualWebsiteMap[p.id] ?? 0;
     const totalOut   = outAmazon + outFlipkart + outMeesho + outOffline + outWebsite;
     const closing    = p.stock;
     const wip        = wipMap[p.id] ?? 0;
     const total      = closing + wip;
     const opening    = Math.max(0, closing - stockIn + totalOut);
 
-    let remarks = "";
+    let autoRemarks = "";
     if (closing <= p.low_stock_threshold) {
-      remarks = wip > 0 ? "Below reorder — production possible" : "Below reorder — plan production";
+      autoRemarks = wip > 0 ? "Below reorder — production possible" : "Below reorder — plan production";
     } else if (wip > 0) {
-      remarks = "Raw stock in advance";
+      autoRemarks = "Raw stock in advance";
     }
+    const remarks = (p.custom_remarks as string | null) ?? autoRemarks;
 
     return {
       id: p.id, name: p.name, category: p.category,

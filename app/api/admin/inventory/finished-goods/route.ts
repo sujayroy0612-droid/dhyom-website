@@ -13,7 +13,7 @@ export async function GET() {
   const sb = adminClient();
   const { data, error } = await sb
     .from("products")
-    .select("id, name, category, stock, low_stock_threshold")
+    .select("id, name, category, stock, low_stock_threshold, custom_remarks")
     .order("stock", { ascending: false })
     .order("name");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -33,12 +33,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, new_stock: newStock });
   }
 
+  if (body.action === "set_stock") {
+    const { id, stock } = body as { id: string; stock: number };
+    const { error } = await sb.from("products").update({ stock: Math.max(0, Number(stock)) }).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
   if (body.action === "set_threshold") {
     const { id, threshold } = body as { id: string; threshold: number };
     const { error } = await sb
       .from("products")
       .update({ low_stock_threshold: Math.max(0, Number(threshold)) })
       .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "set_remarks") {
+    const { id, remarks } = body as { id: string; remarks: string };
+    const { error } = await sb.from("products").update({ custom_remarks: remarks || null }).eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   }
