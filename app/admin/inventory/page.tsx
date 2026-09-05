@@ -140,6 +140,17 @@ export default function InventoryPage() {
       });
       loadLedger(); return;
     }
+
+    // Opening stock / Stock In / WIP — manual overrides per period
+    if (["opening","stock_in","wip"].includes(field)) {
+      const n = parseInt(val, 10);
+      if (isNaN(n) || n < 0) return;
+      await fetch("/api/admin/inventory/ledger-overrides", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: productId, field, value: n, period_from: filterFrom, period_to: filterTo }),
+      });
+      loadLedger(); return;
+    }
   }
 
   function EditCell({ productId, field, value, numeric = true, className = "", style = {} }: {
@@ -455,8 +466,12 @@ export default function InventoryPage() {
                         <td className={TD_LEFT + " font-display text-ivory"} style={{ fontSize: "0.78rem", letterSpacing: "0.03em" }}>
                           {row.name}
                         </td>
-                        <td className={TD + " text-[rgba(245,237,224,0.35)]"}>{fmt(row.opening)}</td>
-                        <td className={TD + " text-[rgba(100,210,130,0.75)]"}>{row.stock_in > 0 ? `+${fmt(row.stock_in)}` : "0"}</td>
+                        <td className={TD + " text-[rgba(245,237,224,0.50)]"}>
+                          <EditCell productId={row.id} field="opening" value={row.opening} className="text-[rgba(245,237,224,0.50)]" />
+                        </td>
+                        <td className={TD + " text-[rgba(100,210,130,0.75)]"}>
+                          <EditCell productId={row.id} field="stock_in" value={row.stock_in} className="text-[rgba(100,210,130,0.75)]" />
+                        </td>
 
                         {/* Stock out — Amazon / Flipkart / Meesho / Website: click to edit */}
                         <td className={TD + " border-l border-[rgba(196,163,115,0.06)]"} style={{ minWidth: 60 }}>
@@ -481,13 +496,14 @@ export default function InventoryPage() {
                           {row.low && <span className="block font-display text-[0.34rem] tracking-[0.12em] uppercase text-[rgba(200,80,80,0.65)] mt-0.5">low</span>}
                         </td>
 
-                        {/* WIP — read-only (calculated) */}
+                        {/* WIP — click to override */}
                         <td className={TD + " border-l border-[rgba(196,163,115,0.08)]"}
-                          style={{ background: "rgba(196,163,115,0.03)", color: row.wip > 0 ? "rgba(196,163,115,0.75)" : "rgba(245,237,224,0.20)" }}>
-                          {row.wip > 0 ? fmt(row.wip) : "0"}
+                          style={{ background: "rgba(196,163,115,0.03)" }}>
+                          <EditCell productId={row.id} field="wip" value={row.wip}
+                            className={row.wip > 0 ? "text-[rgba(196,163,115,0.75)]" : "text-[rgba(245,237,224,0.20)]"} />
                         </td>
 
-                        {/* Total — read-only */}
+                        {/* Total — auto (closing + wip), read-only */}
                         <td className={TD + " text-ivory"}>{fmt(row.total)}</td>
 
                         {/* Reorder level — click to edit */}

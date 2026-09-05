@@ -92,16 +92,28 @@ export async function GET(req: NextRequest) {
     recipeMap[r.product_id].push({ qty: Number(r.quantity_used), stock: Number(rmStock) });
   });
 
-  const wipMap: Record<string, number> = {};
+  const wipAutoMap: Record<string, number> = {};
   Object.entries(recipeMap).forEach(([pid, ingredients]) => {
     if (!ingredients.length) return;
-    wipMap[pid] = Math.max(0, Math.min(...ingredients.map(i => Math.floor(i.stock / i.qty))));
+    wipAutoMap[pid] = Math.max(0, Math.min(...ingredients.map(i => Math.floor(i.stock / i.qty))));
   });
 
-  // 5. Build ledger rows
+  // 5. Manual overrides for opening / stock_in / wip
+  const { data: overrideRows } = await sb
+    .from("ledger_manual_overrides")
+    .select("product_id, opening, stock_in, wip")
+    .eq("period_from", from || "")
+    .eq("period_to",   to   || "");
+
+  const overrideMap: Record<string, { opening?: number | null; stock_in?: number | null; wip?: number | null }> = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (overrideRows ?? []).forEach((r: any) => { overrideMap[r.product_id] = r; });
+
+  // 6. Build ledger rows
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ledger = (products ?? []).map((p: any) => {
-    const stockIn    = stockInMap[p.id]    ?? 0;
+    const ov         = overrideMap[p.id] ?? {};
+    const stockIn    = ov.stock_in != null ? ov.stock_in : (stockInMap[p.id] ?? 0);
     const outAmazon  = (amazonMap[p.id]   ?? 0) + (manualAmazonMap[p.id]   ?? 0);
     const outFlipkart= (flipkartMap[p.id] ?? 0) + (manualFlipkartMap[p.id] ?? 0);
     const outMeesho  = (meeshoMap[p.id]   ?? 0) + (manualMeeshoMap[p.id]   ?? 0);
@@ -109,9 +121,10 @@ export async function GET(req: NextRequest) {
     const outWebsite = manualWebsiteMap[p.id] ?? 0;
     const totalOut   = outAmazon + outFlipkart + outMeesho + outOffline + outWebsite;
     const closing    = p.stock;
-    const wip        = wipMap[p.id] ?? 0;
+    const wip        = ov.wip != null ? ov.wip : (wipAutoMap[p.id] ?? 0);
     const total      = closing + wip;
-    const opening    = Math.max(0, closing - stockIn + totalOut);
+    const calcOpening = Math.max(0, closing - stockIn + totalOut);
+    const opening    = ov.opening != null ? ov.opening : calcOpening;
 
     let autoRemarks = "";
     if (closing <= p.low_stock_threshold) {
