@@ -77,6 +77,9 @@ export default function InventoryPage() {
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [adjustDelta, setAdjustDelta] = useState(0);
   const [savingAdj,   setSavingAdj]   = useState(false);
+  // Inline channel-sales edit: key = `${productId}:${channel}`
+  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [editingVal,  setEditingVal]  = useState("");
 
   const loadLedger = useCallback(async () => {
     setLedgerLoading(true);
@@ -102,6 +105,22 @@ export default function InventoryPage() {
     setAdjustingId(null);
     setAdjustDelta(0);
     loadLedger();
+  }
+
+  async function saveChannelCell(productId: string, channel: string) {
+    const qty = parseInt(editingVal, 10);
+    setEditingCell(null);
+    if (isNaN(qty) || qty < 0) return;
+    await fetch("/api/admin/inventory/channel-sales", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product_id: productId, channel, quantity: qty, period_from: filterFrom, period_to: filterTo }),
+    });
+    loadLedger();
+  }
+
+  function startEditCell(productId: string, channel: string, currentVal: number) {
+    setEditingCell(`${productId}:${channel}`);
+    setEditingVal(String(currentVal));
   }
 
   // Totals row
@@ -391,10 +410,34 @@ export default function InventoryPage() {
                         <td className={TD + " text-[rgba(245,237,224,0.45)]"}>{fmt(row.opening)}</td>
                         <td className={TD + " text-[rgba(100,210,130,0.75)]"}>{row.stock_in > 0 ? `+${fmt(row.stock_in)}` : "0"}</td>
 
-                        {/* Stock out columns */}
-                        <td className={TD + " text-[rgba(245,237,224,0.55)] border-l border-[rgba(196,163,115,0.06)]"}>{row.out_amazon   > 0 ? fmt(row.out_amazon)   : "0"}</td>
-                        <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_flipkart > 0 ? fmt(row.out_flipkart) : "0"}</td>
-                        <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_meesho   > 0 ? fmt(row.out_meesho)   : "0"}</td>
+                        {/* Stock out columns — Amazon/Flipkart/Meesho are click-to-edit */}
+                        {(["amazon","flipkart","meesho"] as const).map((ch, ci) => {
+                          const val    = ch === "amazon" ? row.out_amazon : ch === "flipkart" ? row.out_flipkart : row.out_meesho;
+                          const cellKey = `${row.id}:${ch}`;
+                          const isEditing = editingCell === cellKey;
+                          return (
+                            <td key={ch} className={TD + (ci === 0 ? " border-l border-[rgba(196,163,115,0.06)]" : "")}
+                              style={{ minWidth: 64, cursor: "pointer" }}
+                              onClick={() => !isEditing && startEditCell(row.id, ch, val)}>
+                              {isEditing ? (
+                                <input
+                                  autoFocus
+                                  type="number" min={0} value={editingVal}
+                                  onChange={e => setEditingVal(e.target.value)}
+                                  onBlur={() => saveChannelCell(row.id, ch)}
+                                  onKeyDown={e => { if (e.key === "Enter") saveChannelCell(row.id, ch); if (e.key === "Escape") setEditingCell(null); }}
+                                  className="w-14 text-center bg-[rgba(196,163,115,0.10)] border border-[rgba(196,163,115,0.40)] rounded-[3px] px-1 py-0.5 font-body text-[0.80rem] text-ivory focus:outline-none"
+                                  onClick={e => e.stopPropagation()}
+                                />
+                              ) : (
+                                <span className={`${val > 0 ? "text-[rgba(245,237,224,0.75)]" : "text-[rgba(245,237,224,0.22)]"} hover:text-brass transition-colors`}>
+                                  {val > 0 ? fmt(val) : "0"}
+                                  <span className="ml-1 opacity-0 group-hover:opacity-100 text-[0.55rem]">✎</span>
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
                         <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_website  > 0 ? fmt(row.out_website)  : "0"}</td>
                         <td className={TD + " text-[rgba(245,237,224,0.55)]"}>{row.out_offline  > 0 ? fmt(row.out_offline)  : "0"}</td>
 

@@ -35,6 +35,23 @@ export async function GET(req: NextRequest) {
     stockInMap[b.product_id] = (stockInMap[b.product_id] ?? 0) + b.quantity_produced;
   });
 
+  // 3a. Manual channel sales (Amazon / Flipkart / Meesho entered directly)
+  const { data: manualRows } = await sb
+    .from("manual_channel_sales")
+    .select("product_id, channel, quantity")
+    .eq("period_from", from || "")
+    .eq("period_to",   to   || "");
+
+  const manualAmazonMap:   Record<string, number> = {};
+  const manualFlipkartMap: Record<string, number> = {};
+  const manualMeeshoMap:   Record<string, number> = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (manualRows ?? []).forEach((r: any) => {
+    if      (r.channel === "amazon")   manualAmazonMap[r.product_id]   = (manualAmazonMap[r.product_id]   ?? 0) + r.quantity;
+    else if (r.channel === "flipkart") manualFlipkartMap[r.product_id] = (manualFlipkartMap[r.product_id] ?? 0) + r.quantity;
+    else if (r.channel === "meesho")   manualMeeshoMap[r.product_id]   = (manualMeeshoMap[r.product_id]   ?? 0) + r.quantity;
+  });
+
   // 3. Offline/channel sales filtered by date
   let offQ = sb
     .from("offline_sales_orders")
@@ -84,9 +101,9 @@ export async function GET(req: NextRequest) {
     id: string; name: string; category: string; stock: number; low_stock_threshold: number;
   }) => {
     const stockIn    = stockInMap[p.id]    ?? 0;
-    const outAmazon  = amazonMap[p.id]    ?? 0;
-    const outFlipkart= flipkartMap[p.id]  ?? 0;
-    const outMeesho  = meeshoMap[p.id]    ?? 0;
+    const outAmazon  = (amazonMap[p.id]   ?? 0) + (manualAmazonMap[p.id]   ?? 0);
+    const outFlipkart= (flipkartMap[p.id] ?? 0) + (manualFlipkartMap[p.id] ?? 0);
+    const outMeesho  = (meeshoMap[p.id]   ?? 0) + (manualMeeshoMap[p.id]   ?? 0);
     const outOffline = offlineMap[p.id]   ?? 0;
     const outWebsite = 0;
     const totalOut   = outAmazon + outFlipkart + outMeesho + outOffline + outWebsite;
