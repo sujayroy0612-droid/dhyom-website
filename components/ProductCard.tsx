@@ -8,6 +8,7 @@ import Skeleton from "@/components/Skeleton";
 
 export interface Product {
   id: string;
+  slug?: string | null;
   name: string;
   category: string;
   subcategorySlug: string; // collection slug for candles, subcategory for all others
@@ -19,6 +20,7 @@ export interface Product {
 
 export default function ProductCard({
   id,
+  slug,
   name,
   category,
   subcategorySlug,
@@ -28,10 +30,11 @@ export default function ProductCard({
   imageUrl,
 }: Product) {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const urlSegment = slug ?? id;
 
   return (
     <Link
-      href={`/shop/${category}/${subcategorySlug}/${id}`}
+      href={`/shop/${category}/${subcategorySlug}/${urlSegment}`}
       className="group bg-damson border border-[rgba(196,163,115,0.15)] rounded-[6px] overflow-hidden flex flex-col h-full transition-all duration-300 hover:-translate-y-1 hover:border-[rgba(196,163,115,0.42)] hover:shadow-[0_16px_48px_rgba(15,5,8,0.55)]"
     >
       {/* Image */}

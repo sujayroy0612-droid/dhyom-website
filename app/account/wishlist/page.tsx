@@ -9,7 +9,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import { useCart } from "@/lib/cart/CartContext";
 
 type WishlistProduct = {
-  id: string; name: string; price: number; image_url?: string;
+  id: string; slug: string | null; name: string; price: number; image_url?: string;
   category: string; subcategory?: string; collection?: string; type: string;
 };
 
@@ -24,7 +24,7 @@ export default function WishlistPage() {
     if (!user || ids.size === 0) { setProducts([]); setLoading(false); return; }
     supabase
       .from("products")
-      .select("id,name,price,image_url,category,subcategory,collection,type")
+      .select("id,slug,name,price,image_url,category,subcategory,collection,type")
       .in("id", Array.from(ids))
       .then(({ data }) => { setProducts((data ?? []) as WishlistProduct[]); setLoading(false); });
   }, [user, ids]);
@@ -51,7 +51,7 @@ export default function WishlistPage() {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
       {products.map((p) => (
         <div key={p.id} className="bg-damson border border-[rgba(196,163,115,0.13)] rounded-[6px] overflow-hidden flex flex-col">
-          <Link href={`/shop/${p.category}/${subcatSlug(p)}/${p.id}`} className="block aspect-video relative bg-[#270b1b]">
+          <Link href={`/shop/${p.category}/${subcatSlug(p)}/${p.slug ?? p.id}`} className="block aspect-video relative bg-[#270b1b]">
             {p.image_url ? (
               <Image src={p.image_url} alt={p.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" />
             ) : (

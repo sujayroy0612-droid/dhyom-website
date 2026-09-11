@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import type { DbProduct } from "@/lib/supabase/types";
@@ -39,6 +39,9 @@ const SUBCATEGORY_NAMES: Record<string, string> = {
   camphor: "Camphor",
 };
 
+/* ─── UUID detector ──────────────────────────────────── */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /* ─── Helpers ─────────────────────────────────────────── */
 function buildCardLabel(p: DbProduct): string {
   const first = p.collection
@@ -69,25 +72,34 @@ function getSubcategorySlug(p: DbProduct): string {
 
 /* ─── Page ────────────────────────────────────────────── */
 interface PageProps {
-  params: { category: string; subcategory: string; id: string };
+  params: { category: string; subcategory: string; slug: string };
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
-  const { category, subcategory, id } = params;
+  const { category, subcategory, slug } = params;
 
   const supabase = createServerClient();
   const cols =
-    "id,name,type,subcategory,collection,fragrance,price,description,short_description,bullet_points,image_url,image_urls,category,stock,is_visible,created_at";
+    "id,slug,name,type,subcategory,collection,fragrance,price,description,short_description,bullet_points,image_url,image_urls,category,stock,is_visible,created_at";
 
-  const [productRes, relatedRes, catVisRes, collVisRes, imagesRes] = await Promise.all([
-    supabase.from("products").select(cols).eq("id", id).single(),
-    supabase
+  // ── UUID redirect: old links like /shop/candle/mandala/{uuid} → 301 to slug URL ──
+  if (UUID_RE.test(slug)) {
+    const { data: byId } = await supabase
       .from("products")
-      .select(cols)
-      .eq("category", category)
-      .eq("is_visible", true)
-      .neq("id", id)
-      .limit(3),
+      .select("slug, category, collection, subcategory")
+      .eq("id", slug)
+      .single();
+
+    if (byId?.slug) {
+      const subcat = (byId.collection ?? byId.subcategory) || subcategory;
+      permanentRedirect(`/shop/${byId.category}/${subcat}/${byId.slug}`);
+    }
+    notFound();
+  }
+
+  // ── Normal slug lookup ──
+  const [productRes, catVisRes, collVisRes, imagesRes] = await Promise.all([
+    supabase.from("products").select(cols).eq("slug", slug).single(),
     supabase
       .from("category_visibility")
       .select("is_visible")
@@ -102,7 +114,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
     supabase
       .from("product_images")
       .select("url, display_order, is_primary")
-      .eq("product_id", id)
+      .eq("product_id", slug) // will be replaced below once we have the id
       .order("display_order"),
   ]);
 
@@ -110,17 +122,35 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const product = productRes.data as DbProduct;
 
-  // Build gallery images: prefer product_images table, fall back to image_url + image_urls
-  const productImgs = (imagesRes.data ?? []) as { url: string; display_order: number; is_primary: boolean }[];
+  // Re-fetch product_images using actual UUID now that we have the product
+  const { data: productImgData } = await supabase
+    .from("product_images")
+    .select("url, display_order, is_primary")
+    .eq("product_id", product.id)
+    .order("display_order");
+
+  const productImgs = (productImgData ?? []) as { url: string; display_order: number; is_primary: boolean }[];
+
+  // Build gallery images
   const galleryImages: string[] = productImgs.length > 0
     ? productImgs.map(i => i.url)
     : [product.image_url, ...(product.image_urls ?? [])].filter((u): u is string => !!u);
+
   if (product.category !== category) notFound();
   if (!product.is_visible) notFound();
   if (catVisRes.data?.is_visible === false) notFound();
   if (collVisRes.data?.is_visible === false) notFound();
 
-  const related = (relatedRes.data ?? []) as DbProduct[];
+  // Fetch related products (excluding this one)
+  const { data: relatedData } = await supabase
+    .from("products")
+    .select(cols)
+    .eq("category", category)
+    .eq("is_visible", true)
+    .neq("id", product.id)
+    .limit(3);
+
+  const related = (relatedData ?? []) as DbProduct[];
   const categoryName = CATEGORY_NAMES[category] ?? category;
   const subcategoryName = SUBCATEGORY_NAMES[subcategory] ?? subcategory;
   const detailLabel = buildDetailLabel(product);
@@ -243,7 +273,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </div>
       </section>
 
-
       {/* ══ YOU MAY ALSO LIKE ═══════════════════════════════ */}
       {related.length > 0 && (
         <section className="border-t border-[rgba(196,163,115,0.10)] py-20 px-6">
@@ -270,6 +299,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 <div key={p.id} className="flex-shrink-0 w-64 md:w-72">
                   <ProductCard
                     id={p.id}
+                    slug={p.slug}
                     name={p.name}
                     category={p.category}
                     subcategorySlug={getSubcategorySlug(p)}

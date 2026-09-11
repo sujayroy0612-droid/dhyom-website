@@ -9,6 +9,7 @@ export type CandleCollection = "nakshatra" | "mandala";
 
 export interface DbProduct {
   id: string;
+  slug: string | null;
   name: string;
   category: ProductCategory;
   type: string;

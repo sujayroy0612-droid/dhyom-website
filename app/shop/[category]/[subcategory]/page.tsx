@@ -111,7 +111,7 @@ export default async function SubcategoryPage({ params }: PageProps) {
   /* ── Fetch products + visibility ── */
   const supabase = createServerClient();
   const cols =
-    "id,name,type,subcategory,collection,fragrance,price,description,short_description,image_url,category,stock,created_at";
+    "id,slug,name,type,subcategory,collection,fragrance,price,description,short_description,image_url,category,stock,created_at";
 
   /* Check category and collection visibility in parallel with products */
   const [catVisRes, collVisRes] = await Promise.all([
@@ -241,6 +241,7 @@ export default async function SubcategoryPage({ params }: PageProps) {
                 <div key={product.id} className="flex-shrink-0 w-64 md:w-72">
                   <ProductCard
                     id={product.id}
+                    slug={product.slug}
                     name={product.name}
                     category={product.category}
                     subcategorySlug={getSubcategorySlug(product)}

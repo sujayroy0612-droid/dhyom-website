@@ -31,7 +31,7 @@ function subLabel(key: string) {
 
 /* ── Types ── */
 interface Product {
-  id: string; name: string; category: string; type: string;
+  id: string; slug: string | null; name: string; category: string; type: string;
   subcategory: string | null; collection: string | null; fragrance: string | null;
   stock: number; price: number; mrp: number | null; image_url: string | null;
   image_urls: string[] | null;
@@ -47,7 +47,7 @@ interface Product {
 interface DrawerImage { url: string; isPrimary: boolean; }
 
 interface DrawerForm {
-  name: string; category: string; type: string;
+  name: string; slug: string; category: string; type: string;
   subcat_value: string; fragrance: string;
   price: string; mrp: string; stock: string;
   is_visible: boolean; is_featured: boolean;
@@ -58,7 +58,7 @@ interface DrawerForm {
 }
 
 const EMPTY_DRAWER: DrawerForm = {
-  name: "", category: "candle", type: "scented", subcat_value: "", fragrance: "",
+  name: "", slug: "", category: "candle", type: "scented", subcat_value: "", fragrance: "",
   price: "", mrp: "", stock: "0", is_visible: true, is_featured: false,
   bullet_points: "", sku: "", short_description: "", long_description: "",
   meta_title: "", meta_description: "", weight_grams: "",
@@ -68,7 +68,7 @@ const EMPTY_DRAWER: DrawerForm = {
 
 function productToDrawer(p: Product): DrawerForm {
   return {
-    name: p.name, category: p.category, type: p.type ?? "",
+    name: p.name, slug: p.slug ?? "", category: p.category, type: p.type ?? "",
     subcat_value: p.collection ?? p.subcategory ?? "",
     fragrance: p.fragrance ?? "",
     price: String(p.price), mrp: p.mrp != null ? String(p.mrp) : "",
@@ -156,7 +156,7 @@ export default function AdminProductsPage() {
   useEffect(() => {
     supabase
       .from("products")
-      .select("id,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,image_urls,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code,cost_price,packaging_cost")
+      .select("id,slug,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,image_urls,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code,cost_price,packaging_cost")
       .order("category").order("name")
       .then(({ data }) => {
         const prods = (data ?? []) as Product[];
@@ -356,8 +356,11 @@ export default function AdminProductsPage() {
     const isCandle = drawerForm.category === "candle";
     const subVal   = drawerForm.subcat_value.trim() || null;
 
+    // Slug: use manual value if provided, else auto-generate from name
+    const finalSlug = (drawerForm.slug.trim() || slugify(drawerForm.name.trim())) || null;
+
     const payload: Record<string, unknown> = {
-      name: drawerForm.name.trim(), category: drawerForm.category,
+      name: drawerForm.name.trim(), slug: finalSlug, category: drawerForm.category,
       type: drawerForm.type.trim() || "general",
       collection:  isCandle ? subVal : null,
       subcategory: isCandle ? null   : subVal,
@@ -849,7 +852,15 @@ export default function AdminProductsPage() {
             <section>
               <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass mb-3">Basic Info</p>
               <div className="space-y-3">
-                <div><label className={LABEL}>Product Name *</label><input className={FIELD} value={drawerForm.name} onChange={e => setDrawerForm(f => ({ ...f, name: e.target.value }))} placeholder="Nakshatra Candle — Rose" /></div>
+                <div><label className={LABEL}>Product Name *</label><input className={FIELD} value={drawerForm.name} onChange={e => { const n = e.target.value; setDrawerForm(f => ({ ...f, name: n, slug: f.slug || slugify(n) })); }} placeholder="Nakshatra Candle — Rose" /></div>
+                <div>
+                  <label className={LABEL}>URL Slug (auto-generated — edit to customise)</label>
+                  <div className="flex items-center gap-2">
+                    <span className="font-body font-light text-[0.72rem] text-[rgba(245,237,224,0.28)] whitespace-nowrap">/shop/…/</span>
+                    <input className={FIELD} value={drawerForm.slug} onChange={e => setDrawerForm(f => ({ ...f, slug: slugify(e.target.value) }))} placeholder="auto-generated" />
+                  </div>
+                  {drawerForm.slug && <p className="mt-1 font-body font-light text-[0.68rem] text-[rgba(245,237,224,0.28)]">dhyom.in/shop/…/{drawerForm.slug}</p>}
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className={LABEL}>SKU</label><input className={FIELD} value={drawerForm.sku} onChange={e => setDrawerForm(f => ({ ...f, sku: e.target.value }))} placeholder="NK-ROSE-001" /></div>
                   <div><label className={LABEL}>Type</label><input className={FIELD} value={drawerForm.type} onChange={e => setDrawerForm(f => ({ ...f, type: e.target.value }))} placeholder="scented" /></div>
