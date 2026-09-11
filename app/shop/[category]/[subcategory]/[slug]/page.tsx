@@ -98,7 +98,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   }
 
   // ── Normal slug lookup ──
-  const [productRes, catVisRes, collVisRes, imagesRes] = await Promise.all([
+  const [productRes, catVisRes, collVisRes] = await Promise.all([
     supabase.from("products").select(cols).eq("slug", slug).single(),
     supabase
       .from("category_visibility")
@@ -111,11 +111,6 @@ export default async function ProductDetailPage({ params }: PageProps) {
       .eq("category", category)
       .eq("subcategory", subcategory)
       .single(),
-    supabase
-      .from("product_images")
-      .select("url, display_order, is_primary")
-      .eq("product_id", slug) // will be replaced below once we have the id
-      .order("display_order"),
   ]);
 
   if (productRes.error || !productRes.data) notFound();
