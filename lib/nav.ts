@@ -35,8 +35,7 @@ export const SHOP_NAV: NavCategory[] = [
     title: "Spiritual Bracelets",
     href: "/shop/bracelet",
     subcategories: [
-      { slug: "rudraksh",    title: "Rudraksh Mala", href: "/shop/bracelet/rudraksh" },
-      { slug: "rose-quartz", title: "Rose Quartz",   href: "/shop/bracelet/rose-quartz" },
+      { slug: "navagraha", title: "Navagraha Collection", href: "/shop/bracelet/navagraha" },
     ],
   },
   {

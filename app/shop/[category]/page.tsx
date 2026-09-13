@@ -37,14 +37,10 @@ const SUBCATEGORIES: Record<
   ],
   bracelet: [
     {
-      slug: "rudraksh",
-      title: "Rudraksh Mala",
-      description: "Traditional beads, hand-knotted for daily practice.",
-    },
-    {
-      slug: "rose-quartz",
-      title: "Rose Quartz",
-      description: "A stone with a long history of being carried close. Simply strung.",
+      slug: "navagraha",
+      title: "Navagraha Collection",
+      description:
+        "Nine sacred stones, each aligned to a ruling planet. Find yours through your Mulank — the numerology of your birth day.",
     },
   ],
   gift: [

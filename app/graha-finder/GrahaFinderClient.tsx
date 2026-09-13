@@ -29,63 +29,63 @@ const GRAHA: Record<number, GrahaInfo> = {
     planet: "Sun",
     stone: "Red Garnet",
     copy: "Surya governs clarity, leadership, and the kind of warmth others are drawn toward. Those born on a Sun day carry a natural authority — not loud, but present. Red Garnet worn close to the body amplifies this inner fire and steadies it into purpose.",
-    productSlug: null,
+    productSlug: "red-garnet-bracelet",
   },
   2: {
     name: "Chandra",
     planet: "Moon",
     stone: "Rainbow Moonstone",
     copy: "Chandra governs intuition, cycles, and the quiet intelligence that reads rooms before they speak. Moon-governed people feel everything — deeply. Rainbow Moonstone honours this sensitivity and helps it become wisdom rather than overwhelm.",
-    productSlug: null,
+    productSlug: "rainbow-moonstone-bracelet",
   },
   3: {
     name: "Guru",
     planet: "Jupiter",
     stone: "Citrine",
     copy: "Guru governs expansion, abundance, and the instinct to give. Those born on a Jupiter day carry generosity as a first impulse. Citrine, warm and luminous, amplifies this energy and draws the prosperity that naturally returns to open hands.",
-    productSlug: null,
+    productSlug: "citrine-bracelet",
   },
   4: {
     name: "Rahu",
     planet: "",
     stone: "Smoky Quartz",
     copy: "Rahu governs desire, transformation, and the parts of yourself that resist being tamed. Those who carry Rahu's energy move through life in unexpected ways. Smoky Quartz grounds this intensity — it transmutes restlessness into discernment.",
-    productSlug: null,
+    productSlug: "smoky-quartz-bracelet",
   },
   5: {
     name: "Budh",
     planet: "Mercury",
     stone: "Green Aventurine",
     copy: "Budh governs intellect, communication, and the quick mind that sees connections others miss. Mercury-ruled people are adaptable, articulate, and curious. Green Aventurine clears the mind and opens the channels through which your best thinking flows.",
-    productSlug: null,
+    productSlug: "green-aventurine-bracelet",
   },
   6: {
     name: "Shukra",
     planet: "Venus",
     stone: "Clear Quartz",
     copy: "Shukra governs beauty, love, and the attunement to everything that makes life worthwhile. Those ruled by Venus find their dharma in relationship — to people, to art, to the sensory world. Clear Quartz amplifies this receptive energy and brings clarity to what you most want to create.",
-    productSlug: null,
+    productSlug: "clear-quartz-bracelet",
   },
   7: {
     name: "Ketu",
     planet: "",
     stone: "Labradorite",
     copy: "Ketu governs detachment, spiritual inquiry, and the wisdom that comes only through surrender. Those who carry Ketu energy are seekers — often wiser than they know, and more at home in stillness than in noise. Labradorite honours this depth and protects the sensitivity that comes with it.",
-    productSlug: null,
+    productSlug: "labradorite-bracelet",
   },
   8: {
     name: "Shani",
     planet: "Saturn",
     stone: "Amethyst",
     copy: "Shani governs discipline, karma, and the deep patience that builds what endures. Saturn people are thorough. What they build, lasts. Amethyst, cool and clear, supports this energy — it calms the mind, sharpens discernment, and makes the long work sustainable.",
-    productSlug: null,
+    productSlug: "amethyst-bracelet",
   },
   9: {
     name: "Mangal",
     planet: "Mars",
     stone: "Carnelian",
     copy: "Mangal governs courage, action, and the will that moves things forward. Those ruled by Mars are initiators — they begin before others have finished deciding. Carnelian honours this drive. Worn as a bracelet, it channels the warrior's energy into focus rather than force.",
-    productSlug: null,
+    productSlug: "carnelian-bracelet",
   },
 };
 
@@ -143,7 +143,7 @@ export default function GrahaFinderClient() {
 
   if (step === "result" && result) {
     const productHref = result.info.productSlug
-      ? `/shop/bracelet/rudraksh/${result.info.productSlug}`
+      ? `/shop/bracelet/navagraha/${result.info.productSlug}`
       : "/shop/bracelet";
     return <ResultView mulank={result.mulank} info={result.info} productHref={productHref} onReset={reset} />;
   }
