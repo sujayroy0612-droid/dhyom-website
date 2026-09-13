@@ -48,10 +48,22 @@ export default function BraceletPageClient({ products }: { products: DbProduct[]
   const [day, setDay]   = useState("");
   const [error, setError] = useState("");
   const [match, setMatch] = useState<Match | null>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const CARD_W = 288 + 20; // w-72 (288px) + gap-5 (20px)
+
   function scrollStrip(dir: -1 | 1) {
-    scrollRef.current?.scrollBy({ left: dir * 300, behavior: "smooth" });
+    scrollRef.current?.scrollBy({ left: dir * CARD_W, behavior: "smooth" });
+  }
+
+  function scrollToCard(idx: number) {
+    scrollRef.current?.scrollTo({ left: idx * CARD_W, behavior: "smooth" });
+  }
+
+  function onScroll() {
+    if (!scrollRef.current) return;
+    setActiveIdx(Math.round(scrollRef.current.scrollLeft / CARD_W));
   }
 
   // Drag-to-scroll state
@@ -178,77 +190,94 @@ export default function BraceletPageClient({ products }: { products: DbProduct[]
             {/* divider before grid */}
             <div className="h-px bg-gradient-to-r from-transparent via-[rgba(196,163,115,0.12)] to-transparent -mx-6" />
 
-            {/* Strip with flanking arrows */}
-            <div className="relative -mx-6">
+            {/* Scrollable strip */}
+            <div
+              ref={scrollRef}
+              className="flex gap-5 overflow-x-auto pb-2 -mx-6 px-6 min-w-0"
+              style={{ scrollbarWidth: "none", cursor: "grab", userSelect: "none" }}
+              onScroll={onScroll}
+              onMouseDown={onMouseDown}
+              onMouseUp={onMouseUp}
+              onMouseLeave={onMouseUp}
+              onMouseMove={onMouseMove}
+            >
+              {products.map((product) => {
+                const isMatch = match !== null && product.slug === match.graha.slug;
+                return (
+                  <div
+                    key={product.id}
+                    id={`bracelet-${product.slug ?? product.id}`}
+                    className="flex-shrink-0 w-64 md:w-72 relative"
+                    style={
+                      isMatch
+                        ? { outline: "1.5px solid rgba(196,163,115,0.60)", outlineOffset: "5px" }
+                        : undefined
+                    }
+                  >
+                    {isMatch && (
+                      <div
+                        aria-label="Your Graha match"
+                        className="absolute top-0 left-0 z-10 bg-brass text-[#1A0A14] font-display text-[0.46rem] tracking-[0.22em] uppercase px-2 py-[3px] pointer-events-none"
+                      >
+                        Your Match
+                      </div>
+                    )}
+                    <ProductCard
+                      id={product.id}
+                      slug={product.slug}
+                      name={product.name}
+                      category={product.category}
+                      subcategorySlug={getSubcategorySlug(product)}
+                      label={SLUG_LABEL[product.slug ?? ""] ?? "Navagraha"}
+                      price={product.price}
+                      description={product.short_description || product.description || undefined}
+                      imageUrl={product.image_url || undefined}
+                    />
+                  </div>
+                );
+              })}
+            </div>
 
-              {/* Left arrow */}
+            {/* Dots + arrows below strip */}
+            <div className="flex items-center justify-center gap-5 pt-1">
               <button
                 onClick={() => scrollStrip(-1)}
-                aria-label="Scroll left"
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-14 flex items-center justify-center bg-[rgba(20,6,14,0.78)] border-y border-r border-[rgba(196,163,115,0.28)] text-[rgba(196,163,115,0.70)] hover:text-brass hover:border-[rgba(196,163,115,0.55)] hover:bg-[rgba(20,6,14,0.92)] transition-colors duration-200"
+                aria-label="Previous"
+                className="text-[rgba(196,163,115,0.45)] hover:text-brass transition-colors duration-200"
               >
-                <svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M15 7H1M7 1L1 7l6 6" />
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.3">
+                  <path d="M17 7H1M7 1L1 7l6 6" />
                 </svg>
               </button>
 
-              {/* Right arrow */}
+              <div className="flex items-center gap-[7px]">
+                {products.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => scrollToCard(i)}
+                    aria-label={`Go to item ${i + 1}`}
+                    className="transition-all duration-300"
+                    style={{
+                      width:  i === activeIdx ? "18px" : "6px",
+                      height: "2px",
+                      borderRadius: "1px",
+                      background: i === activeIdx
+                        ? "rgba(196,163,115,0.80)"
+                        : "rgba(196,163,115,0.22)",
+                    }}
+                  />
+                ))}
+              </div>
+
               <button
                 onClick={() => scrollStrip(1)}
-                aria-label="Scroll right"
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-14 flex items-center justify-center bg-[rgba(20,6,14,0.78)] border-y border-l border-[rgba(196,163,115,0.28)] text-[rgba(196,163,115,0.70)] hover:text-brass hover:border-[rgba(196,163,115,0.55)] hover:bg-[rgba(20,6,14,0.92)] transition-colors duration-200"
+                aria-label="Next"
+                className="text-[rgba(196,163,115,0.45)] hover:text-brass transition-colors duration-200"
               >
-                <svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M1 7h14M9 1l6 6-6 6" />
+                <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.3">
+                  <path d="M1 7h16M11 1l6 6-6 6" />
                 </svg>
               </button>
-
-              {/* Scrollable strip */}
-              <div
-                ref={scrollRef}
-                className="flex gap-5 overflow-x-auto pb-4 px-14 min-w-0"
-                style={{ scrollbarWidth: "none", cursor: "grab", userSelect: "none" }}
-                onMouseDown={onMouseDown}
-                onMouseUp={onMouseUp}
-                onMouseLeave={onMouseUp}
-                onMouseMove={onMouseMove}
-              >
-                {products.map((product) => {
-                  const isMatch = match !== null && product.slug === match.graha.slug;
-                  return (
-                    <div
-                      key={product.id}
-                      id={`bracelet-${product.slug ?? product.id}`}
-                      className="flex-shrink-0 w-64 md:w-72 relative"
-                      style={
-                        isMatch
-                          ? { outline: "1.5px solid rgba(196,163,115,0.60)", outlineOffset: "5px" }
-                          : undefined
-                      }
-                    >
-                      {isMatch && (
-                        <div
-                          aria-label="Your Graha match"
-                          className="absolute top-0 left-0 z-10 bg-brass text-[#1A0A14] font-display text-[0.46rem] tracking-[0.22em] uppercase px-2 py-[3px] pointer-events-none"
-                        >
-                          Your Match
-                        </div>
-                      )}
-                      <ProductCard
-                        id={product.id}
-                        slug={product.slug}
-                        name={product.name}
-                        category={product.category}
-                        subcategorySlug={getSubcategorySlug(product)}
-                        label={SLUG_LABEL[product.slug ?? ""] ?? "Navagraha"}
-                        price={product.price}
-                        description={product.short_description || product.description || undefined}
-                        imageUrl={product.image_url || undefined}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           </>
         )}
