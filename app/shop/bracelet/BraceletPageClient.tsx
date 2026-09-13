@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import type { DbProduct } from "@/lib/supabase/types";
@@ -48,6 +48,30 @@ export default function BraceletPageClient({ products }: { products: DbProduct[]
   const [day, setDay]   = useState("");
   const [error, setError] = useState("");
   const [match, setMatch] = useState<Match | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  function scrollStrip(dir: -1 | 1) {
+    scrollRef.current?.scrollBy({ left: dir * 300, behavior: "smooth" });
+  }
+
+  // Drag-to-scroll state
+  const drag = useRef({ active: false, startX: 0, scrollLeft: 0 });
+  function onMouseDown(e: React.MouseEvent) {
+    const el = scrollRef.current;
+    if (!el) return;
+    drag.current = { active: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
+    el.style.cursor = "grabbing";
+  }
+  function onMouseUp() {
+    drag.current.active = false;
+    if (scrollRef.current) scrollRef.current.style.cursor = "grab";
+  }
+  function onMouseMove(e: React.MouseEvent) {
+    if (!drag.current.active || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    scrollRef.current.scrollLeft = drag.current.scrollLeft - (x - drag.current.startX);
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -154,9 +178,32 @@ export default function BraceletPageClient({ products }: { products: DbProduct[]
             {/* divider before grid */}
             <div className="h-px bg-gradient-to-r from-transparent via-[rgba(196,163,115,0.12)] to-transparent -mx-6" />
 
+            {/* Scroll arrows */}
+            <div className="flex justify-end gap-2 -mt-6">
+              {([-1, 1] as const).map((dir) => (
+                <button
+                  key={dir}
+                  onClick={() => scrollStrip(dir)}
+                  aria-label={dir === -1 ? "Scroll left" : "Scroll right"}
+                  className="w-8 h-8 flex items-center justify-center border border-[rgba(196,163,115,0.22)] text-[rgba(196,163,115,0.50)] hover:border-[rgba(196,163,115,0.55)] hover:text-brass transition-colors duration-200"
+                >
+                  <svg width="12" height="10" viewBox="0 0 12 10" fill="none" stroke="currentColor" strokeWidth="1.4">
+                    {dir === -1
+                      ? <path d="M11 5H1M5 1L1 5l4 4" />
+                      : <path d="M1 5h10M7 1l4 4-4 4" />}
+                  </svg>
+                </button>
+              ))}
+            </div>
+
             <div
-              className="scroll-strip flex gap-5 overflow-x-auto pb-4 -mx-6 px-6"
-              style={{ scrollbarWidth: "none" }}
+              ref={scrollRef}
+              className="flex gap-5 overflow-x-auto pb-4 -mx-6 px-6 min-w-0"
+              style={{ scrollbarWidth: "none", cursor: "grab", userSelect: "none" }}
+              onMouseDown={onMouseDown}
+              onMouseUp={onMouseUp}
+              onMouseLeave={onMouseUp}
+              onMouseMove={onMouseMove}
             >
               {products.map((product) => {
                 const isMatch = match !== null && product.slug === match.graha.slug;
