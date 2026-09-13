@@ -230,9 +230,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 ₹{product.price.toLocaleString("en-IN")}
               </p>
 
-              {(product.short_description || product.description) && (
-                <p className="font-body font-light italic text-[rgba(245,237,224,0.55)] text-base leading-[1.9]">
-                  {product.short_description || product.description}
+              {product.description && (
+                <p className="font-display text-[rgba(245,237,224,0.72)] text-base leading-relaxed" style={{ letterSpacing: "0.02em" }}>
+                  {product.description}
+                </p>
+              )}
+
+              {product.short_description && (
+                <p className="font-body font-light italic text-[rgba(245,237,224,0.50)] text-base leading-[1.9]">
+                  {product.short_description}
                 </p>
               )}
 
