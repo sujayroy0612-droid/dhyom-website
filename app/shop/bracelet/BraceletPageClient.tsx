@@ -128,24 +128,31 @@ export default function BraceletPageClient({ products }: { products: DbProduct[]
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex items-start gap-3">
-            <input
-              type="number"
-              min={1}
-              max={31}
-              value={day}
-              onChange={e => { setDay(e.target.value); setMatch(null); setError(""); }}
-              placeholder="Day"
-              aria-label="Day of birth (1–31)"
-              className="w-24 bg-transparent border border-[rgba(196,163,115,0.22)] px-3 py-2.5 font-display text-ivory text-xl tracking-widest text-center placeholder:text-[rgba(245,237,224,0.18)] focus:outline-none focus:border-[rgba(196,163,115,0.55)] transition-colors duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
-            <button
-              type="submit"
-              className="border border-[rgba(196,163,115,0.40)] bg-[rgba(196,163,115,0.06)] text-brass font-display text-[0.62rem] tracking-[0.24em] uppercase px-6 py-3 hover:bg-[rgba(196,163,115,0.12)] hover:border-[rgba(196,163,115,0.65)] transition-colors duration-200"
-            >
-              Find My Stone
-            </button>
-          </form>
+          <div className="flex flex-col gap-2">
+            <form onSubmit={handleSubmit} className="flex items-start gap-3">
+              <input
+                type="number"
+                min={1}
+                max={31}
+                value={day}
+                onChange={e => { setDay(e.target.value); setMatch(null); setError(""); }}
+                placeholder="Day"
+                aria-label="Day of birth (1–31)"
+                className="w-24 bg-transparent border border-[rgba(196,163,115,0.22)] px-3 py-2.5 font-display text-ivory text-xl tracking-widest text-center placeholder:text-[rgba(245,237,224,0.18)] focus:outline-none focus:border-[rgba(196,163,115,0.55)] transition-colors duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                type="submit"
+                className="border border-[rgba(196,163,115,0.40)] bg-[rgba(196,163,115,0.06)] text-brass font-display text-[0.62rem] tracking-[0.24em] uppercase px-6 py-3 hover:bg-[rgba(196,163,115,0.12)] hover:border-[rgba(196,163,115,0.65)] transition-colors duration-200"
+              >
+                Find My Stone
+              </button>
+            </form>
+            {/* Example hint */}
+            <p className="font-body font-light italic text-[rgba(245,237,224,0.28)] text-[0.72rem] leading-relaxed">
+              Only the day matters — not month or year.{" "}
+              <span className="text-[rgba(196,163,115,0.38)]">e.g. born on the 23rd: 2+3 = Mulank 5</span>
+            </p>
+          </div>
 
           {error && (
             <p className="font-body font-light italic text-[0.82rem]" style={{ color: "rgba(220,100,80,0.82)" }}>
