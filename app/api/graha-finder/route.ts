@@ -17,27 +17,26 @@ export async function POST(req: NextRequest) {
 
     if (hp) return NextResponse.json({ ok: true });
 
-    const trimmedEmail = (email ?? "").trim().toLowerCase();
-    if (
-      !trimmedEmail ||
-      trimmedEmail.length > 254 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)
-    ) {
-      return NextResponse.json({ error: "Valid email required." }, { status: 400 });
-    }
-
     const dayNum = Number(day);
     if (!Number.isInteger(dayNum) || dayNum < 1 || dayNum > 31) {
       return NextResponse.json({ error: "Valid day required." }, { status: 400 });
     }
 
-    const { error } = await adminClient().from("contacts").insert({
-      email: trimmedEmail,
-      tag: "graha_finder",
-      message: `Day ${dayNum} → Mulank ${mulank} → ${graha} — ${stone}`,
-    });
+    // Email is optional — skip DB insert if not provided or invalid
+    const trimmedEmail = (email ?? "").trim().toLowerCase();
+    const hasEmail =
+      trimmedEmail.length > 0 &&
+      trimmedEmail.length <= 254 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
 
-    if (error) console.error("[graha-finder] insert error:", error);
+    if (hasEmail) {
+      const { error } = await adminClient().from("contacts").insert({
+        email: trimmedEmail,
+        tag: "graha_finder",
+        message: `Day ${dayNum} → Mulank ${mulank} → ${graha} — ${stone}`,
+      });
+      if (error) console.error("[graha-finder] insert error:", error);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
