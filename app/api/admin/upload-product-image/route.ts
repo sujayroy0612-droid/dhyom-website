@@ -23,9 +23,27 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
   return !!data.user;
 }
 
+async function ensureBucket(sb: ReturnType<typeof adminClient>): Promise<string | null> {
+  // Check if bucket exists first
+  const { data: buckets, error: listErr } = await sb.storage.listBuckets();
+  if (listErr) {
+    console.error("[storage] listBuckets error:", listErr.message);
+    return `Cannot list buckets: ${listErr.message}`;
+  }
+  const exists = (buckets ?? []).some(b => b.name === BUCKET);
+  if (!exists) {
+    const { error: createErr } = await sb.storage.createBucket(BUCKET, { public: true });
+    if (createErr) {
+      console.error("[storage] createBucket error:", createErr.message);
+      return `Cannot create bucket: ${createErr.message}`;
+    }
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   if (!(await verifyAdmin(req))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized — please log in again." }, { status: 401 });
   }
 
   const formData  = await req.formData();
@@ -38,8 +56,8 @@ export async function POST(req: NextRequest) {
 
   const sb = adminClient();
 
-  // Create bucket if it doesn't exist yet (public read)
-  await sb.storage.createBucket(BUCKET, { public: true }).catch(() => {});
+  const bucketErr = await ensureBucket(sb);
+  if (bucketErr) return NextResponse.json({ error: bucketErr }, { status: 500 });
 
   const ext  = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const path = `${productId}/${Date.now()}.${ext}`;
@@ -47,13 +65,15 @@ export async function POST(req: NextRequest) {
   const bytes = Buffer.from(await file.arrayBuffer());
   const { error: upErr } = await sb.storage.from(BUCKET).upload(path, bytes, {
     contentType: file.type || "image/jpeg",
-    upsert: false,
+    upsert: true,
   });
 
-  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+  if (upErr) {
+    console.error("[storage] upload error:", upErr.message);
+    return NextResponse.json({ error: `Upload failed: ${upErr.message}` }, { status: 500 });
+  }
 
   const { data: { publicUrl } } = sb.storage.from(BUCKET).getPublicUrl(path);
 
-  // Return just the URL — the client writes image_url / image_urls on products directly
   return NextResponse.json({ url: publicUrl });
 }

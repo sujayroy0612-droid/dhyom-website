@@ -12,6 +12,26 @@ interface Product {
   image_urls: string[];
 }
 
+async function compressImage(file: File, maxPx = 1400, quality = 0.85): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(
+        (blob) => resolve(new File([blob!], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })),
+        "image/jpeg", quality
+      );
+    };
+    img.src = url;
+  });
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   candle: "Candle",
   idol: "Idol",
@@ -47,10 +67,12 @@ export default function UploadImagesPage() {
   }
 
   async function uploadViaServer(product: Product, file: File, isPrimary: boolean): Promise<string> {
+    const compressed = await compressImage(file);
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token ?? "";
+    if (!token) throw new Error("Not logged in — please refresh.");
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", compressed);
     fd.append("productId", product.id);
     fd.append("isPrimary", String(isPrimary));
     const res = await fetch("/api/admin/upload-product-image", {
@@ -60,7 +82,7 @@ export default function UploadImagesPage() {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error((body as { error?: string }).error ?? res.statusText);
+      throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
     }
     const { url } = await res.json() as { url: string };
     return url;

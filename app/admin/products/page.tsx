@@ -93,7 +93,28 @@ function getSubkey(p: Product): string | null {
 
 interface CatOption { slug: string; name: string; }
 
-/* ── Cloudinary ── */
+/* ── Image compression (canvas) ── */
+async function compressImage(file: File, maxPx = 1400, quality = 0.85): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(
+        (blob) => resolve(new File([blob!], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })),
+        "image/jpeg", quality
+      );
+    };
+    img.src = url;
+  });
+}
+
+/* ── Cloudinary (unused — kept for reference) ── */
 async function uploadToCloudinary(file: File, publicId: string): Promise<string> {
   if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error("Cloudinary not configured.");
   const fd = new FormData();
@@ -240,10 +261,12 @@ export default function AdminProductsPage() {
   async function handlePrimary(product: Product, file: File) {
     setUploading(u => ({ ...u, [product.id]: true }));
     try {
+      const compressed = await compressImage(file);
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token ?? "";
+      if (!token) throw new Error("Not logged in — please refresh and try again.");
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", compressed);
       fd.append("productId", product.id);
       fd.append("isPrimary", "true");
       const res = await fetch("/api/admin/upload-product-image", {
@@ -253,10 +276,11 @@ export default function AdminProductsPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error ?? res.statusText);
+        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
       }
       const { url } = await res.json() as { url: string };
-      await supabase.from("products").update({ image_url: url }).eq("id", product.id);
+      const { error: dbErr } = await supabase.from("products").update({ image_url: url }).eq("id", product.id);
+      if (dbErr) throw new Error("Saved image but DB update failed: " + dbErr.message);
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_url: url } : p));
     } catch (err) { showToast(err instanceof Error ? err.message : "Upload failed"); }
     finally { setUploading(u => ({ ...u, [product.id]: false })); }
@@ -454,8 +478,9 @@ export default function AdminProductsPage() {
       setImgUploadProgress(`${i + 1} / ${files.length}`);
       try {
         const isPrimary = current.length === 0;
+        const compressed = await compressImage(files[i]);
         const fd = new FormData();
-        fd.append("file", files[i]);
+        fd.append("file", compressed);
         fd.append("productId", editingProd.id);
         fd.append("isPrimary", String(isPrimary));
 
