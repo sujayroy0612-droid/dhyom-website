@@ -12,9 +12,6 @@ interface Product {
   image_urls: string[];
 }
 
-const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-
 const CATEGORY_LABELS: Record<string, string> = {
   candle: "Candle",
   idol: "Idol",
@@ -23,26 +20,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   "pooja-essentials": "Pooja Essential",
 };
 
-async function uploadToCloudinary(file: File, publicId: string): Promise<string> {
-  if (!CLOUD_NAME || !UPLOAD_PRESET) {
-    throw new Error(
-      "Cloudinary not configured. Add NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET to Vercel environment variables, then redeploy."
-    );
-  }
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("upload_preset", UPLOAD_PRESET);
-  fd.append("public_id", publicId);
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-    method: "POST", body: fd,
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error?.message ?? "Cloudinary upload failed");
-  }
-  const data = await res.json();
-  return data.secure_url as string;
-}
 
 export default function UploadImagesPage() {
   const [products,  setProducts]  = useState<Product[]>([]);
@@ -69,11 +46,31 @@ export default function UploadImagesPage() {
     setTimeout(() => setToast(""), 8000);
   }
 
+  async function uploadViaServer(product: Product, file: File, isPrimary: boolean): Promise<string> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("productId", product.id);
+    fd.append("isPrimary", String(isPrimary));
+    const res = await fetch("/api/admin/upload-product-image", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error((body as { error?: string }).error ?? res.statusText);
+    }
+    const { url } = await res.json() as { url: string };
+    return url;
+  }
+
   /* ── Upload primary image ── */
   async function handlePrimary(product: Product, file: File) {
     setUploading(p => ({ ...p, [product.id]: "primary" }));
     try {
-      const url = await uploadToCloudinary(file, `products/${product.id}_${Date.now()}`);
+      const url = await uploadViaServer(product, file, true);
       await supabase.from("products").update({ image_url: url }).eq("id", product.id);
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_url: url } : p));
     } catch (err) {
@@ -87,8 +84,7 @@ export default function UploadImagesPage() {
   async function handleGallery(product: Product, file: File) {
     setUploading(p => ({ ...p, [product.id]: "gallery" }));
     try {
-      const idx = (product.image_urls?.length ?? 0) + 1;
-      const url = await uploadToCloudinary(file, `products/${product.id}_gallery_${idx}`);
+      const url = await uploadViaServer(product, file, false);
       const newUrls = [...(product.image_urls ?? []), url];
       await supabase.from("products").update({ image_urls: newUrls }).eq("id", product.id);
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_urls: newUrls } : p));
@@ -125,18 +121,6 @@ export default function UploadImagesPage() {
             <span className="text-[rgba(220,80,80,0.90)] text-lg leading-none mt-0.5">!</span>
             <p className="font-body font-light text-[rgba(220,80,80,0.90)] text-sm leading-relaxed flex-1">{toast}</p>
             <button onClick={() => setToast("")} className="text-[rgba(220,80,80,0.60)] hover:text-[rgba(220,80,80,0.90)] text-lg leading-none">×</button>
-          </div>
-        )}
-
-        {/* Cloudinary config warning */}
-        {(!CLOUD_NAME || !UPLOAD_PRESET) && (
-          <div className="mb-6 bg-[rgba(200,140,40,0.12)] border border-[rgba(200,140,40,0.30)] rounded-[6px] px-5 py-4">
-            <p className="font-body font-light text-[rgba(220,160,60,0.90)] text-sm leading-relaxed">
-              <strong className="font-normal">Cloudinary not configured.</strong> Add{" "}
-              <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code> and{" "}
-              <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET</code>{" "}
-              to Vercel Environment Variables, then redeploy.
-            </p>
           </div>
         )}
 

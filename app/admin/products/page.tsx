@@ -240,7 +240,22 @@ export default function AdminProductsPage() {
   async function handlePrimary(product: Product, file: File) {
     setUploading(u => ({ ...u, [product.id]: true }));
     try {
-      const url = await uploadToCloudinary(file, `products/${product.id}_${Date.now()}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? "";
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("productId", product.id);
+      fd.append("isPrimary", "true");
+      const res = await fetch("/api/admin/upload-product-image", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? res.statusText);
+      }
+      const { url } = await res.json() as { url: string };
       await supabase.from("products").update({ image_url: url }).eq("id", product.id);
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, image_url: url } : p));
     } catch (err) { showToast(err instanceof Error ? err.message : "Upload failed"); }
