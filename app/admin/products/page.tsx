@@ -492,6 +492,8 @@ export default function AdminProductsPage() {
       }
     }
 
+    // Persist final image list to DB (upload loop only updates drawerImages state)
+    if (current.length > 0) await syncImages(current, editingProd.id);
     setImgUploading(false);
     setImgUploadProgress("");
     if (imgFileRef.current) imgFileRef.current.value = "";
