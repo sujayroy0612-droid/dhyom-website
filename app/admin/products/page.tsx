@@ -38,6 +38,7 @@ interface Product {
   weight_grams: number | null; length_cm: number | null;
   width_cm: number | null; height_cm: number | null; hsn_code: string | null;
   cost_price: number | null; packaging_cost: number | null;
+  variant_group: string | null; variant_label: string | null;
 }
 
 // Drawer uses this instead of the product_images table
@@ -52,6 +53,7 @@ interface DrawerForm {
   long_description: string; meta_title: string; meta_description: string;
   weight_grams: string; length_cm: string; width_cm: string; height_cm: string; hsn_code: string;
   cost_price: string; packaging_cost: string;
+  variant_group: string; variant_label: string;
 }
 
 const EMPTY_DRAWER: DrawerForm = {
@@ -61,6 +63,7 @@ const EMPTY_DRAWER: DrawerForm = {
   meta_title: "", meta_description: "", weight_grams: "",
   length_cm: "", width_cm: "", height_cm: "", hsn_code: "",
   cost_price: "", packaging_cost: "",
+  variant_group: "", variant_label: "",
 };
 
 function productToDrawer(p: Product): DrawerForm {
@@ -73,6 +76,7 @@ function productToDrawer(p: Product): DrawerForm {
     bullet_points: p.bullet_points ?? "", sku: p.sku ?? "",
     short_description: p.short_description ?? "", long_description: p.long_description ?? "",
     meta_title: p.meta_title ?? "", meta_description: p.meta_description ?? "",
+    variant_group: p.variant_group ?? "", variant_label: p.variant_label ?? "",
     weight_grams: p.weight_grams != null ? String(p.weight_grams) : "",
     length_cm: p.length_cm != null ? String(p.length_cm) : "",
     width_cm: p.width_cm != null ? String(p.width_cm) : "",
@@ -165,7 +169,7 @@ export default function AdminProductsPage() {
   useEffect(() => {
     supabase
       .from("products")
-      .select("id,slug,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,image_urls,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code,cost_price,packaging_cost")
+      .select("id,slug,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,image_urls,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code,cost_price,packaging_cost,variant_group,variant_label")
       .order("category").order("name")
       .then(({ data }) => {
         const prods = (data ?? []) as Product[];
@@ -409,6 +413,8 @@ export default function AdminProductsPage() {
       hsn_code:        drawerForm.hsn_code.trim() || null,
       cost_price:      drawerForm.cost_price      ? Number(drawerForm.cost_price)      : 0,
       packaging_cost:  drawerForm.packaging_cost  ? Number(drawerForm.packaging_cost)  : 0,
+      variant_group:   drawerForm.variant_group.trim()  || null,
+      variant_label:   drawerForm.variant_label.trim()  || null,
     };
 
     if (editingProd) {
@@ -1025,6 +1031,23 @@ export default function AdminProductsPage() {
                 <div>
                   <div className="flex items-end justify-between mb-1"><label className={LABEL + " mb-0"}>Meta Description</label><span className={`font-display text-[0.32rem] ${drawerForm.meta_description.length > 160 ? "text-[rgba(200,80,80,0.65)]" : "text-[rgba(196,163,115,0.28)]"}`}>{drawerForm.meta_description.length}/160</span></div>
                   <textarea rows={3} className={FIELD + " resize-none leading-[1.7]"} value={drawerForm.meta_description} onChange={e => setDrawerForm(f => ({ ...f, meta_description: e.target.value }))} placeholder="A hand-poured soy wax candle with rose fragrance." />
+                </div>
+              </div>
+            </section>
+
+            {/* Variants */}
+            <section>
+              <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass mb-3">Variants</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={LABEL}>Variant Group</label>
+                  <input className={FIELD} value={drawerForm.variant_group} onChange={e => setDrawerForm(f => ({ ...f, variant_group: e.target.value }))} placeholder="ganesha-idol" />
+                  <p className="mt-1 font-display text-[0.30rem] tracking-[0.08em] uppercase text-[rgba(196,163,115,0.28)]">Same key on all variants of a product</p>
+                </div>
+                <div>
+                  <label className={LABEL}>Variant Label</label>
+                  <input className={FIELD} value={drawerForm.variant_label} onChange={e => setDrawerForm(f => ({ ...f, variant_label: e.target.value }))} placeholder="Green" />
+                  <p className="mt-1 font-display text-[0.30rem] tracking-[0.08em] uppercase text-[rgba(196,163,115,0.28)]">Color or style name shown to customers</p>
                 </div>
               </div>
             </section>

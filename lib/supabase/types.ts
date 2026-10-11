@@ -37,6 +37,8 @@ export interface DbProduct {
   width_cm: number | null;
   height_cm: number | null;
   hsn_code: string | null;
+  variant_group: string | null;
+  variant_label: string | null;
 }
 
 export interface DbProductImage {

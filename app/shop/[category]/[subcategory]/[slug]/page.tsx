@@ -80,7 +80,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const supabase = createServerClient();
   const cols =
-    "id,slug,name,type,subcategory,collection,fragrance,price,description,short_description,bullet_points,image_url,image_urls,category,stock,is_visible,created_at";
+    "id,slug,name,type,subcategory,collection,fragrance,price,description,short_description,bullet_points,image_url,image_urls,category,stock,is_visible,created_at,variant_group,variant_label";
 
   // ── UUID redirect: old links like /shop/candle/mandala/{uuid} → 301 to slug URL ──
   if (UUID_RE.test(slug)) {
@@ -135,6 +135,22 @@ export default async function ProductDetailPage({ params }: PageProps) {
   if (!product.is_visible) notFound();
   if (catVisRes.data?.is_visible === false) notFound();
   if (collVisRes.data?.is_visible === false) notFound();
+
+  // Fetch variant siblings (same variant_group, different product)
+  const variants: { slug: string; label: string; isCurrent: boolean }[] = [];
+  if (product.variant_group) {
+    const { data: variantData } = await supabase
+      .from("products")
+      .select("slug,variant_label,category,subcategory,collection")
+      .eq("variant_group", product.variant_group)
+      .eq("is_visible", true)
+      .order("created_at");
+    for (const v of variantData ?? []) {
+      if (v.slug) {
+        variants.push({ slug: v.slug, label: v.variant_label ?? v.slug, isCurrent: v.slug === slug });
+      }
+    }
+  }
 
   // Fetch related products (excluding this one)
   const { data: relatedData } = await supabase
@@ -229,6 +245,31 @@ export default async function ProductDetailPage({ params }: PageProps) {
               >
                 ₹{product.price.toLocaleString("en-IN")}
               </p>
+
+              {/* Variant swatches */}
+              {variants.length > 1 && (
+                <div className="flex flex-col gap-2">
+                  <p className="font-display text-[0.46rem] tracking-[0.20em] uppercase text-[rgba(196,163,115,0.45)]">
+                    Colour
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {variants.map((v) => (
+                      <Link
+                        key={v.slug}
+                        href={`/shop/${category}/${subcategory}/${v.slug}`}
+                        className={[
+                          "px-4 py-2 font-display text-[0.54rem] tracking-[0.18em] uppercase transition-colors duration-200",
+                          v.isCurrent
+                            ? "border border-brass text-brass bg-[rgba(196,163,115,0.08)]"
+                            : "border border-[rgba(196,163,115,0.22)] text-[rgba(245,237,224,0.45)] hover:border-[rgba(196,163,115,0.55)] hover:text-ivory",
+                        ].join(" ")}
+                      >
+                        {v.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {product.description && (
                 <p className="font-display text-[rgba(245,237,224,0.72)] text-base leading-relaxed" style={{ letterSpacing: "0.02em" }}>
