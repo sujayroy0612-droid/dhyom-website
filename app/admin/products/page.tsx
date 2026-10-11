@@ -4,9 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
-const CLOUD_NAME    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-
 /* ── Category / subcategory display maps ── */
 const CATEGORY_LABELS: Record<string, string> = {
   candle: "Candles", idol: "Idols", bracelet: "Bracelets",
@@ -114,15 +111,6 @@ async function compressImage(file: File, maxPx = 1400, quality = 0.85): Promise<
   });
 }
 
-/* ── Cloudinary (unused — kept for reference) ── */
-async function uploadToCloudinary(file: File, publicId: string): Promise<string> {
-  if (!CLOUD_NAME || !UPLOAD_PRESET) throw new Error("Cloudinary not configured.");
-  const fd = new FormData();
-  fd.append("file", file); fd.append("upload_preset", UPLOAD_PRESET); fd.append("public_id", publicId);
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: "POST", body: fd });
-  if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.error?.message ?? "Upload failed"); }
-  return (await res.json()).secure_url as string;
-}
 
 function slugify(v: string) { return v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""); }
 
@@ -660,14 +648,6 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {/* Cloudinary warning */}
-      {(!CLOUD_NAME || !UPLOAD_PRESET) && (
-        <div className="mb-5 bg-[rgba(200,140,40,0.10)] border border-[rgba(200,140,40,0.28)] rounded-[6px] px-5 py-3">
-          <p className="font-body font-light text-[rgba(220,160,60,0.90)] text-sm">
-            Image uploads require <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME</code> and <code className="font-mono text-xs bg-[rgba(255,255,255,0.08)] px-1 py-0.5 rounded">NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET</code>
-          </p>
-        </div>
-      )}
 
       {/* Search + controls */}
       <div className="flex gap-3 mb-6 items-center">
