@@ -77,14 +77,23 @@ export default function Header({
   const [shopOpen,     setShopOpen]     = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const shopRef     = useRef<HTMLDivElement>(null);
 
   /* Mobile */
-  const [menuOpen,          setMenuOpen]          = useState(false);
-  const [mobileShopOpen,    setMobileShopOpen]    = useState(false);
+  const [menuOpen,           setMenuOpen]           = useState(false);
+  const [mobileShopOpen,     setMobileShopOpen]     = useState(false);
   const [mobileExpandedCats, setMobileExpandedCats] = useState<Set<string>>(new Set());
 
-  /* Hover-delay timer ref */
-  const closeTimer = useRef<ReturnType<typeof setTimeout>>();
+  /* Close shop dropdown on outside click */
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (shopRef.current && !shopRef.current.contains(e.target as Node)) {
+        setShopOpen(false);
+      }
+    }
+    if (shopOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [shopOpen]);
 
   /* Close user menu on outside click */
   useEffect(() => {
@@ -99,26 +108,14 @@ export default function Header({
 
   /* Close everything on route change */
   useEffect(() => {
-    clearTimeout(closeTimer.current);
     setShopOpen(false);
     setMenuOpen(false);
     setMobileShopOpen(false);
     setMobileExpandedCats(new Set());
   }, [pathname]);
 
-  /* Desktop hover helpers */
-  function openShop() {
-    clearTimeout(closeTimer.current);
-    setShopOpen(true);
-  }
-  function scheduleClose() {
-    clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setShopOpen(false), 180);
-  }
-
   /* Close all menus (called on link click) */
   function closeAll() {
-    clearTimeout(closeTimer.current);
     setShopOpen(false);
     setMenuOpen(false);
     setMobileShopOpen(false);
@@ -180,12 +177,8 @@ export default function Header({
             Home
           </Link>
 
-          {/* ── SHOP — h-16 wrapper so top-full = bottom of header ── */}
-          <div
-            className="relative h-16 flex items-center"
-            onMouseEnter={openShop}
-            onMouseLeave={scheduleClose}
-          >
+          {/* ── SHOP — click-only dropdown ── */}
+          <div ref={shopRef} className="relative h-16 flex items-center">
             {/* Trigger button */}
             <button
               onClick={() => setShopOpen((v) => !v)}
