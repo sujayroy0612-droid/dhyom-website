@@ -74,9 +74,8 @@ export default function Header({
   const { ids: wishlistIds } = useWishlist();
 
   /* Desktop */
-  const [shopOpen,       setShopOpen]       = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [userMenuOpen,   setUserMenuOpen]   = useState(false);
+  const [shopOpen,     setShopOpen]     = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   /* Mobile */
@@ -102,7 +101,6 @@ export default function Header({
   useEffect(() => {
     clearTimeout(closeTimer.current);
     setShopOpen(false);
-    setActiveCategory(null);
     setMenuOpen(false);
     setMobileShopOpen(false);
     setMobileExpandedCats(new Set());
@@ -115,21 +113,13 @@ export default function Header({
   }
   function scheduleClose() {
     clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => {
-      setShopOpen(false);
-      setActiveCategory(null);
-    }, 260);
-  }
-  function hoverCategory(cat: string) {
-    clearTimeout(closeTimer.current);
-    setActiveCategory(cat);
+    closeTimer.current = setTimeout(() => setShopOpen(false), 180);
   }
 
   /* Close all menus (called on link click) */
   function closeAll() {
     clearTimeout(closeTimer.current);
     setShopOpen(false);
-    setActiveCategory(null);
     setMenuOpen(false);
     setMobileShopOpen(false);
     setMobileExpandedCats(new Set());
@@ -146,10 +136,6 @@ export default function Header({
   }
 
   const shopActive = pathname.startsWith("/shop");
-  const activeSubcats =
-    activeCategory
-      ? (shopNav.find((c) => c.category === activeCategory)?.subcategories ?? [])
-      : [];
 
   return (
     <header className="fixed left-0 right-0 z-50 bg-[rgba(26,10,20,0.92)] backdrop-blur-md border-b border-[rgba(196,163,115,0.14)]" style={{ top: "var(--bar-height, 0px)" }}>
@@ -215,12 +201,10 @@ export default function Header({
             {/* ── Dropdown ── */}
             {shopOpen && (
               <div
-                className="absolute right-0 top-full flex bg-damson border border-[rgba(196,163,115,0.18)] rounded-b-[4px] shadow-[0_20px_60px_rgba(15,5,8,0.75)] overflow-hidden"
-                style={{ animation: "menu-enter 150ms ease-out" }}
+                className="absolute right-0 top-full bg-damson border border-[rgba(196,163,115,0.18)] rounded-b-[4px] shadow-[0_20px_60px_rgba(15,5,8,0.75)] overflow-hidden"
+                style={{ animation: "menu-enter 150ms ease-out", minWidth: "220px" }}
               >
-                {/* Left panel: category list */}
-                <div className="w-56 py-2 flex-shrink-0">
-
+                <div className="py-2">
                   {/* Shop All */}
                   <Link
                     href="/shop"
@@ -232,54 +216,35 @@ export default function Header({
                     </span>
                   </Link>
 
-                  {/* Divider */}
                   <div className="my-1.5 mx-5 h-px bg-[rgba(196,163,115,0.12)]" />
 
-                  {/* Categories */}
+                  {/* Categories with inline subcategories */}
                   {shopNav.map((cat) => (
-                    <Link
-                      key={cat.category}
-                      href={cat.href}
-                      onClick={closeAll}
-                      onMouseEnter={() => hoverCategory(cat.category)}
-                      className="flex items-center justify-between px-5 py-2.5 group hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100"
-                    >
-                      <span className={[
-                        "font-body text-[1.0rem] transition-colors duration-150",
-                        activeCategory === cat.category ? "text-ivory" : "text-[rgba(245,237,224,0.62)] group-hover:text-ivory",
-                      ].join(" ")}>
-                        {cat.title}
-                      </span>
-                      <span className={[
-                        "transition-colors duration-150",
-                        activeCategory === cat.category ? "text-brass" : "text-[rgba(196,163,115,0.28)] group-hover:text-[rgba(196,163,115,0.55)]",
-                      ].join(" ")}>
-                        <ChevronRight />
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-
-                {/* Right panel: subcategory flyout */}
-                {activeSubcats.length > 0 && (
-                  <div
-                    className="w-52 flex-shrink-0 bg-[#250d1e] border-l border-[rgba(196,163,115,0.12)] py-2"
-                    style={{ animation: "menu-enter 120ms ease-out" }}
-                  >
-                    {activeSubcats.map((sub) => (
+                    <div key={cat.category}>
                       <Link
-                        key={sub.slug}
-                        href={sub.href}
+                        href={cat.href}
                         onClick={closeAll}
-                        className="flex items-center px-5 py-2.5 group hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100"
+                        className="flex items-center px-5 py-2 group hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100"
                       >
-                        <span className="font-body italic text-[0.95rem] text-[rgba(245,237,224,0.52)] group-hover:text-ivory transition-colors duration-150">
-                          {sub.title}
+                        <span className="font-body text-[1.0rem] text-[rgba(245,237,224,0.70)] group-hover:text-ivory transition-colors duration-150">
+                          {cat.title}
                         </span>
                       </Link>
-                    ))}
-                  </div>
-                )}
+                      {cat.subcategories.map((sub) => (
+                        <Link
+                          key={sub.slug}
+                          href={sub.href}
+                          onClick={closeAll}
+                          className="flex items-center pl-8 pr-5 py-1.5 group hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100"
+                        >
+                          <span className="font-body italic text-[0.88rem] text-[rgba(245,237,224,0.38)] group-hover:text-[rgba(245,237,224,0.75)] transition-colors duration-150">
+                            {sub.title}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
