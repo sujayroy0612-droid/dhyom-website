@@ -74,8 +74,9 @@ export default function Header({
   const { ids: wishlistIds } = useWishlist();
 
   /* Desktop */
-  const [shopOpen,     setShopOpen]     = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [shopOpen,       setShopOpen]       = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string>(shopNav[0]?.category ?? "");
+  const [userMenuOpen,   setUserMenuOpen]   = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const shopRef     = useRef<HTMLDivElement>(null);
 
@@ -194,50 +195,63 @@ export default function Header({
             {/* ── Dropdown ── */}
             {shopOpen && (
               <div
-                className="absolute right-0 top-full bg-damson border border-[rgba(196,163,115,0.18)] rounded-b-[4px] shadow-[0_20px_60px_rgba(15,5,8,0.75)] overflow-hidden"
-                style={{ animation: "menu-enter 150ms ease-out", minWidth: "220px" }}
+                className="absolute right-0 top-full flex bg-damson border border-[rgba(196,163,115,0.18)] rounded-b-[4px] shadow-[0_20px_60px_rgba(15,5,8,0.75)] overflow-hidden"
+                style={{ animation: "menu-enter 150ms ease-out" }}
               >
-                <div className="py-2">
-                  {/* Shop All */}
-                  <Link
-                    href="/shop"
-                    onClick={closeAll}
-                    className="flex items-center px-5 py-2.5 group"
-                  >
+                {/* Left: category list */}
+                <div className="w-52 py-2 flex-shrink-0">
+                  <Link href="/shop" onClick={closeAll} className="flex items-center px-5 py-2.5 group">
                     <span className="font-display text-[0.57rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.50)] group-hover:text-brass transition-colors duration-150">
                       Shop All
                     </span>
                   </Link>
-
                   <div className="my-1.5 mx-5 h-px bg-[rgba(196,163,115,0.12)]" />
-
-                  {/* Categories with inline subcategories */}
                   {shopNav.map((cat) => (
-                    <div key={cat.category}>
-                      <Link
-                        href={cat.href}
-                        onClick={closeAll}
-                        className="flex items-center px-5 py-2 group hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100"
-                      >
-                        <span className="font-body text-[1.0rem] text-[rgba(245,237,224,0.70)] group-hover:text-ivory transition-colors duration-150">
-                          {cat.title}
+                    <Link
+                      key={cat.category}
+                      href={cat.href}
+                      onClick={closeAll}
+                      onMouseEnter={() => setActiveCategory(cat.category)}
+                      className="flex items-center justify-between px-5 py-2.5 group hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100"
+                    >
+                      <span className={[
+                        "font-body text-[1.0rem] transition-colors duration-150",
+                        activeCategory === cat.category ? "text-ivory" : "text-[rgba(245,237,224,0.62)] group-hover:text-ivory",
+                      ].join(" ")}>
+                        {cat.title}
+                      </span>
+                      {cat.subcategories.length > 0 && (
+                        <span className={[
+                          "transition-colors duration-150",
+                          activeCategory === cat.category ? "text-brass" : "text-[rgba(196,163,115,0.28)] group-hover:text-[rgba(196,163,115,0.55)]",
+                        ].join(" ")}>
+                          <ChevronRight />
                         </span>
-                      </Link>
-                      {cat.subcategories.map((sub) => (
+                      )}
+                    </Link>
+                  ))}
+                </div>
+
+                {/* Right: subcategories for active category */}
+                {(() => {
+                  const subs = shopNav.find(c => c.category === activeCategory)?.subcategories ?? [];
+                  return subs.length > 0 ? (
+                    <div className="w-52 flex-shrink-0 bg-[#250d1e] border-l border-[rgba(196,163,115,0.12)] py-2">
+                      {subs.map((sub) => (
                         <Link
                           key={sub.slug}
                           href={sub.href}
                           onClick={closeAll}
-                          className="flex items-center pl-8 pr-5 py-1.5 group hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100"
+                          className="flex items-center px-5 py-2.5 group hover:bg-[rgba(245,237,224,0.04)] transition-colors duration-100"
                         >
-                          <span className="font-body italic text-[0.88rem] text-[rgba(245,237,224,0.38)] group-hover:text-[rgba(245,237,224,0.75)] transition-colors duration-150">
+                          <span className="font-body italic text-[0.95rem] text-[rgba(245,237,224,0.52)] group-hover:text-ivory transition-colors duration-150">
                             {sub.title}
                           </span>
                         </Link>
                       ))}
                     </div>
-                  ))}
-                </div>
+                  ) : null;
+                })()}
               </div>
             )}
           </div>
