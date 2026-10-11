@@ -12,6 +12,11 @@ const nextConfig = {
         protocol: "https",
         hostname: "res.cloudinary.com",
       },
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
     ],
   },
 
@@ -23,7 +28,7 @@ const nextConfig = {
       // framer-motion and Tailwind runtime class generation need unsafe-inline; Google Fonts stylesheet
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // product images from Cloudinary; Razorpay may load its own logo
-      "img-src 'self' data: blob: https://res.cloudinary.com https://*.razorpay.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://*.supabase.co https://*.razorpay.com",
       // Next.js self-hosted fonts + Google Fonts (Cinzel, Cormorant Garamond)
       "font-src 'self' data: https://fonts.gstatic.com",
       // Supabase (REST + realtime websocket) + Razorpay API
