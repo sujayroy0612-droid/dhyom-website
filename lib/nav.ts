@@ -53,6 +53,12 @@ export const SHOP_NAV: NavCategory[] = [
     ],
   },
   {
+    category: "hampers",
+    title: "Gift Hampers",
+    href: "/shop/hampers",
+    subcategories: [],
+  },
+  {
     category: "pooja-essentials",
     title: "Pooja Essentials",
     href: "/shop/pooja-essentials",

@@ -67,7 +67,7 @@ export interface InvoicePdfProps {
   shippingCity:    string;
   shippingState:   string;
   shippingPincode: string;
-  items: { id?: string; name: string; label?: string; price: number; quantity: number }[];
+  items: { id?: string; name: string; label?: string; price: number; quantity: number; subItems?: { name: string; label?: string }[] }[];
   subtotal:        number;
   shippingFee:     number;
   total:           number;
@@ -201,6 +201,11 @@ export function InvoicePdf(props: InvoicePdfProps) {
             <View style={[tbl, s.cProduct, { borderLeftWidth: 0 }]}>
               <Text style={s.bold}>{item.name}</Text>
               {item.label ? <Text style={{ color: "#555", fontSize: 8 }}>{item.label}</Text> : null}
+              {item.subItems && item.subItems.map((sub, si) => (
+                <Text key={si} style={{ color: "#777", fontSize: 7.5, marginTop: 1 }}>
+                  {'  '}↳ {sub.name}{sub.label ? ` · ${sub.label}` : ""}
+                </Text>
+              ))}
             </View>
             <View style={[tbl, s.cQty]}>
               <Text style={s.center}>{item.quantity}</Text>

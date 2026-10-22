@@ -79,14 +79,31 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 4. Deduct finished-goods stock for each ordered item ──────────────
-    // base.items is the cart array: [{ id: productId, quantity, ... }]
+    // For hampers: deduct each component individually using hamperComponents[].
+    // For regular products: deduct by item.id.
     // Non-blocking — a stock deduction failure must never fail the order save.
     try {
-      const cartItems = base.items as { id: string; quantity: number }[] | undefined;
+      type RawCartItem = {
+        kind?: string;
+        id: string;
+        quantity: number;
+        hamperComponents?: { id: string; quantity: number }[];
+      };
+      const cartItems = base.items as RawCartItem[] | undefined;
       if (Array.isArray(cartItems) && cartItems.length > 0) {
+        const deductions: { id: string; quantity: number }[] = [];
+        for (const item of cartItems) {
+          if (item.kind === "hamper" && Array.isArray(item.hamperComponents)) {
+            for (const comp of item.hamperComponents) {
+              deductions.push({ id: comp.id, quantity: comp.quantity });
+            }
+          } else {
+            deductions.push({ id: item.id, quantity: item.quantity });
+          }
+        }
         await Promise.all(
-          cartItems.map(item =>
-            sb.rpc("decrement_product_stock", { p_product_id: item.id, p_quantity: item.quantity })
+          deductions.map(d =>
+            sb.rpc("decrement_product_stock", { p_product_id: d.id, p_quantity: d.quantity })
           )
         );
       }

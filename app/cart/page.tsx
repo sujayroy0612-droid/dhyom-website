@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { useCart, CartItem } from "@/lib/cart/CartContext";
+import { useCart, CartItem, ProductCartItem, HamperCartItem } from "@/lib/cart/CartContext";
 import { supabase } from "@/lib/supabase/client";
 
 const DEFAULT_SHIPPING = 99;
@@ -37,8 +37,8 @@ function calcDiscount(meta: CouponMeta, subtotal: number): number {
 }
 
 /* ─── Cart item row ───────────────────────────────────── */
-function CartRow({ item, onQtyChange, onRemove }: {
-  item: CartItem; onQtyChange: (q: number) => void; onRemove: () => void;
+function ProductRow({ item, onQtyChange, onRemove }: {
+  item: ProductCartItem; onQtyChange: (q: number) => void; onRemove: () => void;
 }) {
   return (
     <div className="flex gap-5 py-6">
@@ -71,6 +71,56 @@ function CartRow({ item, onQtyChange, onRemove }: {
       </div>
     </div>
   );
+}
+
+function HamperRow({ item, onRemove }: {
+  item: HamperCartItem; onRemove: () => void;
+}) {
+  return (
+    <div className="flex gap-5 py-6">
+      <div className="w-20 h-20 flex-shrink-0 bg-[#270b1b] rounded-[4px] border border-[rgba(196,163,115,0.12)] flex items-center justify-center overflow-hidden relative">
+        {item.imageUrl ? (
+          <Image src={item.imageUrl} alt={item.tierName} fill className="object-cover" sizes="80px" />
+        ) : (
+          <span className="font-display text-[0.36rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.18)]">DHYOM</span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-start gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="font-display text-[0.52rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.42)] mb-1">Gift Hamper · {item.boxName}</p>
+          <p className="font-display text-ivory leading-tight" style={{ fontSize: "0.9rem", letterSpacing: "0.04em" }}>{item.tierName}</p>
+          <p className="font-body font-light text-[rgba(245,237,224,0.35)] text-sm mt-1">₹{item.price.toLocaleString("en-IN")}</p>
+          {item.selections.length > 0 && (
+            <ul className="mt-2 flex flex-col gap-0.5">
+              {item.selections.map(s => (
+                <li key={s.slotId} className="font-body font-light text-[rgba(245,237,224,0.38)] text-[0.78rem]">
+                  <span className="text-[rgba(196,163,115,0.45)]">{s.slotLabel}:</span> {s.productName}{s.productLabel ? ` · ${s.productLabel}` : ""}
+                </li>
+              ))}
+            </ul>
+          )}
+          {item.giftMessage && (
+            <p className="mt-2 font-body font-light italic text-[rgba(245,237,224,0.30)] text-[0.78rem]">
+              &ldquo;{item.giftMessage}&rdquo;
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-4 sm:gap-5 flex-shrink-0 mt-1">
+          <span className="font-display text-brass w-[72px] text-right flex-shrink-0" style={{ fontSize: "0.92rem", letterSpacing: "0.04em" }}>₹{item.price.toLocaleString("en-IN")}</span>
+          <button type="button" onClick={onRemove} aria-label="Remove hamper" className="text-[rgba(196,163,115,0.28)] hover:text-brass transition-colors duration-150 p-1 flex-shrink-0">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3"><path d="M1.5 1.5l10 10M11.5 1.5l-10 10" /></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CartRow({ item, onQtyChange, onRemove }: {
+  item: CartItem; onQtyChange: (q: number) => void; onRemove: () => void;
+}) {
+  if (item.kind === "hamper") return <HamperRow item={item} onRemove={onRemove} />;
+  return <ProductRow item={item} onQtyChange={onQtyChange} onRemove={onRemove} />;
 }
 
 /* ─── Page ─────────────────────────────────────────────── */
@@ -119,6 +169,7 @@ export default function CartPage() {
   function handleCheckout() {
     if (bumpChecked && bumpProduct) {
       addItem({
+        kind: "product",
         id: bumpProduct.id,
         name: bumpProduct.name,
         price: bumpProduct.price,
