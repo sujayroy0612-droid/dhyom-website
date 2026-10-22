@@ -39,6 +39,7 @@ export interface DbProduct {
   hsn_code: string | null;
   variant_group: string | null;
   variant_label: string | null;
+  product_type: string;
 }
 
 export interface DbProductImage {

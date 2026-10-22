@@ -666,7 +666,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="divide-y divide-[rgba(196,163,115,0.08)]">
                   {items.map((item) => {
-                    const displayName = item.kind === "hamper" ? `${item.tierName} Hamper` : item.name;
+                    const displayName = item.kind === "hamper" ? item.productName : item.name;
                     const displayLabel = item.kind === "hamper" ? item.boxName : item.label;
                     return (
                     <div key={item.id} className="flex gap-3.5 px-5 py-3.5">

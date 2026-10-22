@@ -39,7 +39,14 @@ interface Product {
   width_cm: number | null; height_cm: number | null; hsn_code: string | null;
   cost_price: number | null; packaging_cost: number | null;
   variant_group: string | null; variant_label: string | null;
+  product_type: string;
 }
+
+interface HamperSlot {
+  id: string; label: string; allowed_categories: string[]; quantity: number; sort_order: number;
+}
+interface HamperBox { id: string; name: string; image_url: string | null; }
+interface HamperBoxLink { id: string; box_id: string; extra_price: number; hamper_boxes: HamperBox; }
 
 // Drawer uses this instead of the product_images table
 interface DrawerImage { url: string; isPrimary: boolean; }
@@ -54,6 +61,7 @@ interface DrawerForm {
   weight_grams: string; length_cm: string; width_cm: string; height_cm: string; hsn_code: string;
   cost_price: string; packaging_cost: string;
   variant_group: string; variant_label: string;
+  product_type: string;
 }
 
 const EMPTY_DRAWER: DrawerForm = {
@@ -64,6 +72,7 @@ const EMPTY_DRAWER: DrawerForm = {
   length_cm: "", width_cm: "", height_cm: "", hsn_code: "",
   cost_price: "", packaging_cost: "",
   variant_group: "", variant_label: "",
+  product_type: "standard",
 };
 
 function productToDrawer(p: Product): DrawerForm {
@@ -84,6 +93,7 @@ function productToDrawer(p: Product): DrawerForm {
     hsn_code: p.hsn_code ?? "",
     cost_price:     p.cost_price     != null ? String(p.cost_price)     : "",
     packaging_cost: p.packaging_cost != null ? String(p.packaging_cost) : "",
+    product_type:   p.product_type ?? "standard",
   };
 }
 
@@ -160,6 +170,19 @@ export default function AdminProductsPage() {
   const [newCatSlug,     setNewCatSlug]     = useState("");
   const [creatingCat,    setCreatingCat]    = useState(false);
 
+  /* Hamper setup (shown inside drawer when product_type === 'customizable_hamper') */
+  const [hamperSlots,     setHamperSlots]     = useState<HamperSlot[]>([]);
+  const [hamperBoxLinks,  setHamperBoxLinks]  = useState<HamperBoxLink[]>([]);
+  const [allBoxes,        setAllBoxes]        = useState<HamperBox[]>([]);
+  const [hamperLoading,   setHamperLoading]   = useState(false);
+  const [hamperSaving,    setHamperSaving]    = useState(false);
+  const [newSlotLabel,    setNewSlotLabel]    = useState("");
+  const [newSlotCats,     setNewSlotCats]     = useState("");
+  const [dupSubcat,       setDupSubcat]       = useState("");
+  const [dupName,         setDupName]         = useState("");
+  const [dupSlug,         setDupSlug]         = useState("");
+  const [duplicating,     setDuplicating]     = useState(false);
+
   const allCatOptions: CatOption[] = [
     ...CATEGORY_ORDER.map(s => ({ slug: s, name: CATEGORY_LABELS[s] ?? s })),
     ...extraCats,
@@ -169,7 +192,7 @@ export default function AdminProductsPage() {
   useEffect(() => {
     supabase
       .from("products")
-      .select("id,slug,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,image_urls,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code,cost_price,packaging_cost,variant_group,variant_label")
+      .select("id,slug,name,category,type,subcategory,collection,fragrance,stock,price,mrp,image_url,image_urls,bullet_points,is_visible,is_featured,sku,short_description,long_description,meta_title,meta_description,weight_grams,length_cm,width_cm,height_cm,hsn_code,cost_price,packaging_cost,variant_group,variant_label,product_type")
       .order("category").order("name")
       .then(({ data }) => {
         const prods = (data ?? []) as Product[];
@@ -320,9 +343,26 @@ export default function AdminProductsPage() {
   function collapseAll() { setExpandedCats(new Set<string>()); setExpandedSubs(new Set<string>()); }
 
   /* ── Drawer ── */
+  async function loadHamperConfig(productId: string) {
+    setHamperLoading(true);
+    setHamperSlots([]); setHamperBoxLinks([]);
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    const [slotsRes, boxLinksRes, allBoxesRes] = await Promise.all([
+      fetch(`/api/admin/hampers/slots?productId=${productId}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch(`/api/hampers/config?productId=${productId}`).then(r => r.json()),
+      fetch("/api/admin/hampers/product-boxes", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    ]);
+    setHamperSlots(slotsRes.slots ?? []);
+    setHamperBoxLinks((boxLinksRes.boxes ?? []) as HamperBoxLink[]);
+    setAllBoxes(allBoxesRes.boxes ?? []);
+    setHamperLoading(false);
+  }
+
   function openEdit(product: Product) {
     setEditingProd(product); setDrawerForm(productToDrawer(product));
     setShowNewCat(false); setDrawerOpen(true); setImgError("");
+    setNewSlotLabel(""); setNewSlotCats(""); setDupSubcat(""); setDupName(""); setDupSlug("");
     // Build image list from existing product columns — no separate table query needed
     const imgs: DrawerImage[] = [];
     if (product.image_url) imgs.push({ url: product.image_url, isPrimary: true });
@@ -330,17 +370,21 @@ export default function AdminProductsPage() {
       if (u && u !== product.image_url) imgs.push({ url: u, isPrimary: false });
     }
     setDrawerImages(imgs);
+    if (product.product_type === "customizable_hamper") loadHamperConfig(product.id);
   }
 
   function openAdd(defaultCategory?: string, defaultSub?: string) {
     setEditingProd(null);
     setDrawerForm({ ...EMPTY_DRAWER, category: defaultCategory ?? "candle", subcat_value: defaultSub ?? "" });
     setDrawerImages([]); setShowNewCat(false); setDrawerOpen(true);
+    setHamperSlots([]); setHamperBoxLinks([]); setAllBoxes([]);
   }
 
   function closeDrawer() {
     setDrawerOpen(false); setEditingProd(null); setDrawerForm(EMPTY_DRAWER);
     setDrawerImages([]); setImgError(""); setShowNewCat(false); setNewCatName(""); setNewCatSlug("");
+    setHamperSlots([]); setHamperBoxLinks([]); setAllBoxes([]);
+    setNewSlotLabel(""); setNewSlotCats(""); setDupSubcat(""); setDupName(""); setDupSlug("");
   }
 
   /* ── Category creation ── */
@@ -415,6 +459,7 @@ export default function AdminProductsPage() {
       packaging_cost:  drawerForm.packaging_cost  ? Number(drawerForm.packaging_cost)  : 0,
       variant_group:   drawerForm.variant_group.trim()  || null,
       variant_label:   drawerForm.variant_label.trim()  || null,
+      product_type:    drawerForm.product_type || "standard",
     };
 
     if (editingProd) {
@@ -445,6 +490,85 @@ export default function AdminProductsPage() {
       }
     }
     setDrawerSaving(false);
+  }
+
+  /* ── Hamper slot/box helpers ── */
+  async function addSlot() {
+    if (!editingProd || !newSlotLabel.trim()) return;
+    setHamperSaving(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    const cats = newSlotCats.split(",").map(s => s.trim()).filter(Boolean);
+    const res = await fetch("/api/admin/hampers/slots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ product_id: editingProd.id, label: newSlotLabel.trim(), allowed_categories: cats, quantity: 1, sort_order: hamperSlots.length }),
+    });
+    const data = await res.json();
+    if (data.slot) { setHamperSlots(prev => [...prev, data.slot]); setNewSlotLabel(""); setNewSlotCats(""); }
+    else showToast("Error: " + (data.error ?? "Unknown"));
+    setHamperSaving(false);
+  }
+
+  async function deleteSlot(id: string) {
+    setHamperSaving(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    await fetch(`/api/admin/hampers/slots?id=${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    setHamperSlots(prev => prev.filter(s => s.id !== id));
+    setHamperSaving(false);
+  }
+
+  async function linkBox(boxId: string, extraPrice: number) {
+    if (!editingProd) return;
+    setHamperSaving(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    const res = await fetch("/api/admin/hampers/product-boxes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ product_id: editingProd.id, box_id: boxId, extra_price: extraPrice }),
+    });
+    const data = await res.json();
+    if (!data.error) await loadHamperConfig(editingProd.id);
+    else showToast("Error: " + data.error);
+    setHamperSaving(false);
+  }
+
+  async function unlinkBox(linkId: string) {
+    setHamperSaving(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    await fetch(`/api/admin/hampers/product-boxes?id=${linkId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+    setHamperBoxLinks(prev => prev.filter(b => b.id !== linkId));
+    setHamperSaving(false);
+  }
+
+  async function duplicateHamper() {
+    if (!editingProd || !dupSubcat.trim() || !dupName.trim() || !dupSlug.trim()) {
+      showToast("Fill in subcategory, name, and slug to duplicate."); return;
+    }
+    setDuplicating(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? "";
+    const res = await fetch("/api/admin/hampers/duplicate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ sourceProductId: editingProd.id, targetSubcategory: dupSubcat.trim(), newName: dupName.trim(), newSlug: dupSlug.trim() }),
+    });
+    const data = await res.json();
+    if (data.product) {
+      const np = data.product as Product;
+      setProducts(prev => [...prev, np].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)));
+      setMrpDrafts(d => ({ ...d, [np.id]: np.mrp != null ? String(np.mrp) : "" }));
+      setPriceDrafts(d => ({ ...d, [np.id]: String(np.price) }));
+      setBulletDrafts(d => ({ ...d, [np.id]: np.bullet_points ?? "" }));
+      showToast(`Duplicated to "${dupName}" in ${dupSubcat}. Find it in the list (hidden by default).`);
+      setDupSubcat(""); setDupName(""); setDupSlug("");
+    } else {
+      showToast("Error: " + (data.error ?? "Unknown"));
+    }
+    setDuplicating(false);
   }
 
   /* ── Product image management (uses products.image_url + image_urls — no product_images table) ── */
@@ -893,6 +1017,14 @@ export default function AdminProductsPage() {
                   <div><label className={LABEL}>SKU</label><input className={FIELD} value={drawerForm.sku} onChange={e => setDrawerForm(f => ({ ...f, sku: e.target.value }))} placeholder="NK-ROSE-001" /></div>
                   <div><label className={LABEL}>Type</label><input className={FIELD} value={drawerForm.type} onChange={e => setDrawerForm(f => ({ ...f, type: e.target.value }))} placeholder="scented" /></div>
                 </div>
+                <div>
+                  <label className={LABEL}>Product Type</label>
+                  <select className={FIELD} style={{ background: '#1a0a12' }} value={drawerForm.product_type}
+                    onChange={e => setDrawerForm(f => ({ ...f, product_type: e.target.value }))}>
+                    <option value="standard">Standard</option>
+                    <option value="customizable_hamper">Customisable Hamper</option>
+                  </select>
+                </div>
 
                 {/* Category */}
                 <div>
@@ -1051,6 +1183,120 @@ export default function AdminProductsPage() {
                 </div>
               </div>
             </section>
+
+            {/* Hamper Setup — only for customizable_hamper, only when editing */}
+            {drawerForm.product_type === "customizable_hamper" && editingProd && (
+              <section>
+                <p className="font-display text-[0.42rem] tracking-[0.18em] uppercase text-brass mb-3">Hamper Setup</p>
+
+                {hamperLoading ? (
+                  <div className="flex items-center gap-2 py-2">
+                    <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" />
+                    <span className="font-body font-light text-[rgba(245,237,224,0.35)] text-sm">Loading…</span>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+
+                    {/* Slots */}
+                    <div>
+                      <p className="font-display text-[0.38rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.55)] mb-2">Slots</p>
+                      {hamperSlots.length === 0 ? (
+                        <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-sm mb-2">No slots yet.</p>
+                      ) : (
+                        <div className="space-y-1.5 mb-2">
+                          {hamperSlots.map(s => (
+                            <div key={s.id} className="flex items-center justify-between bg-[rgba(196,163,115,0.04)] border border-[rgba(196,163,115,0.10)] rounded-[3px] px-3 py-2">
+                              <div>
+                                <p className="font-display text-ivory text-[0.74rem]">{s.label}</p>
+                                <p className="font-display text-[0.32rem] tracking-[0.08em] uppercase text-[rgba(196,163,115,0.38)]">{s.allowed_categories.join(", ")} · qty {s.quantity}</p>
+                              </div>
+                              <button onClick={() => deleteSlot(s.id)} disabled={hamperSaving}
+                                className="font-display text-[0.32rem] uppercase px-2 py-1 border border-[rgba(200,60,60,0.25)] text-[rgba(200,60,60,0.55)] rounded-[2px] hover:border-[rgba(200,60,60,0.55)] hover:text-[rgba(200,60,60,0.80)] transition-colors disabled:opacity-30">
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                        <div>
+                          <label className={LABEL}>Label</label>
+                          <input className={FIELD} value={newSlotLabel} onChange={e => setNewSlotLabel(e.target.value)} placeholder="Candle" />
+                        </div>
+                        <div>
+                          <label className={LABEL}>Categories (comma-sep)</label>
+                          <input className={FIELD} value={newSlotCats} onChange={e => setNewSlotCats(e.target.value)} placeholder="candle" />
+                        </div>
+                        <button onClick={addSlot} disabled={!newSlotLabel.trim() || hamperSaving}
+                          className="font-display text-[0.36rem] tracking-[0.10em] uppercase px-3 py-2 border border-brass text-brass bg-[rgba(196,163,115,0.05)] rounded-[3px] hover:bg-[rgba(196,163,115,0.12)] disabled:opacity-30 transition-colors whitespace-nowrap">
+                          + Add
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Boxes */}
+                    <div>
+                      <p className="font-display text-[0.38rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.55)] mb-2">Gift Boxes</p>
+                      {hamperBoxLinks.length === 0 ? (
+                        <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-sm mb-2">No boxes linked.</p>
+                      ) : (
+                        <div className="space-y-1.5 mb-2">
+                          {hamperBoxLinks.map(b => (
+                            <div key={b.id} className="flex items-center justify-between bg-[rgba(196,163,115,0.04)] border border-[rgba(196,163,115,0.10)] rounded-[3px] px-3 py-2">
+                              <div>
+                                <p className="font-display text-ivory text-[0.74rem]">{b.hamper_boxes?.name}</p>
+                                <p className="font-display text-[0.32rem] tracking-[0.08em] uppercase text-[rgba(196,163,115,0.38)]">Extra price: ₹{b.extra_price}</p>
+                              </div>
+                              <button onClick={() => unlinkBox(b.id)} disabled={hamperSaving}
+                                className="font-display text-[0.32rem] uppercase px-2 py-1 border border-[rgba(200,60,60,0.25)] text-[rgba(200,60,60,0.55)] rounded-[2px] hover:border-[rgba(200,60,60,0.55)] hover:text-[rgba(200,60,60,0.80)] transition-colors disabled:opacity-30">
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {allBoxes.length > 0 && (
+                        <div className="flex flex-col gap-1.5">
+                          {allBoxes.filter(b => !hamperBoxLinks.some(bl => bl.hamper_boxes?.id === b.id)).map(box => (
+                            <div key={box.id} className="flex items-center gap-2">
+                              <span className="font-body font-light text-[rgba(245,237,224,0.55)] text-sm flex-1">{box.name}</span>
+                              <button onClick={() => linkBox(box.id, 0)} disabled={hamperSaving}
+                                className="font-display text-[0.32rem] uppercase px-2 py-1.5 border border-[rgba(196,163,115,0.22)] text-[rgba(196,163,115,0.50)] rounded-[2px] hover:border-brass hover:text-brass transition-colors disabled:opacity-30">
+                                + Link (₹0)
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Duplicate to occasion */}
+                    <div>
+                      <p className="font-display text-[0.38rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.55)] mb-2">Duplicate to Another Occasion</p>
+                      <div className="grid grid-cols-3 gap-2 mb-2">
+                        <div>
+                          <label className={LABEL}>Subcategory</label>
+                          <input className={FIELD} value={dupSubcat} onChange={e => setDupSubcat(e.target.value)} placeholder="rakhi" />
+                        </div>
+                        <div>
+                          <label className={LABEL}>New Name</label>
+                          <input className={FIELD} value={dupName} onChange={e => { setDupName(e.target.value); setDupSlug(slugify(e.target.value)); }} placeholder="Essential Rakhi Hamper" />
+                        </div>
+                        <div>
+                          <label className={LABEL}>Slug</label>
+                          <input className={FIELD} value={dupSlug} onChange={e => setDupSlug(e.target.value)} placeholder="essential-rakhi-hamper" />
+                        </div>
+                      </div>
+                      <button onClick={duplicateHamper} disabled={duplicating || !dupSubcat.trim() || !dupName.trim() || !dupSlug.trim()}
+                        className="font-display text-[0.38rem] tracking-[0.10em] uppercase px-4 py-2 border border-[rgba(196,163,115,0.28)] text-[rgba(245,237,224,0.50)] rounded-[3px] hover:border-brass hover:text-brass disabled:opacity-30 transition-colors">
+                        {duplicating ? "Duplicating…" : "Duplicate"}
+                      </button>
+                    </div>
+
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* Shipping */}
             <section>

@@ -29,13 +29,17 @@ export interface ProductCartItem {
 export interface HamperCartItem {
   kind:             "hamper";
   id:               string;  // fresh UUID per instance — never deduped
-  tierId:           string;
-  tierName:         string;
+  productId:        string;  // the hamper product UUID
+  productName:      string;
+  productSlug:      string;
+  category:         string;
+  subcategorySlug:  string;
   boxId:            string;
   boxName:          string;
-  price:            number;
+  boxExtraPrice:    number;
+  price:            number;  // base hamper price (component prices hidden when hidePrices)
   quantity:         number;  // always 1
-  imageUrl:         string;  // box image
+  imageUrl:         string;  // hamper product image
   giftMessage:      string;
   hidePrices:       boolean;
   selections:       HamperSelection[];
@@ -51,9 +55,26 @@ type LegacyItem = {
   category?: string; subcategorySlug?: string; label?: string; imageUrl?: string;
 };
 
+type OldHamperItem = LegacyItem & Partial<HamperCartItem> & {
+  kind?: string;
+  tierId?: string;
+  tierName?: string;
+};
+
 function normaliseLegacy(raw: unknown): CartItem {
-  const r = raw as LegacyItem & Partial<HamperCartItem & { kind: string }>;
-  if (r.kind === "hamper") return raw as HamperCartItem;
+  const r = raw as OldHamperItem;
+  if (r.kind === "hamper") {
+    // Migrate old tierId/tierName fields to productId/productName
+    return {
+      ...raw as HamperCartItem,
+      productId:       r.productId       ?? r.tierId    ?? "",
+      productName:     r.productName     ?? r.tierName  ?? "",
+      productSlug:     r.productSlug     ?? "",
+      category:        r.category        ?? "gift",
+      subcategorySlug: r.subcategorySlug ?? "",
+      boxExtraPrice:   r.boxExtraPrice   ?? 0,
+    };
+  }
   // Old items have no `kind` — treat as product
   return {
     kind:            "product",

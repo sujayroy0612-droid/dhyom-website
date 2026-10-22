@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const sb = createServerClient();
   const { data, error } = await sb
     .from("products")
-    .select("id,name,category,subcategory,collection,fragrance,price,stock,image_url,slug")
+    .select("id,name,category,subcategory,collection,fragrance,variant_label,price,stock,image_url,slug")
     .in("category", categories)
     .eq("is_visible", true)
     .gt("stock", 0)

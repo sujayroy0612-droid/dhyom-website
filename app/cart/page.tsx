@@ -80,7 +80,7 @@ function HamperRow({ item, onRemove }: {
     <div className="flex gap-5 py-6">
       <div className="w-20 h-20 flex-shrink-0 bg-[#270b1b] rounded-[4px] border border-[rgba(196,163,115,0.12)] flex items-center justify-center overflow-hidden relative">
         {item.imageUrl ? (
-          <Image src={item.imageUrl} alt={item.tierName} fill className="object-cover" sizes="80px" />
+          <Image src={item.imageUrl} alt={item.productName} fill className="object-cover" sizes="80px" />
         ) : (
           <span className="font-display text-[0.36rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.18)]">DHYOM</span>
         )}
@@ -88,7 +88,7 @@ function HamperRow({ item, onRemove }: {
       <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-start gap-4">
         <div className="flex-1 min-w-0">
           <p className="font-display text-[0.52rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.42)] mb-1">Gift Hamper · {item.boxName}</p>
-          <p className="font-display text-ivory leading-tight" style={{ fontSize: "0.9rem", letterSpacing: "0.04em" }}>{item.tierName}</p>
+          <p className="font-display text-ivory leading-tight" style={{ fontSize: "0.9rem", letterSpacing: "0.04em" }}>{item.productName}</p>
           <p className="font-body font-light text-[rgba(245,237,224,0.35)] text-sm mt-1">₹{item.price.toLocaleString("en-IN")}</p>
           {item.selections.length > 0 && (
             <ul className="mt-2 flex flex-col gap-0.5">
