@@ -5,22 +5,16 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { useCart, CartItem, ProductCartItem, HamperCartItem } from "@/lib/cart/CartContext";
+import { useCart, ProductCartItem } from "@/lib/cart/CartContext";
 import { supabase } from "@/lib/supabase/client";
 
 const DEFAULT_SHIPPING = 99;
 const DEFAULT_FREE_THRESHOLD = 1500;
 
 interface BumpProduct {
-  id: string;
-  name: string;
-  price: number;
-  image_url: string | null;
-  category: string;
-  subcategory: string | null;
-  collection: string | null;
-  type: string;
-  fragrance: string | null;
+  id: string; name: string; price: number; image_url: string | null;
+  category: string; subcategory: string | null; collection: string | null;
+  type: string; fragrance: string | null;
 }
 
 /* ─── Coupon ──────────────────────────────────────────── */
@@ -36,7 +30,7 @@ function calcDiscount(meta: CouponMeta, subtotal: number): number {
   return Math.min(meta.value, subtotal);
 }
 
-/* ─── Cart item row ───────────────────────────────────── */
+/* ─── Regular product row ────────────────────────────── */
 function ProductRow({ item, onQtyChange, onRemove }: {
   item: ProductCartItem; onQtyChange: (q: number) => void; onRemove: () => void;
 }) {
@@ -73,60 +67,88 @@ function ProductRow({ item, onQtyChange, onRemove }: {
   );
 }
 
-function HamperRow({ item, onRemove }: {
-  item: HamperCartItem; onRemove: () => void;
+/* ─── Hamper group section ───────────────────────────── */
+function HamperGroupSection({ items, onRemoveGroup, onQtyChange }: {
+  items: ProductCartItem[];
+  onRemoveGroup: () => void;
+  onQtyChange: (cartItemId: string, q: number) => void;
 }) {
+  const boxItem = items.find(i => i.isHamperBox);
+  const groupName = boxItem?.hamperGroup ?? "Gift Hamper";
+  const giftMessage = boxItem?.giftMessage;
+  const groupTotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+
   return (
-    <div className="flex gap-5 py-6">
-      <div className="w-20 h-20 flex-shrink-0 bg-[#270b1b] rounded-[4px] border border-[rgba(196,163,115,0.12)] flex items-center justify-center overflow-hidden relative">
-        {item.imageUrl ? (
-          <Image src={item.imageUrl} alt={item.productName} fill className="object-cover" sizes="80px" />
-        ) : (
-          <span className="font-display text-[0.36rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.18)]">DHYOM</span>
-        )}
-      </div>
-      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-start gap-4">
-        <div className="flex-1 min-w-0">
-          <p className="font-display text-[0.52rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.42)] mb-1">Gift Hamper · {item.boxName}</p>
-          <p className="font-display text-ivory leading-tight" style={{ fontSize: "0.9rem", letterSpacing: "0.04em" }}>{item.productName}</p>
-          <p className="font-body font-light text-[rgba(245,237,224,0.35)] text-sm mt-1">₹{item.price.toLocaleString("en-IN")}</p>
-          {item.selections.length > 0 && (
-            <ul className="mt-2 flex flex-col gap-0.5">
-              {item.selections.map(s => (
-                <li key={s.slotId} className="font-body font-light text-[rgba(245,237,224,0.38)] text-[0.78rem]">
-                  <span className="text-[rgba(196,163,115,0.45)]">{s.slotLabel}:</span> {s.productName}{s.productLabel ? ` · ${s.productLabel}` : ""}
-                </li>
-              ))}
-            </ul>
-          )}
-          {item.giftMessage && (
-            <p className="mt-2 font-body font-light italic text-[rgba(245,237,224,0.30)] text-[0.78rem]">
-              &ldquo;{item.giftMessage}&rdquo;
+    <div className="py-4 border border-[rgba(196,163,115,0.14)] rounded-[5px] mb-4 px-4 bg-[rgba(196,163,115,0.02)]">
+      {/* Group header */}
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <p className="font-display text-[0.48rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.42)] mb-0.5">Gift Hamper</p>
+          <p className="font-display text-ivory" style={{ fontSize: "0.88rem", letterSpacing: "0.04em" }}>{groupName}</p>
+          {giftMessage && (
+            <p className="mt-1.5 font-body font-light italic text-[rgba(245,237,224,0.32)] text-[0.78rem]">
+              &ldquo;{giftMessage}&rdquo;
             </p>
           )}
         </div>
-        <div className="flex items-center gap-4 sm:gap-5 flex-shrink-0 mt-1">
-          <span className="font-display text-brass w-[72px] text-right flex-shrink-0" style={{ fontSize: "0.92rem", letterSpacing: "0.04em" }}>₹{item.price.toLocaleString("en-IN")}</span>
-          <button type="button" onClick={onRemove} aria-label="Remove hamper" className="text-[rgba(196,163,115,0.28)] hover:text-brass transition-colors duration-150 p-1 flex-shrink-0">
+        <div className="flex items-center gap-3 flex-shrink-0 ml-4">
+          <span className="font-display text-brass" style={{ fontSize: "0.88rem", letterSpacing: "0.04em" }}>
+            ₹{groupTotal.toLocaleString("en-IN")}
+          </span>
+          <button
+            type="button"
+            onClick={onRemoveGroup}
+            aria-label="Remove hamper"
+            title="Remove entire hamper"
+            className="text-[rgba(196,163,115,0.28)] hover:text-brass transition-colors duration-150 p-1"
+          >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3"><path d="M1.5 1.5l10 10M11.5 1.5l-10 10" /></svg>
           </button>
         </div>
+      </div>
+
+      {/* Items within group */}
+      <div className="flex flex-col divide-y divide-[rgba(196,163,115,0.07)]">
+        {items.map(item => (
+          <div key={item.cartItemId} className="flex gap-3 py-3 items-center">
+            <div className="w-12 h-12 flex-shrink-0 bg-[#270b1b] rounded-[3px] border border-[rgba(196,163,115,0.10)] flex items-center justify-center overflow-hidden relative">
+              {item.imageUrl
+                ? <Image src={item.imageUrl} alt={item.name} fill className="object-cover" sizes="48px" />
+                : <span className="font-display text-[0.28rem] tracking-[0.1em] uppercase text-[rgba(196,163,115,0.18)]">D</span>
+              }
+            </div>
+            <div className="flex-1 min-w-0">
+              {item.isHamperBox
+                ? <p className="font-display text-[rgba(196,163,115,0.55)] text-[0.72rem]" style={{ letterSpacing: "0.06em" }}>Gift Box · {item.name}</p>
+                : <>
+                    {item.label && <p className="font-display text-[0.42rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.38)] mb-0.5 truncate">{item.label}</p>}
+                    <p className="font-display text-ivory text-[0.78rem] leading-tight truncate" style={{ letterSpacing: "0.04em" }}>{item.name}</p>
+                  </>
+              }
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {!item.isHamperBox && (
+                <div className="inline-flex items-center border border-[rgba(196,163,115,0.20)] rounded-[3px] overflow-hidden">
+                  <button type="button" onClick={() => onQtyChange(item.cartItemId, item.quantity - 1)} disabled={item.quantity <= 1} className="w-7 h-7 flex items-center justify-center text-brass font-display text-sm hover:bg-[rgba(196,163,115,0.06)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors">−</button>
+                  <span className="w-7 h-7 flex items-center justify-center font-display text-ivory text-xs select-none">{item.quantity}</span>
+                  <button type="button" onClick={() => onQtyChange(item.cartItemId, item.quantity + 1)} disabled={item.quantity >= 10} className="w-7 h-7 flex items-center justify-center text-brass font-display text-sm hover:bg-[rgba(196,163,115,0.06)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors">+</button>
+                </div>
+              )}
+              <span className="font-display text-[rgba(245,237,224,0.45)] text-[0.78rem] w-16 text-right" style={{ letterSpacing: "0.04em" }}>
+                {item.price > 0 ? `₹${(item.price * item.quantity).toLocaleString("en-IN")}` : "—"}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function CartRow({ item, onQtyChange, onRemove }: {
-  item: CartItem; onQtyChange: (q: number) => void; onRemove: () => void;
-}) {
-  if (item.kind === "hamper") return <HamperRow item={item} onRemove={onRemove} />;
-  return <ProductRow item={item} onQtyChange={onQtyChange} onRemove={onRemove} />;
-}
-
 /* ─── Page ─────────────────────────────────────────────── */
 export default function CartPage() {
   const router = useRouter();
-  const { items, subtotal, totalItems, removeItem, setQuantity, addItem } = useCart();
+  const { items, subtotal, totalItems, removeItem, removeHamperGroup, setQuantity, addItem } = useCart();
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<CouponState>({ status: "idle" });
   const [bumpProduct, setBumpProduct] = useState<BumpProduct | null>(null);
@@ -134,7 +156,6 @@ export default function CartPage() {
   const [shippingFee,           setShippingFee]           = useState(DEFAULT_SHIPPING);
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(DEFAULT_FREE_THRESHOLD);
 
-  /* ── Fetch shipping settings ── */
   useEffect(() => {
     fetch("/api/store-settings")
       .then(r => r.json())
@@ -145,15 +166,13 @@ export default function CartPage() {
       .catch(() => {});
   }, []);
 
-  /* ── Fetch bump product via server API (bypasses RLS) ── */
   useEffect(() => {
     setBumpChecked(false);
     if (items.length === 0) { setBumpProduct(null); return; }
-    const primaryId = items[0]?.id;
+    const primaryId = items.find(i => !i.hamperGroupId)?.id ?? items[0]?.id;
     if (!primaryId) { setBumpProduct(null); return; }
-
     fetch(`/api/funnel-bump?stage=bump&productId=${encodeURIComponent(primaryId)}`)
-      .then((r) => r.json())
+      .then(r => r.json())
       .then(({ product }) => setBumpProduct(product ?? null))
       .catch(() => setBumpProduct(null));
   }, [items]);
@@ -165,12 +184,12 @@ export default function CartPage() {
   const shippingCost = isFreeShip ? 0 : shippingFee;
   const total        = subtotal - discount + shippingCost + bumpExtra;
 
-  /* ── Proceed to checkout ── */
   function handleCheckout() {
     if (bumpChecked && bumpProduct) {
       addItem({
         kind: "product",
         id: bumpProduct.id,
+        cartItemId: bumpProduct.id,
         name: bumpProduct.name,
         price: bumpProduct.price,
         quantity: 1,
@@ -204,7 +223,17 @@ export default function CartPage() {
 
   function handleRemoveCoupon() { setCoupon({ status: "idle" }); setCouponInput(""); }
 
-  /* ── Empty state ── */
+  // Group items: standalone vs hamper groups
+  const standaloneItems = items.filter(i => !i.hamperGroupId) as ProductCartItem[];
+  const hamperGroupMap = new Map<string, ProductCartItem[]>();
+  for (const item of items) {
+    if (item.hamperGroupId) {
+      const group = hamperGroupMap.get(item.hamperGroupId) ?? [];
+      group.push(item as ProductCartItem);
+      hamperGroupMap.set(item.hamperGroupId, group);
+    }
+  }
+
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-black-plum flex flex-col items-center justify-center px-6 text-center">
@@ -228,7 +257,6 @@ export default function CartPage() {
     );
   }
 
-  /* ── Filled cart ── */
   return (
     <div className="min-h-screen bg-black-plum">
       <div className="pt-24 pb-20 max-w-6xl mx-auto px-6">
@@ -243,19 +271,44 @@ export default function CartPage() {
 
           {/* ── Left: items ── */}
           <div className="flex-1 min-w-0">
+
+            {/* Hamper groups */}
             <AnimatePresence initial={false}>
-              {items.map((item) => (
+              {Array.from(hamperGroupMap.entries()).map(([groupId, groupItems]) => (
                 <motion.div
-                  key={item.id}
+                  key={groupId}
+                  initial={{ opacity: 1 }}
+                  exit={{ opacity: 0, height: 0, overflow: "hidden" }}
+                  transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                >
+                  <HamperGroupSection
+                    items={groupItems}
+                    onRemoveGroup={() => removeHamperGroup(groupId)}
+                    onQtyChange={(cartItemId, q) => setQuantity(cartItemId, q)}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* Standalone items */}
+            <AnimatePresence initial={false}>
+              {standaloneItems.map(item => (
+                <motion.div
+                  key={item.cartItemId}
                   initial={{ opacity: 1 }}
                   exit={{ opacity: 0, height: 0, overflow: "hidden" }}
                   transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
                   className="border-b border-[rgba(196,163,115,0.10)] last:border-b-0"
                 >
-                  <CartRow item={item} onQtyChange={(q) => setQuantity(item.id, q)} onRemove={() => removeItem(item.id)} />
+                  <ProductRow
+                    item={item}
+                    onQtyChange={(q) => setQuantity(item.cartItemId, q)}
+                    onRemove={() => removeItem(item.cartItemId)}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>
+
             <p className="mt-5 font-display text-[0.52rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.28)]">
               {totalItems} {totalItems === 1 ? "item" : "items"} in your cart
             </p>
@@ -265,7 +318,6 @@ export default function CartPage() {
           <div className="w-full lg:w-[340px] xl:w-[370px] flex-shrink-0 lg:sticky lg:top-24">
             <div className="bg-damson border border-[rgba(196,163,115,0.14)] rounded-[6px] overflow-hidden">
 
-              {/* Header */}
               <div className="px-6 pt-5 pb-4 border-b border-[rgba(196,163,115,0.10)]">
                 <h2 className="font-display text-ivory" style={{ fontSize: "0.82rem", letterSpacing: "0.1em" }}>Order Summary</h2>
               </div>
@@ -336,22 +388,13 @@ export default function CartPage() {
                   )}
                 </div>
 
-                {/* Free-shipping nudge */}
                 {freeShippingThreshold > 0 && (() => {
                   const cartValue = subtotal - discount + bumpExtra;
                   const needed = freeShippingThreshold - cartValue;
                   if (isFreeShip) {
-                    return (
-                      <p className="font-body font-light text-[0.72rem] text-[rgba(100,215,100,0.60)]">
-                        Free shipping applied on this order.
-                      </p>
-                    );
+                    return <p className="font-body font-light text-[0.72rem] text-[rgba(100,215,100,0.60)]">Free shipping applied on this order.</p>;
                   }
-                  return (
-                    <p className="font-body font-light text-[0.72rem] text-[rgba(245,237,224,0.35)]">
-                      Add ₹{needed.toLocaleString("en-IN")} more for free shipping.
-                    </p>
-                  );
+                  return <p className="font-body font-light text-[0.72rem] text-[rgba(245,237,224,0.35)]">Add ₹{needed.toLocaleString("en-IN")} more for free shipping.</p>;
                 })()}
 
                 <div className="h-px bg-[rgba(196,163,115,0.14)]" />
@@ -363,7 +406,7 @@ export default function CartPage() {
 
               </div>
 
-              {/* ── Order Bump ── */}
+              {/* Order Bump */}
               {bumpProduct && (
                 <div className="border-t border-[rgba(196,163,115,0.18)] px-6 py-5 bg-[rgba(196,163,115,0.04)]">
                   <p className="font-display text-[0.52rem] tracking-[0.2em] uppercase text-brass mb-4">Complete the Ritual</p>

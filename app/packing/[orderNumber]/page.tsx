@@ -14,19 +14,23 @@ function fmtDate(s: string) {
 }
 
 interface RawItem {
-  kind?: string;
-  id?: string;
-  name?: string;
-  tierName?: string;
-  boxName?: string;
-  price?: number;
-  quantity?: number;
-  label?: string;
-  imageUrl?: string;
-  giftMessage?: string;
-  hidePrices?: boolean;
-  selections?: { slotLabel: string; productName: string; productLabel?: string }[];
+  id?:           string;
+  name?:         string;
+  price?:        number;
+  quantity?:     number;
+  label?:        string;
+  imageUrl?:     string;
+  cartItemId?:   string;
+  hamperGroupId?: string;
+  hamperGroup?:  string;
+  isHamperBox?:  boolean;
+  giftMessage?:  string;
+  hidePrices?:   boolean;
 }
+
+type DisplaySection =
+  | { kind: "standalone"; item: RawItem }
+  | { kind: "hamperGroup"; groupId: string; groupName: string; giftMessage?: string; hidePrices: boolean; items: RawItem[] };
 
 export default async function PackingSlipPage({ params }: { params: { orderNumber: string } }) {
   const { orderNumber } = params;
@@ -42,8 +46,33 @@ export default async function PackingSlipPage({ params }: { params: { orderNumbe
 
   const items = (order.items ?? []) as RawItem[];
 
-  // Any hamper in the order with hidePrices=true → hide prices globally
-  const anyHidePrice = items.some(i => i.kind === "hamper" && i.hidePrices);
+  // Build display sections
+  const sections: DisplaySection[] = [];
+  const groupMap = new Map<string, { groupName: string; giftMessage?: string; hidePrices: boolean; items: RawItem[] }>();
+
+  for (const item of items) {
+    if (item.hamperGroupId) {
+      if (!groupMap.has(item.hamperGroupId)) {
+        groupMap.set(item.hamperGroupId, {
+          groupName:   item.hamperGroup  ?? "Gift Hamper",
+          giftMessage: item.isHamperBox  ? item.giftMessage : undefined,
+          hidePrices:  item.isHamperBox  ? (item.hidePrices ?? false) : false,
+          items: [],
+        });
+      }
+      const g = groupMap.get(item.hamperGroupId)!;
+      if (item.isHamperBox && item.giftMessage) g.giftMessage = item.giftMessage;
+      if (item.isHamperBox && item.hidePrices)  g.hidePrices  = true;
+      g.items.push(item);
+    } else {
+      sections.push({ kind: "standalone", item });
+    }
+  }
+  for (const [groupId, g] of Array.from(groupMap.entries())) {
+    sections.push({ kind: "hamperGroup", groupId, ...g });
+  }
+
+  const anyHidePrice = sections.some(s => s.kind === "hamperGroup" && s.hidePrices);
 
   return (
     <html lang="en">
@@ -62,13 +91,11 @@ export default async function PackingSlipPage({ params }: { params: { orderNumbe
           .addr-block { display: flex; gap: 24px; border: 1px solid #ccc; padding: 12px; margin-bottom: 16px; }
           .addr-block > div { flex: 1; }
           .addr-block h3 { font-size: 15px; margin-bottom: 4px; }
-          .divider { border-top: 1px solid #ddd; margin: 12px 0; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
           th { background: #eee; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; padding: 6px 8px; text-align: left; border: 1px solid #ccc; }
           td { padding: 7px 8px; border: 1px solid #e0e0e0; vertical-align: top; font-size: 11px; }
-          .hamper-selections { margin-top: 4px; padding-top: 4px; border-top: 1px dashed #ddd; }
-          .hamper-slot { font-size: 10px; color: #555; margin-bottom: 2px; }
-          .gift-msg { margin-top: 4px; font-style: italic; font-size: 10px; color: #666; border-left: 2px solid #ccc; padding-left: 6px; }
+          .group-header td { background: #f5f0e8; font-weight: bold; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; border-top: 2px solid #c4a373; }
+          .gift-msg { margin-top: 4px; font-style: italic; font-size: 10px; color: #666; border-left: 2px solid #c4a373; padding-left: 6px; }
           .footer { border-top: 1px solid #ccc; padding-top: 10px; font-size: 10px; color: #888; }
           @media print { body { padding: 16px; } button { display: none; } }
         `}</style>
@@ -113,36 +140,61 @@ export default async function PackingSlipPage({ params }: { params: { orderNumbe
             </tr>
           </thead>
           <tbody>
-            {items.map((item, i) => {
-              const isHamper    = item.kind === "hamper";
-              const displayName = isHamper ? `${item.tierName} Hamper` : (item.name ?? "");
-              const qty         = item.quantity ?? 1;
-              const price       = item.price ?? 0;
-              const hideThis    = isHamper && item.hidePrices;
+            {sections.map((section, si) => {
+              if (section.kind === "standalone") {
+                const item = section.item;
+                const qty   = item.quantity ?? 1;
+                const price = item.price    ?? 0;
+                return (
+                  <tr key={si}>
+                    <td>
+                      <strong>{item.name ?? ""}</strong>
+                      {item.label && <div style={{ fontSize: "10px", color: "#666", marginTop: "2px" }}>{item.label}</div>}
+                    </td>
+                    <td style={{ textAlign: "center" }}>{qty}</td>
+                    {!anyHidePrice && <td style={{ textAlign: "right" }}>₹{price.toLocaleString("en-IN")}</td>}
+                    {!anyHidePrice && <td style={{ textAlign: "right" }}>₹{(price * qty).toLocaleString("en-IN")}</td>}
+                  </tr>
+                );
+              }
 
+              // Hamper group
+              const { groupName, giftMessage, hidePrices, items: gItems } = section;
+              const groupTotal = gItems.reduce((s, i) => s + (i.price ?? 0) * (i.quantity ?? 1), 0);
               return (
-                <tr key={i}>
-                  <td>
-                    {isHamper && <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#888", marginBottom: "2px" }}>Gift Hamper · {item.boxName}</div>}
-                    <strong>{displayName}</strong>
-                    {item.label && <div style={{ fontSize: "10px", color: "#666", marginTop: "2px" }}>{item.label}</div>}
-                    {isHamper && item.selections && item.selections.length > 0 && (
-                      <div className="hamper-selections">
-                        {item.selections.map((s, si) => (
-                          <div key={si} className="hamper-slot">
-                            <span style={{ color: "#999" }}>{s.slotLabel}:</span> {s.productName}{s.productLabel ? ` · ${s.productLabel}` : ""}
-                          </div>
-                        ))}
-                      </div>
+                <>
+                  <tr key={`${si}-header`} className="group-header">
+                    <td colSpan={anyHidePrice ? 2 : 4}>
+                      Gift Hamper — {groupName}
+                      {giftMessage && <div className="gift-msg">&ldquo;{giftMessage}&rdquo;</div>}
+                    </td>
+                    {!anyHidePrice && !hidePrices && (
+                      <td colSpan={2} style={{ textAlign: "right", fontWeight: "bold", fontSize: "11px" }}>
+                        ₹{groupTotal.toLocaleString("en-IN")}
+                      </td>
                     )}
-                    {isHamper && item.giftMessage && (
-                      <div className="gift-msg">&ldquo;{item.giftMessage}&rdquo;</div>
-                    )}
-                  </td>
-                  <td style={{ textAlign: "center" }}>{qty}</td>
-                  {!anyHidePrice && <td style={{ textAlign: "right" }}>{hideThis ? "—" : `₹${price.toLocaleString("en-IN")}`}</td>}
-                  {!anyHidePrice && <td style={{ textAlign: "right" }}>{hideThis ? "—" : `₹${(price * qty).toLocaleString("en-IN")}`}</td>}
-                </tr>
+                  </tr>
+                  {gItems.map((item, ii) => {
+                    const qty   = item.quantity ?? 1;
+                    const price = item.price    ?? 0;
+                    return (
+                      <tr key={`${si}-${ii}`}>
+                        <td style={{ paddingLeft: "16px" }}>
+                          {item.isHamperBox
+                            ? <span style={{ color: "#888", fontSize: "10px" }}>Gift Box — {item.name}</span>
+                            : <>
+                                <strong>{item.name}</strong>
+                                {item.label && <div style={{ fontSize: "10px", color: "#666", marginTop: "2px" }}>{item.label}</div>}
+                              </>
+                          }
+                        </td>
+                        <td style={{ textAlign: "center" }}>{qty}</td>
+                        {!anyHidePrice && <td style={{ textAlign: "right" }}>{hidePrices || item.isHamperBox ? "—" : `₹${price.toLocaleString("en-IN")}`}</td>}
+                        {!anyHidePrice && <td style={{ textAlign: "right" }}>{hidePrices || item.isHamperBox ? "—" : `₹${(price * qty).toLocaleString("en-IN")}`}</td>}
+                      </tr>
+                    );
+                  })}
+                </>
               );
             })}
           </tbody>

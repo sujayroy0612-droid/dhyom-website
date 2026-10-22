@@ -2,20 +2,11 @@
 
 import { createContext, useContext, useReducer, useEffect, useState, ReactNode } from "react";
 
-/* ── Hamper selection (one per slot) ─────────────────────────── */
-export interface HamperSelection {
-  slotId:       string;
-  slotLabel:    string;
-  productId:    string;
-  productName:  string;
-  productLabel: string; // fragrance / variant shown to customer
-  imageUrl:     string;
-}
-
-/* ── Regular product cart item ───────────────────────────────── */
+/* ── Cart item ────────────────────────────────────────── */
 export interface ProductCartItem {
   kind:            "product";
-  id:              string;  // product UUID — dedup key
+  id:              string;        // product UUID — dedup key for non-hamper items
+  cartItemId:      string;        // unique per cart slot — key for remove/setQty
   name:            string;
   price:           number;
   quantity:        number;
@@ -23,77 +14,56 @@ export interface ProductCartItem {
   subcategorySlug: string;
   label:           string;
   imageUrl:        string;
+  // Optional hamper group fields
+  hamperGroupId?:  string;        // UUID shared by all items in one hamper build
+  hamperGroup?:    string;        // display name e.g. "Diwali Signature Hamper"
+  isHamperBox?:    boolean;       // true for the box item in a hamper group
+  giftMessage?:    string;        // stored on the box item
+  hidePrices?:     boolean;       // stored on the box item
 }
 
-/* ── Hamper cart item ─────────────────────────────────────────── */
-export interface HamperCartItem {
-  kind:             "hamper";
-  id:               string;  // fresh UUID per instance — never deduped
-  productId:        string;  // the hamper product UUID
-  productName:      string;
-  productSlug:      string;
-  category:         string;
-  subcategorySlug:  string;
-  boxId:            string;
-  boxName:          string;
-  boxExtraPrice:    number;
-  price:            number;  // base hamper price (component prices hidden when hidePrices)
-  quantity:         number;  // always 1
-  imageUrl:         string;  // hamper product image
-  giftMessage:      string;
-  hidePrices:       boolean;
-  selections:       HamperSelection[];
-  // For stock deduction in verify-payment
-  hamperComponents: Array<{ id: string; quantity: number }>;
-}
+export type CartItem = ProductCartItem;
 
-export type CartItem = ProductCartItem | HamperCartItem;
-
-// Legacy plain shape (hydrated from localStorage before kind was added)
+/* ── Legacy item migration ────────────────────────────── */
 type LegacyItem = {
-  id: string; name: string; price: number; quantity: number;
+  id?: string; name?: string; price?: number; quantity?: number;
   category?: string; subcategorySlug?: string; label?: string; imageUrl?: string;
+  cartItemId?: string; kind?: string;
+  hamperGroupId?: string; hamperGroup?: string; isHamperBox?: boolean;
+  giftMessage?: string; hidePrices?: boolean;
 };
 
-type OldHamperItem = LegacyItem & Partial<HamperCartItem> & {
-  kind?: string;
-  tierId?: string;
-  tierName?: string;
-};
-
-function normaliseLegacy(raw: unknown): CartItem {
-  const r = raw as OldHamperItem;
-  if (r.kind === "hamper") {
-    // Migrate old tierId/tierName fields to productId/productName
-    return {
-      ...raw as HamperCartItem,
-      productId:       r.productId       ?? r.tierId    ?? "",
-      productName:     r.productName     ?? r.tierName  ?? "",
-      productSlug:     r.productSlug     ?? "",
-      category:        r.category        ?? "gift",
-      subcategorySlug: r.subcategorySlug ?? "",
-      boxExtraPrice:   r.boxExtraPrice   ?? 0,
-    };
-  }
-  // Old items have no `kind` — treat as product
+function normaliseLegacy(raw: unknown): CartItem | null {
+  const r = raw as LegacyItem;
+  if (r.kind === "hamper") return null;  // drop old-format hamper items
+  if (!r.id) return null;
   return {
     kind:            "product",
     id:              r.id,
-    name:            r.name,
-    price:           r.price,
-    quantity:        r.quantity,
+    cartItemId:      r.cartItemId ?? r.id,
+    name:            r.name            ?? "",
+    price:           r.price           ?? 0,
+    quantity:        r.quantity        ?? 1,
     category:        r.category        ?? "",
     subcategorySlug: r.subcategorySlug ?? "",
     label:           r.label           ?? "",
     imageUrl:        r.imageUrl        ?? "",
+    hamperGroupId:   r.hamperGroupId,
+    hamperGroup:     r.hamperGroup,
+    isHamperBox:     r.isHamperBox,
+    giftMessage:     r.giftMessage,
+    hidePrices:      r.hidePrices,
   };
 }
 
+/* ── Reducer ──────────────────────────────────────────── */
 type Action =
-  | { type: "HYDRATE"; items: CartItem[] }
-  | { type: "ADD_ITEM"; payload: CartItem }
-  | { type: "REMOVE_ITEM"; id: string }
-  | { type: "SET_QUANTITY"; id: string; quantity: number }
+  | { type: "HYDRATE";             items: CartItem[] }
+  | { type: "ADD_ITEM";            payload: CartItem }
+  | { type: "ADD_ITEMS";           payload: CartItem[] }
+  | { type: "REMOVE_ITEM";         cartItemId: string }
+  | { type: "REMOVE_HAMPER_GROUP"; hamperGroupId: string }
+  | { type: "SET_QUANTITY";        cartItemId: string; quantity: number }
   | { type: "CLEAR" };
 
 function reducer(state: CartItem[], action: Action): CartItem[] {
@@ -102,29 +72,31 @@ function reducer(state: CartItem[], action: Action): CartItem[] {
       return action.items;
 
     case "ADD_ITEM": {
-      if (action.payload.kind === "hamper") {
-        // Hampers are always unique instances — never merge
-        return [...state, action.payload];
+      const item = action.payload;
+      // Non-hamper items merge by product id
+      if (!item.hamperGroupId) {
+        const idx = state.findIndex(i => !i.hamperGroupId && i.id === item.id);
+        if (idx >= 0) {
+          return state.map((it, i) =>
+            i === idx ? { ...it, quantity: Math.min(it.quantity + item.quantity, 10) } : it
+          );
+        }
       }
-      const idx = state.findIndex(
-        (i) => i.kind === "product" && i.id === action.payload.id
-      );
-      if (idx >= 0) {
-        return state.map((item, i) =>
-          i === idx
-            ? { ...item, quantity: Math.min(item.quantity + action.payload.quantity, 10) }
-            : item
-        );
-      }
-      return [...state, action.payload];
+      return [...state, item];
     }
 
+    case "ADD_ITEMS":
+      return [...state, ...action.payload];
+
     case "REMOVE_ITEM":
-      return state.filter((i) => i.id !== action.id);
+      return state.filter(i => i.cartItemId !== action.cartItemId);
+
+    case "REMOVE_HAMPER_GROUP":
+      return state.filter(i => i.hamperGroupId !== action.hamperGroupId);
 
     case "SET_QUANTITY":
-      return state.map((i) =>
-        i.id === action.id
+      return state.map(i =>
+        i.cartItemId === action.cartItemId
           ? { ...i, quantity: Math.max(1, Math.min(action.quantity, 10)) }
           : i
       );
@@ -137,15 +109,18 @@ function reducer(state: CartItem[], action: Action): CartItem[] {
   }
 }
 
+/* ── Context ──────────────────────────────────────────── */
 interface CartContextValue {
-  items:       CartItem[];
-  totalItems:  number;
-  subtotal:    number;
-  hydrated:    boolean;
-  addItem:     (item: CartItem) => void;
-  removeItem:  (id: string) => void;
-  setQuantity: (id: string, quantity: number) => void;
-  clearCart:   () => void;
+  items:             CartItem[];
+  totalItems:        number;
+  subtotal:          number;
+  hydrated:          boolean;
+  addItem:           (item: CartItem) => void;
+  addItems:          (items: CartItem[]) => void;
+  removeItem:        (cartItemId: string) => void;
+  removeHamperGroup: (hamperGroupId: string) => void;
+  setQuantity:       (cartItemId: string, quantity: number) => void;
+  clearCart:         () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -161,7 +136,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as unknown[];
-        dispatch({ type: "HYDRATE", items: parsed.map(normaliseLegacy) });
+        const normalised = parsed.map(normaliseLegacy).filter(Boolean) as CartItem[];
+        dispatch({ type: "HYDRATE", items: normalised });
       }
     } catch {}
     setHydrated(true);
@@ -169,23 +145,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
   }, [items, hydrated]);
 
   const totalItems = items.reduce((s, i) => s + i.quantity, 0);
   const subtotal   = items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  function addItem(item: CartItem)              { dispatch({ type: "ADD_ITEM",     payload: item }); }
-  function removeItem(id: string)              { dispatch({ type: "REMOVE_ITEM",  id }); }
-  function setQuantity(id: string, qty: number){ dispatch({ type: "SET_QUANTITY", id, quantity: qty }); }
-  function clearCart()                         { dispatch({ type: "CLEAR" }); }
+  function addItem(item: CartItem)                    { dispatch({ type: "ADD_ITEM",            payload: item }); }
+  function addItems(batch: CartItem[])               { dispatch({ type: "ADD_ITEMS",            payload: batch }); }
+  function removeItem(cartItemId: string)            { dispatch({ type: "REMOVE_ITEM",         cartItemId }); }
+  function removeHamperGroup(hamperGroupId: string)  { dispatch({ type: "REMOVE_HAMPER_GROUP", hamperGroupId }); }
+  function setQuantity(cartItemId: string, qty: number) { dispatch({ type: "SET_QUANTITY",     cartItemId, quantity: qty }); }
+  function clearCart()                               { dispatch({ type: "CLEAR" }); }
 
   return (
-    <CartContext.Provider
-      value={{ items, totalItems, subtotal, hydrated, addItem, removeItem, setQuantity, clearCart }}
-    >
+    <CartContext.Provider value={{ items, totalItems, subtotal, hydrated, addItem, addItems, removeItem, removeHamperGroup, setQuantity, clearCart }}>
       {children}
     </CartContext.Provider>
   );

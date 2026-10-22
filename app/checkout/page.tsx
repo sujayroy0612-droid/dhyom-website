@@ -665,22 +665,19 @@ export default function CheckoutPage() {
                   <p className="font-display text-[0.48rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.38)] mt-1">{totalItems} {totalItems === 1 ? "item" : "items"}</p>
                 </div>
                 <div className="divide-y divide-[rgba(196,163,115,0.08)]">
-                  {items.map((item) => {
-                    const displayName = item.kind === "hamper" ? item.productName : item.name;
-                    const displayLabel = item.kind === "hamper" ? item.boxName : item.label;
-                    return (
-                    <div key={item.id} className="flex gap-3.5 px-5 py-3.5">
+                  {items.map((item) => (
+                    <div key={item.cartItemId} className="flex gap-3.5 px-5 py-3.5">
                       <div className="w-11 h-11 flex-shrink-0 bg-[#270b1b] rounded-[3px] border border-[rgba(196,163,115,0.10)] flex items-center justify-center overflow-hidden relative">
-                        {item.imageUrl ? <Image src={item.imageUrl} alt={displayName} fill className="object-cover" sizes="44px" /> : <span className="font-display text-[0.3rem] tracking-[0.1em] uppercase text-[rgba(196,163,115,0.18)]">D</span>}
+                        {item.imageUrl ? <Image src={item.imageUrl} alt={item.name} fill className="object-cover" sizes="44px" /> : <span className="font-display text-[0.3rem] tracking-[0.1em] uppercase text-[rgba(196,163,115,0.18)]">D</span>}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-display text-ivory truncate leading-tight" style={{ fontSize: "0.78rem", letterSpacing: "0.04em" }}>{displayName}</p>
-                        {displayLabel && <p className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.38)] mt-0.5 truncate">{displayLabel}</p>}
+                        {item.hamperGroup && <p className="font-display text-[0.40rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.42)] mb-0.5 truncate">{item.hamperGroup}</p>}
+                        <p className="font-display text-ivory truncate leading-tight" style={{ fontSize: "0.78rem", letterSpacing: "0.04em" }}>{item.name}</p>
+                        {item.label && !item.hamperGroupId && <p className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.38)] mt-0.5 truncate">{item.label}</p>}
                         <p className="font-body font-light text-[rgba(245,237,224,0.35)] text-[0.75rem] mt-0.5">Qty {item.quantity} · ₹{(item.price * item.quantity).toLocaleString("en-IN")}</p>
                       </div>
                     </div>
-                    );
-                  })}
+                  ))}
                 </div>
                 <div className="px-5 pt-4 pb-5 border-t border-[rgba(196,163,115,0.10)] flex flex-col gap-3">
                   <div className="flex justify-between items-baseline">

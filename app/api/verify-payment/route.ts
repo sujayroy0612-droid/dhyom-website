@@ -83,24 +83,11 @@ export async function POST(req: NextRequest) {
     // For regular products: deduct by item.id.
     // Non-blocking — a stock deduction failure must never fail the order save.
     try {
-      type RawCartItem = {
-        kind?: string;
-        id: string;
-        quantity: number;
-        hamperComponents?: { id: string; quantity: number }[];
-      };
+      type RawCartItem = { id: string; quantity: number; isHamperBox?: boolean; };
       const cartItems = base.items as RawCartItem[] | undefined;
       if (Array.isArray(cartItems) && cartItems.length > 0) {
-        const deductions: { id: string; quantity: number }[] = [];
-        for (const item of cartItems) {
-          if (item.kind === "hamper" && Array.isArray(item.hamperComponents)) {
-            for (const comp of item.hamperComponents) {
-              deductions.push({ id: comp.id, quantity: comp.quantity });
-            }
-          } else {
-            deductions.push({ id: item.id, quantity: item.quantity });
-          }
-        }
+        // Deduct stock for every item — boxes have price 0 and aren't in products table so skip them
+        const deductions = cartItems.filter(i => !i.isHamperBox);
         await Promise.all(
           deductions.map(d =>
             sb.rpc("decrement_product_stock", { p_product_id: d.id, p_quantity: d.quantity })

@@ -9,8 +9,6 @@ import ProductActions from "@/components/ProductActions";
 import ProductGallery from "@/components/ProductGallery";
 import FunnelTracker from "@/components/FunnelTracker";
 import WishlistButton from "@/components/WishlistButton";
-import HamperCustomizationPanel from "@/components/HamperCustomizationPanel";
-import type { HamperSlot, HamperBox } from "@/components/HamperCustomizationPanel";
 
 /* ─── Display name maps ───────────────────────────────── */
 const CATEGORY_NAMES: Record<string, string> = {
@@ -82,7 +80,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const supabase = createServerClient();
   const cols =
-    "id,slug,name,type,subcategory,collection,fragrance,price,description,short_description,bullet_points,image_url,image_urls,category,stock,is_visible,created_at,variant_group,variant_label,product_type";
+    "id,slug,name,type,subcategory,collection,fragrance,price,description,short_description,bullet_points,image_url,image_urls,category,stock,is_visible,created_at,variant_group,variant_label";
 
   // ── UUID redirect: old links like /shop/candle/mandala/{uuid} → 301 to slug URL ──
   if (UUID_RE.test(slug)) {
@@ -154,55 +152,21 @@ export default async function ProductDetailPage({ params }: PageProps) {
     }
   }
 
-  const isHamper = (product as DbProduct & { product_type?: string }).product_type === "customizable_hamper";
-
-  // Fetch related products and hamper config (if needed) in parallel
-  const [relatedRes, hamperConfigRes] = await Promise.all([
-    supabase
-      .from("products")
-      .select(cols)
-      .eq("category", category)
-      .eq("is_visible", true)
-      .neq("id", product.id)
-      .limit(3),
-    isHamper
-      ? Promise.all([
-          supabase
-            .from("hamper_slots")
-            .select("id,label,allowed_categories,quantity,sort_order")
-            .eq("product_id", product.id)
-            .order("sort_order"),
-          supabase
-            .from("hamper_product_boxes")
-            .select("id,extra_price,hamper_boxes(id,name,image_url)")
-            .eq("product_id", product.id),
-        ])
-      : null,
-  ]);
+  // Fetch related products
+  const relatedRes = await supabase
+    .from("products")
+    .select(cols)
+    .eq("category", category)
+    .eq("is_visible", true)
+    .neq("id", product.id)
+    .limit(3);
 
   const related = (relatedRes.data ?? []) as DbProduct[];
-  const hamperSlots: HamperSlot[] = isHamper && hamperConfigRes
-    ? ((hamperConfigRes[0].data ?? []) as HamperSlot[])
-    : [];
-  type HBoxRecord = { id: string; name: string; image_url: string };
-  type BoxJoinRow = { id: string; extra_price: number; hamper_boxes: HBoxRecord | HBoxRecord[] | null };
-  const hamperBoxes: HamperBox[] = isHamper && hamperConfigRes
-    ? (hamperConfigRes[1].data ?? []).map((row: BoxJoinRow) => {
-        const hb = Array.isArray(row.hamper_boxes) ? row.hamper_boxes[0] : row.hamper_boxes;
-        return {
-          id:          hb?.id        ?? "",
-          name:        hb?.name      ?? "",
-          image_url:   hb?.image_url ?? "",
-          extra_price: row.extra_price ?? 0,
-        };
-      })
-    : [];
 
   const categoryName = CATEGORY_NAMES[category] ?? category;
   const subcategoryName = SUBCATEGORY_NAMES[subcategory] ?? subcategory;
   const detailLabel = buildDetailLabel(product);
-  // Hampers are always "in stock" — component availability checked at checkout
-  const inStock = isHamper ? true : product.stock > 0;
+  const inStock = product.stock > 0;
 
   return (
     <div className="min-h-screen bg-black-plum">
@@ -336,30 +300,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
               <div className="w-full h-px bg-[rgba(196,163,115,0.10)]" />
 
-              {isHamper ? (
-                <HamperCustomizationPanel
-                  productId={product.id}
-                  productName={product.name}
-                  price={product.price}
-                  imageUrl={product.image_url || ""}
-                  category={product.category}
-                  subcategorySlug={getSubcategorySlug(product)}
-                  productSlug={product.slug ?? ""}
-                  slots={hamperSlots}
-                  boxes={hamperBoxes}
-                />
-              ) : (
-                <ProductActions
-                  productId={product.id}
-                  productName={product.name}
-                  price={product.price}
-                  inStock={inStock}
-                  label={detailLabel}
-                  imageUrl={product.image_url || ""}
-                  category={product.category}
-                  subcategorySlug={getSubcategorySlug(product)}
-                />
-              )}
+              <ProductActions
+                productId={product.id}
+                productName={product.name}
+                price={product.price}
+                inStock={inStock}
+                label={detailLabel}
+                imageUrl={product.image_url || ""}
+                category={product.category}
+                subcategorySlug={getSubcategorySlug(product)}
+              />
 
             </div>
           </div>

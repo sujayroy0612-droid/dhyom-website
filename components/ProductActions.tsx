@@ -40,7 +40,7 @@ export default function ProductActions({
   }
 
   function handleAddToCart() {
-    addItem({ kind: "product", id: productId, name: productName, price, quantity: qty, category, subcategorySlug, label, imageUrl });
+    addItem({ kind: "product", cartItemId: crypto.randomUUID(), id: productId, name: productName, price, quantity: qty, category, subcategorySlug, label, imageUrl });
     trackEvent("add_to_cart", productId);
     setAddedState("added");
     setTimeout(() => setAddedState("idle"), 1800);

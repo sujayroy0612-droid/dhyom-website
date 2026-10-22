@@ -550,16 +550,34 @@ export default function OrdersPage() {
                   >
                     Print Invoice ↗
                   </a>
+                  <a
+                    href={`/packing/${selected.order_number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 font-display text-[0.52rem] tracking-[0.18em] uppercase text-[rgba(245,237,224,0.55)] border border-[rgba(196,163,115,0.20)] hover:bg-[rgba(196,163,115,0.05)] hover:border-[rgba(196,163,115,0.40)] rounded-[3px] px-3 py-2 transition-all duration-150"
+                  >
+                    Packing Slip ↗
+                  </a>
                 </div>
               </Section>
             ) : (
               <Section title="Invoice">
-                <button
-                  onClick={() => generateInvoice(selected)}
-                  className="font-display text-[0.52rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.30)] hover:bg-[rgba(196,163,115,0.07)] rounded-[3px] px-3 py-2 transition-all duration-150 text-left"
-                >
-                  Generate Invoice
-                </button>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => generateInvoice(selected)}
+                    className="font-display text-[0.52rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.30)] hover:bg-[rgba(196,163,115,0.07)] rounded-[3px] px-3 py-2 transition-all duration-150"
+                  >
+                    Generate Invoice
+                  </button>
+                  <a
+                    href={`/packing/${selected.order_number}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 font-display text-[0.52rem] tracking-[0.18em] uppercase text-[rgba(245,237,224,0.55)] border border-[rgba(196,163,115,0.20)] hover:bg-[rgba(196,163,115,0.05)] hover:border-[rgba(196,163,115,0.40)] rounded-[3px] px-3 py-2 transition-all duration-150"
+                  >
+                    Packing Slip ↗
+                  </a>
+                </div>
                 {invoiceError && (
                   <p className="font-mono text-[rgba(220,80,80,0.85)] text-[0.68rem] break-all mt-1">{invoiceError}</p>
                 )}

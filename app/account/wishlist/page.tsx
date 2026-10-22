@@ -65,7 +65,7 @@ export default function WishlistPage() {
             </div>
             <div className="flex items-center gap-2 mt-auto">
               <button
-                onClick={() => addItem({ kind: "product", id: p.id, name: p.name, price: p.price, imageUrl: p.image_url ?? "", category: p.category, subcategorySlug: subcatSlug(p), label: p.type, quantity: 1 })}
+                onClick={() => addItem({ kind: "product", cartItemId: crypto.randomUUID(), id: p.id, name: p.name, price: p.price, imageUrl: p.image_url ?? "", category: p.category, subcategorySlug: subcatSlug(p), label: p.type, quantity: 1 })}
                 className="flex-1 font-display text-[0.55rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.35)] rounded-[3px] py-2.5 hover:bg-[rgba(196,163,115,0.07)] transition-all duration-200 text-center"
               >
                 Add to Cart

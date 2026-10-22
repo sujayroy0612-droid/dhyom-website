@@ -6,6 +6,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import type { DbProduct } from "@/lib/supabase/types";
 import ProductCard from "@/components/ProductCard";
 import FadeInView from "@/components/FadeInView";
+import HamperLevelCards from "@/components/HamperLevelCards";
 
 /* ─── Static metadata ─────────────────────────────────── */
 const CATEGORY_NAMES: Record<string, string> = {
@@ -201,6 +202,15 @@ export default async function SubcategoryPage({ params }: PageProps) {
 
       {/* Brass rule */}
       <div className="h-px bg-gradient-to-r from-transparent via-[rgba(196,163,115,0.20)] to-transparent" />
+
+      {/* Hamper level cards — gift category only */}
+      {category === "gift" && (
+        <section className="px-6 pt-12 pb-0">
+          <div className="max-w-6xl mx-auto">
+            <HamperLevelCards category={category} subcategory={subcategory} />
+          </div>
+        </section>
+      )}
 
       {/* Product grid */}
       <section className="px-6 py-20">

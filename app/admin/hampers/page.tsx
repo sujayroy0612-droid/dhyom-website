@@ -1,408 +1,236 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
-/* ── Types ─────────────────────────────────────────────── */
-interface Tier {
-  id: string; name: string; price: number; description: string;
-  is_active: boolean; sort_order: number;
-}
-interface Box {
-  id: string; name: string; image_url: string; is_active: boolean;
-}
-interface Slot {
-  id: string; tier_id: string; label: string;
-  allowed_categories: string[]; quantity: number; sort_order: number;
-}
+interface HamperLevel { id: string; level: string; name: string; min_spend: number; sort_order: number; }
+interface HamperBox   { id: string; name: string; image_url: string | null; price: number; }
 
-type Tab = "tiers" | "boxes" | "slots";
+const FIELD  = "w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.32)] focus:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 font-body font-light text-[rgba(245,237,224,0.75)] text-sm focus:outline-none transition-colors duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+const LABEL  = "block font-display text-[0.38rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.45)] mb-1";
+const CLOUD  = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "";
+const PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? "";
 
-/* ── Helpers ────────────────────────────────────────────── */
-async function authHeader() {
-  const { data } = await supabase.auth.getSession();
-  return data.session ? `Bearer ${data.session.access_token}` : "";
+async function uploadImage(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append("upload_preset", PRESET);
+  fd.append("file", file);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/image/upload`, { method: "POST", body: fd });
+  const json = await res.json();
+  return json.secure_url as string;
 }
 
-async function apiFetch(method: string, url: string, body?: unknown) {
-  const auth = await authHeader();
-  const res = await fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json", Authorization: auth },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? res.statusText);
-  }
-  return res.json();
-}
-
-/* ── Tier form ─────────────────────────────────────────── */
-const BLANK_TIER = { name: "", price: "", description: "", sort_order: "0", is_active: true };
-
-function TierForm({ initial, onSave, onCancel }: {
-  initial?: Partial<Tier>;
-  onSave: (data: Omit<Tier, "id">) => void;
-  onCancel: () => void;
-}) {
-  const [f, setF] = useState({
-    name:        initial?.name        ?? BLANK_TIER.name,
-    price:       String(initial?.price ?? BLANK_TIER.price),
-    description: initial?.description ?? BLANK_TIER.description,
-    sort_order:  String(initial?.sort_order ?? BLANK_TIER.sort_order),
-    is_active:   initial?.is_active   ?? BLANK_TIER.is_active,
-  });
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    onSave({ name: f.name, price: Number(f.price), description: f.description, sort_order: Number(f.sort_order), is_active: f.is_active });
-  }
-
-  return (
-    <form onSubmit={submit} className="flex flex-col gap-3 p-4 bg-[#1a0a12] border border-[rgba(196,163,115,0.14)] rounded-[4px]">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Name</label>
-          <input required value={f.name} onChange={e => setF(p => ({ ...p, name: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" />
-        </div>
-        <div>
-          <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Price (₹)</label>
-          <input required type="number" min="0" value={f.price} onChange={e => setF(p => ({ ...p, price: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" />
-        </div>
-      </div>
-      <div>
-        <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Description</label>
-        <input value={f.description} onChange={e => setF(p => ({ ...p, description: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Sort Order</label>
-          <input type="number" value={f.sort_order} onChange={e => setF(p => ({ ...p, sort_order: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" />
-        </div>
-        <div className="flex items-end pb-1">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={f.is_active} onChange={e => setF(p => ({ ...p, is_active: e.target.checked }))} className="w-3.5 h-3.5 accent-brass" />
-            <span className="font-display text-[0.48rem] tracking-[0.14em] uppercase text-[rgba(245,237,224,0.55)]">Active</span>
-          </label>
-        </div>
-      </div>
-      <div className="flex gap-2 pt-1">
-        <button type="submit" className="px-4 py-2 font-display text-[0.50rem] tracking-[0.16em] uppercase text-brass border border-[rgba(196,163,115,0.35)] hover:bg-[rgba(196,163,115,0.07)] rounded-[3px] transition-all duration-150">Save</button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 font-display text-[0.50rem] tracking-[0.16em] uppercase text-[rgba(245,237,224,0.35)] border border-[rgba(196,163,115,0.12)] hover:border-[rgba(196,163,115,0.28)] rounded-[3px] transition-all duration-150">Cancel</button>
-      </div>
-    </form>
-  );
-}
-
-/* ── Box form ───────────────────────────────────────────── */
-function BoxForm({ initial, onSave, onCancel }: {
-  initial?: Partial<Box>;
-  onSave: (data: Omit<Box, "id">) => void;
-  onCancel: () => void;
-}) {
-  const [f, setF] = useState({
-    name:      initial?.name      ?? "",
-    image_url: initial?.image_url ?? "",
-    is_active: initial?.is_active ?? true,
-  });
-
-  function submit(e: React.FormEvent) { e.preventDefault(); onSave(f); }
-
-  return (
-    <form onSubmit={submit} className="flex flex-col gap-3 p-4 bg-[#1a0a12] border border-[rgba(196,163,115,0.14)] rounded-[4px]">
-      <div>
-        <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Name</label>
-        <input required value={f.name} onChange={e => setF(p => ({ ...p, name: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" />
-      </div>
-      <div>
-        <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Image URL</label>
-        <input value={f.image_url} onChange={e => setF(p => ({ ...p, image_url: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" placeholder="https://res.cloudinary.com/..." />
-      </div>
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" checked={f.is_active} onChange={e => setF(p => ({ ...p, is_active: e.target.checked }))} className="w-3.5 h-3.5 accent-brass" />
-        <span className="font-display text-[0.48rem] tracking-[0.14em] uppercase text-[rgba(245,237,224,0.55)]">Active</span>
-      </label>
-      <div className="flex gap-2 pt-1">
-        <button type="submit" className="px-4 py-2 font-display text-[0.50rem] tracking-[0.16em] uppercase text-brass border border-[rgba(196,163,115,0.35)] hover:bg-[rgba(196,163,115,0.07)] rounded-[3px] transition-all duration-150">Save</button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 font-display text-[0.50rem] tracking-[0.16em] uppercase text-[rgba(245,237,224,0.35)] border border-[rgba(196,163,115,0.12)] hover:border-[rgba(196,163,115,0.28)] rounded-[3px] transition-all duration-150">Cancel</button>
-      </div>
-    </form>
-  );
-}
-
-/* ── Slot form ─────────────────────────────────────────── */
-function SlotForm({ tiers, initial, onSave, onCancel }: {
-  tiers: Tier[];
-  initial?: Partial<Slot>;
-  onSave: (data: Omit<Slot, "id">) => void;
-  onCancel: () => void;
-}) {
-  const [f, setF] = useState({
-    tier_id:            initial?.tier_id            ?? (tiers[0]?.id ?? ""),
-    label:              initial?.label              ?? "",
-    allowed_categories: (initial?.allowed_categories ?? []).join(", "),
-    quantity:           String(initial?.quantity    ?? 1),
-    sort_order:         String(initial?.sort_order  ?? 0),
-  });
-
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    onSave({
-      tier_id:            f.tier_id,
-      label:              f.label,
-      allowed_categories: f.allowed_categories.split(",").map(s => s.trim()).filter(Boolean),
-      quantity:           Number(f.quantity),
-      sort_order:         Number(f.sort_order),
-    });
-  }
-
-  return (
-    <form onSubmit={submit} className="flex flex-col gap-3 p-4 bg-[#1a0a12] border border-[rgba(196,163,115,0.14)] rounded-[4px]">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Tier</label>
-          <select required value={f.tier_id} onChange={e => setF(p => ({ ...p, tier_id: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]">
-            {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Label</label>
-          <input required value={f.label} onChange={e => setF(p => ({ ...p, label: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" placeholder="e.g. Candle" />
-        </div>
-      </div>
-      <div>
-        <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Allowed Categories (comma-separated)</label>
-        <input required value={f.allowed_categories} onChange={e => setF(p => ({ ...p, allowed_categories: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" placeholder="candle, idol, bracelet" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Quantity</label>
-          <input type="number" min="1" value={f.quantity} onChange={e => setF(p => ({ ...p, quantity: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" />
-        </div>
-        <div>
-          <label className="block font-display text-[0.48rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-1">Sort Order</label>
-          <input type="number" value={f.sort_order} onChange={e => setF(p => ({ ...p, sort_order: e.target.value }))} className="w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] rounded-[3px] px-3 py-2 font-body text-ivory text-sm focus:outline-none focus:border-[rgba(196,163,115,0.45)]" />
-        </div>
-      </div>
-      <div className="flex gap-2 pt-1">
-        <button type="submit" className="px-4 py-2 font-display text-[0.50rem] tracking-[0.16em] uppercase text-brass border border-[rgba(196,163,115,0.35)] hover:bg-[rgba(196,163,115,0.07)] rounded-[3px] transition-all duration-150">Save</button>
-        <button type="button" onClick={onCancel} className="px-4 py-2 font-display text-[0.50rem] tracking-[0.16em] uppercase text-[rgba(245,237,224,0.35)] border border-[rgba(196,163,115,0.12)] hover:border-[rgba(196,163,115,0.28)] rounded-[3px] transition-all duration-150">Cancel</button>
-      </div>
-    </form>
-  );
-}
-
-/* ── Main page ──────────────────────────────────────────── */
 export default function AdminHampersPage() {
-  const [tab,     setTab]     = useState<Tab>("tiers");
-  const [tiers,   setTiers]   = useState<Tier[]>([]);
-  const [boxes,   setBoxes]   = useState<Box[]>([]);
-  const [slots,   setSlots]   = useState<Slot[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err,     setErr]     = useState<string | null>(null);
+  const [levels,      setLevels]      = useState<HamperLevel[]>([]);
+  const [boxes,       setBoxes]       = useState<HamperBox[]>([]);
+  const [levelDrafts, setLevelDrafts] = useState<Record<string, { name: string; min_spend: string }>>({});
+  const [saving,      setSaving]      = useState<Record<string, boolean>>({});
+  const [toast,       setToast]       = useState("");
 
-  const [newTier, setNewTier] = useState(false);
-  const [newBox,  setNewBox]  = useState(false);
-  const [newSlot, setNewSlot] = useState(false);
-  const [editing, setEditing] = useState<{ resource: string; id: string } | null>(null);
+  // New box form
+  const [newBoxName,  setNewBoxName]  = useState("");
+  const [newBoxPrice, setNewBoxPrice] = useState("0");
+  const [newBoxImg,   setNewBoxImg]   = useState("");
+  const [imgFile,     setImgFile]     = useState<File | null>(null);
+  const [addingBox,   setAddingBox]   = useState(false);
 
-  async function load() {
-    setLoading(true);
-    setErr(null);
-    try {
-      const auth = await authHeader();
-      const [tr, br, sr] = await Promise.all([
-        fetch("/api/admin/hampers?resource=tiers",  { headers: { Authorization: auth } }).then(r => r.json()),
-        fetch("/api/admin/hampers?resource=boxes",  { headers: { Authorization: auth } }).then(r => r.json()),
-        fetch("/api/admin/hampers?resource=slots",  { headers: { Authorization: auth } }).then(r => r.json()),
-      ]);
-      setTiers(tr.data ?? []);
-      setBoxes(br.data ?? []);
-      setSlots(sr.data ?? []);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Load failed");
+  function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(""), 4000); }
+
+  async function getToken() {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? "";
+  }
+
+  useEffect(() => {
+    fetch("/api/hampers/builder-config")
+      .then(r => r.json())
+      .then((d: { levels?: HamperLevel[]; boxes?: HamperBox[] }) => {
+        const lvls = d.levels ?? [];
+        setLevels(lvls);
+        setBoxes(d.boxes ?? []);
+        const drafts: Record<string, { name: string; min_spend: string }> = {};
+        for (const l of lvls) drafts[l.id] = { name: l.name, min_spend: String(l.min_spend) };
+        setLevelDrafts(drafts);
+      });
+  }, []);
+
+  async function saveLevel(level: HamperLevel) {
+    const draft = levelDrafts[level.id];
+    if (!draft) return;
+    setSaving(s => ({ ...s, [level.id]: true }));
+    const token = await getToken();
+    const res = await fetch(`/api/admin/hampers/config?id=${level.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name: draft.name.trim(), min_spend: Number(draft.min_spend) }),
+    });
+    if (res.ok) {
+      setLevels(prev => prev.map(l => l.id === level.id ? { ...l, name: draft.name.trim(), min_spend: Number(draft.min_spend) } : l));
+      showToast("Saved");
+    } else {
+      showToast("Save failed");
     }
-    setLoading(false);
+    setSaving(s => ({ ...s, [level.id]: false }));
   }
 
-  useEffect(() => { load(); }, []);
+  async function addBox() {
+    if (!newBoxName.trim()) return;
+    setAddingBox(true);
+    try {
+      let imgUrl = newBoxImg;
+      if (imgFile) imgUrl = await uploadImage(imgFile);
 
-  async function createTier(data: Omit<Tier, "id">) {
-    try { await apiFetch("POST", "/api/admin/hampers", { resource: "tiers", payload: data }); setNewTier(false); load(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Error"); }
-  }
-  async function updateTier(id: string, data: Omit<Tier, "id">) {
-    try { await apiFetch("PATCH", "/api/admin/hampers", { resource: "tiers", id, payload: data }); setEditing(null); load(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Error"); }
-  }
-  async function deleteTier(id: string) {
-    if (!confirm("Delete this tier? Its slots will also be removed.")) return;
-    try { await apiFetch("DELETE", `/api/admin/hampers?resource=tiers&id=${id}`); load(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Error"); }
+      const token = await getToken();
+      const res = await fetch("/api/admin/hampers/boxes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: newBoxName.trim(), price: Number(newBoxPrice) || 0, image_url: imgUrl || null }),
+      });
+      if (res.ok) {
+        const { box } = await res.json();
+        setBoxes(prev => [...prev, box]);
+        setNewBoxName(""); setNewBoxPrice("0"); setNewBoxImg(""); setImgFile(null);
+        showToast("Box added");
+      } else showToast("Failed to add box");
+    } catch { showToast("Upload error"); }
+    setAddingBox(false);
   }
 
-  async function createBox(data: Omit<Box, "id">) {
-    try { await apiFetch("POST", "/api/admin/hampers", { resource: "boxes", payload: data }); setNewBox(false); load(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Error"); }
-  }
-  async function updateBox(id: string, data: Omit<Box, "id">) {
-    try { await apiFetch("PATCH", "/api/admin/hampers", { resource: "boxes", id, payload: data }); setEditing(null); load(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Error"); }
-  }
   async function deleteBox(id: string) {
-    if (!confirm("Delete this box?")) return;
-    try { await apiFetch("DELETE", `/api/admin/hampers?resource=boxes&id=${id}`); load(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Error"); }
+    setSaving(s => ({ ...s, [id]: true }));
+    const token = await getToken();
+    const res = await fetch(`/api/admin/hampers/boxes?id=${id}`, {
+      method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setBoxes(prev => prev.filter(b => b.id !== id));
+    else showToast("Delete failed");
+    setSaving(s => ({ ...s, [id]: false }));
   }
-
-  async function createSlot(data: Omit<Slot, "id">) {
-    try { await apiFetch("POST", "/api/admin/hampers", { resource: "slots", payload: data }); setNewSlot(false); load(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Error"); }
-  }
-  async function updateSlot(id: string, data: Omit<Slot, "id">) {
-    try { await apiFetch("PATCH", "/api/admin/hampers", { resource: "slots", id, payload: data }); setEditing(null); load(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Error"); }
-  }
-  async function deleteSlot(id: string) {
-    if (!confirm("Delete this slot?")) return;
-    try { await apiFetch("DELETE", `/api/admin/hampers?resource=slots&id=${id}`); load(); }
-    catch (e) { alert(e instanceof Error ? e.message : "Error"); }
-  }
-
-  const tabClass = (t: Tab) => [
-    "px-4 py-2.5 font-display text-[0.50rem] tracking-[0.16em] uppercase transition-all duration-150 border-b-2",
-    tab === t
-      ? "border-brass text-brass"
-      : "border-transparent text-[rgba(245,237,224,0.35)] hover:text-[rgba(245,237,224,0.65)]",
-  ].join(" ");
 
   return (
     <div className="min-h-screen bg-[#12060e] p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-2xl mx-auto">
 
         <div className="mb-8">
-          <p className="font-display text-[0.46rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.35)] mb-1">Admin</p>
-          <h1 className="font-display text-ivory" style={{ fontSize: "1.4rem", letterSpacing: "0.06em" }}>Gift Hampers</h1>
+          <p className="font-display text-[0.44rem] tracking-[0.20em] uppercase text-[rgba(196,163,115,0.38)] mb-1">Admin</p>
+          <h1 className="font-display text-ivory" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Hamper Settings</h1>
         </div>
 
-        {err && <p className="mb-4 font-body text-[rgba(210,80,80,0.75)] text-sm">{err}</p>}
-
-        {/* Tabs */}
-        <div className="flex border-b border-[rgba(196,163,115,0.12)] mb-6">
-          <button type="button" className={tabClass("tiers")} onClick={() => setTab("tiers")}>Tiers ({tiers.length})</button>
-          <button type="button" className={tabClass("boxes")} onClick={() => setTab("boxes")}>Boxes ({boxes.length})</button>
-          <button type="button" className={tabClass("slots")} onClick={() => setTab("slots")}>Slots ({slots.length})</button>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-5 h-5 rounded-full border-2 border-[rgba(196,163,115,0.18)] border-t-brass animate-spin" />
-          </div>
-        ) : (
-          <>
-            {/* ── Tiers ── */}
-            {tab === "tiers" && (
-              <div className="flex flex-col gap-3">
-                {tiers.map(t => (
-                  <div key={t.id}>
-                    {editing?.resource === "tiers" && editing.id === t.id ? (
-                      <TierForm initial={t} onSave={d => updateTier(t.id, d)} onCancel={() => setEditing(null)} />
-                    ) : (
-                      <div className="flex items-center justify-between px-4 py-3 bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[4px]">
-                        <div>
-                          <p className="font-display text-ivory text-[0.76rem]" style={{ letterSpacing: "0.06em" }}>{t.name}</p>
-                          <p className="font-body font-light text-[rgba(245,237,224,0.38)] text-[0.74rem] mt-0.5">
-                            ₹{t.price.toLocaleString("en-IN")} · Order {t.sort_order} · {t.is_active ? "Active" : "Hidden"}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => setEditing({ resource: "tiers", id: t.id })} className="px-3 py-1.5 font-display text-[0.46rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.55)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.40)] rounded-[3px] transition-all duration-150">Edit</button>
-                          <button type="button" onClick={() => deleteTier(t.id)} className="px-3 py-1.5 font-display text-[0.46rem] tracking-[0.14em] uppercase text-[rgba(210,80,80,0.45)] border border-[rgba(210,80,80,0.15)] hover:border-[rgba(210,80,80,0.40)] rounded-[3px] transition-all duration-150">Delete</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {newTier ? (
-                  <TierForm onSave={createTier} onCancel={() => setNewTier(false)} />
-                ) : (
-                  <button type="button" onClick={() => setNewTier(true)} className="mt-1 px-4 py-2.5 font-display text-[0.50rem] tracking-[0.18em] uppercase text-brass border border-dashed border-[rgba(196,163,115,0.28)] hover:border-[rgba(196,163,115,0.50)] hover:bg-[rgba(196,163,115,0.04)] rounded-[4px] transition-all duration-150 w-full text-left">
-                    + Add Tier
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* ── Boxes ── */}
-            {tab === "boxes" && (
-              <div className="flex flex-col gap-3">
-                {boxes.map(b => (
-                  <div key={b.id}>
-                    {editing?.resource === "boxes" && editing.id === b.id ? (
-                      <BoxForm initial={b} onSave={d => updateBox(b.id, d)} onCancel={() => setEditing(null)} />
-                    ) : (
-                      <div className="flex items-center justify-between px-4 py-3 bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[4px]">
-                        <div>
-                          <p className="font-display text-ivory text-[0.76rem]" style={{ letterSpacing: "0.06em" }}>{b.name}</p>
-                          <p className="font-body font-light text-[rgba(245,237,224,0.38)] text-[0.74rem] mt-0.5">{b.is_active ? "Active" : "Hidden"}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => setEditing({ resource: "boxes", id: b.id })} className="px-3 py-1.5 font-display text-[0.46rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.55)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.40)] rounded-[3px] transition-all duration-150">Edit</button>
-                          <button type="button" onClick={() => deleteBox(b.id)} className="px-3 py-1.5 font-display text-[0.46rem] tracking-[0.14em] uppercase text-[rgba(210,80,80,0.45)] border border-[rgba(210,80,80,0.15)] hover:border-[rgba(210,80,80,0.40)] rounded-[3px] transition-all duration-150">Delete</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {newBox ? (
-                  <BoxForm onSave={createBox} onCancel={() => setNewBox(false)} />
-                ) : (
-                  <button type="button" onClick={() => setNewBox(true)} className="mt-1 px-4 py-2.5 font-display text-[0.50rem] tracking-[0.18em] uppercase text-brass border border-dashed border-[rgba(196,163,115,0.28)] hover:border-[rgba(196,163,115,0.50)] hover:bg-[rgba(196,163,115,0.04)] rounded-[4px] transition-all duration-150 w-full text-left">
-                    + Add Box
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* ── Slots ── */}
-            {tab === "slots" && (
-              <div className="flex flex-col gap-3">
-                {slots.map(s => {
-                  const tierName = tiers.find(t => t.id === s.tier_id)?.name ?? s.tier_id;
-                  return (
-                    <div key={s.id}>
-                      {editing?.resource === "slots" && editing.id === s.id ? (
-                        <SlotForm tiers={tiers} initial={s} onSave={d => updateSlot(s.id, d)} onCancel={() => setEditing(null)} />
-                      ) : (
-                        <div className="flex items-center justify-between px-4 py-3 bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[4px]">
-                          <div>
-                            <p className="font-display text-ivory text-[0.76rem]" style={{ letterSpacing: "0.06em" }}>{s.label}</p>
-                            <p className="font-body font-light text-[rgba(245,237,224,0.38)] text-[0.74rem] mt-0.5">
-                              {tierName} · qty {s.quantity} · [{s.allowed_categories.join(", ")}]
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button type="button" onClick={() => setEditing({ resource: "slots", id: s.id })} className="px-3 py-1.5 font-display text-[0.46rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.55)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.40)] rounded-[3px] transition-all duration-150">Edit</button>
-                            <button type="button" onClick={() => deleteSlot(s.id)} className="px-3 py-1.5 font-display text-[0.46rem] tracking-[0.14em] uppercase text-[rgba(210,80,80,0.45)] border border-[rgba(210,80,80,0.15)] hover:border-[rgba(210,80,80,0.40)] rounded-[3px] transition-all duration-150">Delete</button>
-                          </div>
-                        </div>
-                      )}
+        {/* Hamper levels */}
+        <section className="mb-10">
+          <h2 className="font-display text-[0.58rem] tracking-[0.18em] uppercase text-brass mb-4">Hamper Levels</h2>
+          <div className="flex flex-col gap-4">
+            {levels.map(level => {
+              const draft = levelDrafts[level.id] ?? { name: level.name, min_spend: String(level.min_spend) };
+              return (
+                <div key={level.id} className="bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[5px] p-4">
+                  <p className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.35)] mb-3">{level.level}</p>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className={LABEL}>Display Name</label>
+                      <input
+                        className={FIELD}
+                        value={draft.name}
+                        onChange={e => setLevelDrafts(d => ({ ...d, [level.id]: { ...draft, name: e.target.value } }))}
+                      />
                     </div>
-                  );
-                })}
-                {newSlot ? (
-                  <SlotForm tiers={tiers} onSave={createSlot} onCancel={() => setNewSlot(false)} />
-                ) : (
-                  <button type="button" onClick={() => setNewSlot(true)} className="mt-1 px-4 py-2.5 font-display text-[0.50rem] tracking-[0.18em] uppercase text-brass border border-dashed border-[rgba(196,163,115,0.28)] hover:border-[rgba(196,163,115,0.50)] hover:bg-[rgba(196,163,115,0.04)] rounded-[4px] transition-all duration-150 w-full text-left">
-                    + Add Slot
+                    <div>
+                      <label className={LABEL}>Minimum Spend (₹)</label>
+                      <input
+                        type="number"
+                        className={FIELD}
+                        value={draft.min_spend}
+                        onChange={e => setLevelDrafts(d => ({ ...d, [level.id]: { ...draft, min_spend: e.target.value } }))}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => saveLevel(level)}
+                    disabled={saving[level.id]}
+                    className="font-display text-[0.48rem] tracking-[0.14em] uppercase text-brass border border-[rgba(196,163,115,0.28)] hover:border-[rgba(196,163,115,0.50)] px-4 py-2 rounded-[3px] transition-all duration-150 disabled:opacity-40"
+                  >
+                    {saving[level.id] ? "Saving…" : "Save"}
                   </button>
-                )}
-              </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Box options */}
+        <section>
+          <h2 className="font-display text-[0.58rem] tracking-[0.18em] uppercase text-brass mb-4">Gift Box Options</h2>
+
+          {/* Existing boxes */}
+          <div className="flex flex-col gap-3 mb-6">
+            {boxes.length === 0 && (
+              <p className="font-body font-light text-[rgba(245,237,224,0.30)] text-sm">No boxes yet. Add one below.</p>
             )}
-          </>
-        )}
+            {boxes.map(box => (
+              <div key={box.id} className="bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[5px] p-3 flex items-center gap-4">
+                {box.image_url && (
+                  <div className="w-12 h-12 flex-shrink-0 relative rounded-[3px] overflow-hidden bg-[#270b1b]">
+                    <Image src={box.image_url} alt={box.name} fill className="object-cover" sizes="48px" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-display text-ivory text-[0.80rem]" style={{ letterSpacing: "0.04em" }}>{box.name}</p>
+                  <p className="font-display text-brass text-[0.62rem]">
+                    {box.price > 0 ? `₹${box.price.toLocaleString("en-IN")}` : "Included (₹0)"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => deleteBox(box.id)}
+                  disabled={saving[box.id]}
+                  className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-[rgba(200,80,80,0.60)] hover:text-[rgba(200,80,80,0.85)] border border-[rgba(200,80,80,0.20)] hover:border-[rgba(200,80,80,0.45)] px-3 py-1.5 rounded-[3px] transition-all duration-150 disabled:opacity-40 flex-shrink-0"
+                >
+                  {saving[box.id] ? "…" : "Delete"}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add new box */}
+          <div className="bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[5px] p-4">
+            <p className="font-display text-[0.44rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.38)] mb-3">Add New Box</p>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className={LABEL}>Box Name</label>
+                <input className={FIELD} value={newBoxName} onChange={e => setNewBoxName(e.target.value)} placeholder="Box A" />
+              </div>
+              <div>
+                <label className={LABEL}>Price (₹, 0 = included)</label>
+                <input type="number" className={FIELD} value={newBoxPrice} onChange={e => setNewBoxPrice(e.target.value)} />
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className={LABEL}>Box Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e => { const f = e.target.files?.[0]; if (f) setImgFile(f); }}
+                className="font-body font-light text-[rgba(245,237,224,0.55)] text-sm"
+              />
+            </div>
+            <button
+              onClick={addBox}
+              disabled={!newBoxName.trim() || addingBox}
+              className="font-display text-[0.50rem] tracking-[0.16em] uppercase text-brass border border-[rgba(196,163,115,0.30)] hover:border-[rgba(196,163,115,0.55)] hover:bg-[rgba(196,163,115,0.06)] px-5 py-2 rounded-[3px] transition-all duration-150 disabled:opacity-40"
+            >
+              {addingBox ? "Adding…" : "Add Box"}
+            </button>
+          </div>
+        </section>
+
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a0a12] border border-[rgba(196,163,115,0.30)] px-5 py-3 rounded-[4px]">
+          <p className="font-display text-[0.52rem] tracking-[0.14em] uppercase text-brass">{toast}</p>
+        </div>
+      )}
     </div>
   );
 }
