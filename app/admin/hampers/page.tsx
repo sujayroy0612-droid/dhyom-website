@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 
-interface HamperLevel { id: string; level: string; name: string; min_spend: number; sort_order: number; }
-interface HamperBox   { id: string; name: string; image_url: string | null; price: number; }
+interface HamperBox { id: string; name: string; image_url: string | null; price: number; }
 
 const FIELD  = "w-full bg-[rgba(245,237,224,0.04)] border border-[rgba(196,163,115,0.18)] hover:border-[rgba(196,163,115,0.32)] focus:border-[rgba(196,163,115,0.55)] rounded-[3px] px-3 py-2 font-body font-light text-[rgba(245,237,224,0.75)] text-sm focus:outline-none transition-colors duration-150 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 const LABEL  = "block font-display text-[0.38rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.45)] mb-1";
@@ -22,12 +21,10 @@ async function uploadImage(file: File): Promise<string> {
 }
 
 export default function AdminHampersPage() {
-  const [levels,      setLevels]      = useState<HamperLevel[]>([]);
-  const [boxes,       setBoxes]       = useState<HamperBox[]>([]);
-  const [levelDrafts, setLevelDrafts] = useState<Record<string, { name: string; min_spend: string }>>({});
-  const [boxDrafts,   setBoxDrafts]   = useState<Record<string, { name: string; price: string }>>({});
-  const [saving,      setSaving]      = useState<Record<string, boolean>>({});
-  const [toast,       setToast]       = useState("");
+  const [boxes,     setBoxes]     = useState<HamperBox[]>([]);
+  const [boxDrafts, setBoxDrafts] = useState<Record<string, { name: string; price: string }>>({});
+  const [saving,    setSaving]    = useState<Record<string, boolean>>({});
+  const [toast,     setToast]     = useState("");
 
   // New box form
   const [newBoxName,  setNewBoxName]  = useState("");
@@ -46,37 +43,14 @@ export default function AdminHampersPage() {
   useEffect(() => {
     fetch("/api/hampers/builder-config")
       .then(r => r.json())
-      .then((d: { levels?: HamperLevel[]; boxes?: HamperBox[] }) => {
-        const lvls = d.levels ?? [];
-        setLevels(lvls);
-        setBoxes(d.boxes ?? []);
-        const drafts: Record<string, { name: string; min_spend: string }> = {};
-        for (const l of lvls) drafts[l.id] = { name: l.name, min_spend: String(l.min_spend) };
-        setLevelDrafts(drafts);
+      .then((d: { boxes?: HamperBox[] }) => {
+        const bxList = d.boxes ?? [];
+        setBoxes(bxList);
         const bxDrafts: Record<string, { name: string; price: string }> = {};
-        for (const b of (d.boxes ?? [])) bxDrafts[b.id] = { name: b.name, price: String(b.price) };
+        for (const b of bxList) bxDrafts[b.id] = { name: b.name, price: String(b.price) };
         setBoxDrafts(bxDrafts);
       });
   }, []);
-
-  async function saveLevel(level: HamperLevel) {
-    const draft = levelDrafts[level.id];
-    if (!draft) return;
-    setSaving(s => ({ ...s, [level.id]: true }));
-    const token = await getToken();
-    const res = await fetch(`/api/admin/hampers/config?id=${level.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ name: draft.name.trim(), min_spend: Number(draft.min_spend) }),
-    });
-    if (res.ok) {
-      setLevels(prev => prev.map(l => l.id === level.id ? { ...l, name: draft.name.trim(), min_spend: Number(draft.min_spend) } : l));
-      showToast("Saved");
-    } else {
-      showToast("Save failed");
-    }
-    setSaving(s => ({ ...s, [level.id]: false }));
-  }
 
   async function addBox() {
     if (!newBoxName.trim()) return;
@@ -94,6 +68,7 @@ export default function AdminHampersPage() {
       if (res.ok) {
         const { box } = await res.json();
         setBoxes(prev => [...prev, box]);
+        setBoxDrafts(d => ({ ...d, [box.id]: { name: box.name, price: String(box.price) } }));
         setNewBoxName(""); setNewBoxPrice("0"); setNewBoxImg(""); setImgFile(null);
         showToast("Box added");
       } else showToast("Failed to add box");
@@ -137,47 +112,6 @@ export default function AdminHampersPage() {
           <p className="font-display text-[0.44rem] tracking-[0.20em] uppercase text-[rgba(196,163,115,0.38)] mb-1">Admin</p>
           <h1 className="font-display text-ivory" style={{ fontSize: "1.5rem", letterSpacing: "0.06em" }}>Hamper Settings</h1>
         </div>
-
-        {/* Hamper levels */}
-        <section className="mb-10">
-          <h2 className="font-display text-[0.58rem] tracking-[0.18em] uppercase text-brass mb-4">Hamper Levels</h2>
-          <div className="flex flex-col gap-4">
-            {levels.map(level => {
-              const draft = levelDrafts[level.id] ?? { name: level.name, min_spend: String(level.min_spend) };
-              return (
-                <div key={level.id} className="bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[5px] p-4">
-                  <p className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(196,163,115,0.35)] mb-3">{level.level}</p>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label className={LABEL}>Display Name</label>
-                      <input
-                        className={FIELD}
-                        value={draft.name}
-                        onChange={e => setLevelDrafts(d => ({ ...d, [level.id]: { ...draft, name: e.target.value } }))}
-                      />
-                    </div>
-                    <div>
-                      <label className={LABEL}>Minimum Spend (₹)</label>
-                      <input
-                        type="number"
-                        className={FIELD}
-                        value={draft.min_spend}
-                        onChange={e => setLevelDrafts(d => ({ ...d, [level.id]: { ...draft, min_spend: e.target.value } }))}
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => saveLevel(level)}
-                    disabled={saving[level.id]}
-                    className="font-display text-[0.48rem] tracking-[0.14em] uppercase text-brass border border-[rgba(196,163,115,0.28)] hover:border-[rgba(196,163,115,0.50)] px-4 py-2 rounded-[3px] transition-all duration-150 disabled:opacity-40"
-                  >
-                    {saving[level.id] ? "Saving…" : "Save"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </section>
 
         {/* Box options */}
         <section>
