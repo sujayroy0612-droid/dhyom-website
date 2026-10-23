@@ -188,7 +188,7 @@ export default function HamperPricingPage() {
         {boxes.length > 0 && (
           <section className="mb-10">
             <h2 className="font-display text-[0.58rem] tracking-[0.18em] uppercase text-brass mb-4">Gift Box Prices</h2>
-            <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-sm mb-4">Set to 0 to include the box free. A non-zero price adds to the customer's hamper total.</p>
+            <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-sm mb-4">Set to 0 to include the box free. A non-zero price adds to the customer&apos;s hamper total.</p>
             <div className="flex flex-col gap-2">
               {boxes.map(box => (
                 <div key={box.id} className="bg-[#1a0a12] border border-[rgba(196,163,115,0.10)] rounded-[5px] p-3 flex items-center gap-4">
