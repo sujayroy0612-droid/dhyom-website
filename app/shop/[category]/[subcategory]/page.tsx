@@ -6,7 +6,6 @@ import { createServerClient } from "@/lib/supabase/server";
 import type { DbProduct } from "@/lib/supabase/types";
 import ProductCard from "@/components/ProductCard";
 import FadeInView from "@/components/FadeInView";
-import HamperLevelCards from "@/components/HamperLevelCards";
 
 /* ─── Static metadata ─────────────────────────────────── */
 const CATEGORY_NAMES: Record<string, string> = {
@@ -203,11 +202,22 @@ export default async function SubcategoryPage({ params }: PageProps) {
       {/* Brass rule */}
       <div className="h-px bg-gradient-to-r from-transparent via-[rgba(196,163,115,0.20)] to-transparent" />
 
-      {/* Hamper level cards — gift category only */}
+      {/* Hamper CTA — gift category only */}
       {category === "gift" && (
         <section className="px-6 pt-12 pb-0">
           <div className="max-w-6xl mx-auto">
-            <HamperLevelCards category={category} subcategory={subcategory} />
+            <div className="bg-[rgba(196,163,115,0.05)] border border-[rgba(196,163,115,0.18)] rounded-[6px] px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="font-display text-ivory" style={{ fontSize: "0.92rem", letterSpacing: "0.04em" }}>Build Your Own Hamper</p>
+                <p className="font-body font-light italic text-[rgba(245,237,224,0.42)] text-sm mt-0.5">Choose products, a gift box, and a personal message. ₹1,399 – ₹2,300</p>
+              </div>
+              <Link
+                href={`/shop/${category}/${subcategory}/hamper`}
+                className="flex-shrink-0 font-display text-[0.52rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.35)] hover:border-brass hover:bg-[rgba(196,163,115,0.08)] px-5 py-2.5 rounded-[3px] transition-all duration-200 text-center"
+              >
+                Start Building →
+              </Link>
+            </div>
           </div>
         </section>
       )}

@@ -6,8 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart, type CartItem } from "@/lib/cart/CartContext";
 
-interface HamperLevel { id: string; level: string; name: string; min_spend: number; sort_order: number; }
-interface HamperBox   { id: string; name: string; image_url: string | null; price: number; }
+interface HamperBox { id: string; name: string; image_url: string | null; price: number; }
 interface BuilderProduct {
   id: string; name: string; price: number; category: string;
   fragrance: string | null; variant_label: string | null;
@@ -18,21 +17,21 @@ interface Props {
   category:     string;
   subcategory:  string;
   occasionName: string;
-  levels:       HamperLevel[];
   boxes:        HamperBox[];
-  initialLevel: HamperLevel;
 }
+
+const MIN_SPEND = 1399;
+const MAX_SPEND = 2300;
 
 const CATEGORY_LABELS: Record<string, string> = {
   candle: "Candles", idol: "Idols", bracelet: "Bracelets",
-  gift: "Gift Sets", "pooja-essentials": "Pooja Essentials",
+  "pooja-essentials": "Pooja Essentials",
 };
 
-export default function HamperBuilder({ category, subcategory, occasionName, levels, boxes, initialLevel }: Props) {
+export default function HamperBuilder({ category, subcategory, occasionName, boxes }: Props) {
   const router = useRouter();
   const { addItems } = useCart();
 
-  const [activeLevel,  setActiveLevel]  = useState<HamperLevel>(initialLevel);
   const [selectedBox,  setSelectedBox]  = useState<HamperBox | null>(null);
   const [products,     setProducts]     = useState<BuilderProduct[]>([]);
   const [loadingProds, setLoadingProds] = useState(true);
@@ -42,7 +41,6 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
   const [hidePrices,   setHidePrices]   = useState(false);
   const [adding,       setAdding]       = useState(false);
 
-  // Load all in-stock visible products
   useEffect(() => {
     setLoadingProds(true);
     fetch("/api/hampers/products?categories=candle,idol,bracelet,pooja-essentials")
@@ -60,11 +58,10 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
   }, 0);
   const boxPrice     = selectedBox?.price ?? 0;
   const runningTotal = productTotal + boxPrice;
-  const minSpend     = activeLevel.min_spend;
-  const progress     = Math.min(100, Math.round((runningTotal / minSpend) * 100));
-  const remaining    = Math.max(0, minSpend - runningTotal);
-  const canAdd       = !!selectedBox && runningTotal >= minSpend;
-  const budgetFull   = runningTotal >= minSpend + 50;
+  const progress     = Math.min(100, Math.round((runningTotal / MIN_SPEND) * 100));
+  const remaining    = Math.max(0, MIN_SPEND - runningTotal);
+  const canAdd       = !!selectedBox && runningTotal >= MIN_SPEND;
+  const budgetFull   = runningTotal >= MAX_SPEND + 50;
 
   const categories = Array.from(new Set(products.map(p => p.category)));
   const visibleProducts = catFilter ? products.filter(p => p.category === catFilter) : [];
@@ -84,11 +81,10 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
     setAdding(true);
 
     const groupId   = crypto.randomUUID();
-    const groupName = `${occasionName} ${activeLevel.name} Hamper`;
+    const groupName = `${occasionName} Hamper`;
 
     const cartItems: CartItem[] = [];
 
-    // Box item (price = box price, could be 0)
     cartItems.push({
       kind:            "product",
       id:              selectedBox.id,
@@ -107,7 +103,6 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
       hidePrices:      hidePrices || undefined,
     });
 
-    // Chosen products
     for (const [productId, qty] of Array.from(chosen.entries())) {
       const p = products.find(pr => pr.id === productId);
       if (!p) continue;
@@ -131,7 +126,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
     addItems(cartItems);
     setAdding(false);
     router.push("/cart");
-  }, [canAdd, selectedBox, occasionName, activeLevel, subcategory, giftMessage, hidePrices, chosen, products, addItems, router]);
+  }, [canAdd, selectedBox, occasionName, subcategory, giftMessage, hidePrices, chosen, products, addItems, router]);
 
   const LABEL = "block font-display text-[0.40rem] tracking-[0.16em] uppercase text-[rgba(196,163,115,0.45)] mb-2";
   const RING  = "border border-[rgba(196,163,115,0.22)] hover:border-[rgba(196,163,115,0.45)] rounded-[4px] transition-all duration-150";
@@ -155,32 +150,14 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
             Build Your {occasionName} Hamper
           </h1>
           <p className="font-body font-light italic text-[rgba(245,237,224,0.40)] text-[0.92rem]">
-            Choose your level, select a box, then fill it with what feels right.
+            Select a box, fill it with what feels right. Min ₹{MIN_SPEND.toLocaleString("en-IN")} · Max ₹{MAX_SPEND.toLocaleString("en-IN")}
           </p>
-
-          {/* Level tabs */}
-          <div className="flex gap-2 mt-6 flex-wrap">
-            {levels.map(lvl => (
-              <button
-                key={lvl.id}
-                onClick={() => setActiveLevel(lvl)}
-                className={[
-                  "px-4 py-2 rounded-[3px] font-display text-[0.52rem] tracking-[0.14em] uppercase transition-all duration-150",
-                  activeLevel.level === lvl.level
-                    ? "bg-[rgba(196,163,115,0.14)] border border-brass text-brass"
-                    : "border border-[rgba(196,163,115,0.20)] text-[rgba(245,237,224,0.45)] hover:border-[rgba(196,163,115,0.38)] hover:text-[rgba(245,237,224,0.70)]",
-                ].join(" ")}
-              >
-                {lvl.name} · ₹{lvl.min_spend.toLocaleString("en-IN")}+
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-10 flex flex-col lg:flex-row gap-10 items-start">
 
-        {/* Left column: steps */}
+        {/* Left column */}
         <div className="flex-1 min-w-0 flex flex-col gap-10">
 
           {/* Step 1 — Box */}
@@ -209,12 +186,10 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="font-display text-ivory text-[0.80rem]" style={{ letterSpacing: "0.04em" }}>{box.name}</p>
-                      {box.price > 0 && (
-                        <p className="font-display text-brass text-[0.65rem] mt-0.5">₹{box.price.toLocaleString("en-IN")}</p>
-                      )}
-                      {box.price === 0 && (
-                        <p className="font-display text-[rgba(196,163,115,0.38)] text-[0.65rem] mt-0.5">Included</p>
-                      )}
+                      {box.price > 0
+                        ? <p className="font-display text-brass text-[0.65rem] mt-0.5">₹{box.price.toLocaleString("en-IN")}</p>
+                        : <p className="font-display text-[rgba(196,163,115,0.38)] text-[0.65rem] mt-0.5">Included</p>
+                      }
                     </div>
                     <span className={["w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors", selectedBox?.id === box.id ? "border-brass bg-brass" : "border-[rgba(196,163,115,0.30)]"].join(" ")} />
                   </button>
@@ -227,7 +202,6 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
           <div>
             <p className={LABEL}>Step 2 — Fill your hamper</p>
 
-            {/* Category filter */}
             <div className="flex gap-2 flex-wrap mb-4">
               {loadingProds ? (
                 <div className="flex items-center gap-2 py-1">
@@ -253,7 +227,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
             {budgetFull && (
               <div className="mb-4 px-3 py-2.5 rounded-[4px] bg-[rgba(196,163,115,0.07)] border border-[rgba(196,163,115,0.22)] flex items-center gap-2">
                 <span className="text-brass text-[0.7rem]">✓</span>
-                <p className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-brass">Minimum spend reached — remove an item to add more</p>
+                <p className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-brass">Maximum reached — remove an item to add more</p>
               </div>
             )}
 
@@ -343,7 +317,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
 
             <div className="px-5 pt-5 pb-4 border-b border-[rgba(196,163,115,0.08)]">
               <p className="font-display text-[0.44rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.38)] mb-1">Your Hamper</p>
-              <p className="font-display text-ivory" style={{ fontSize: "0.88rem", letterSpacing: "0.06em" }}>{activeLevel.name}</p>
+              <p className="font-display text-ivory" style={{ fontSize: "0.88rem", letterSpacing: "0.06em" }}>{occasionName}</p>
             </div>
 
             <div className="px-5 py-4 flex flex-col gap-3">
@@ -351,14 +325,13 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
               {/* Progress bar */}
               <div>
                 <div className="flex justify-between items-baseline mb-1.5">
-                  <span className="font-display text-[0.38rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.38)]">Minimum ₹{minSpend.toLocaleString("en-IN")}</span>
+                  <span className="font-display text-[0.38rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.38)]">
+                    Min ₹{MIN_SPEND.toLocaleString("en-IN")} · Max ₹{MAX_SPEND.toLocaleString("en-IN")}
+                  </span>
                   <span className="font-display text-brass text-[0.68rem]">₹{runningTotal.toLocaleString("en-IN")}</span>
                 </div>
                 <div className="w-full h-1.5 bg-[rgba(196,163,115,0.10)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-brass rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
+                  <div className="h-full bg-brass rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
                 </div>
                 {remaining > 0 && (
                   <p className="font-display text-[0.36rem] tracking-[0.10em] uppercase text-[rgba(245,237,224,0.28)] mt-1.5">
@@ -372,8 +345,8 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
                 )}
               </div>
 
-              {/* Chosen items list */}
-              {chosen.size > 0 && (
+              {/* Chosen items */}
+              {(chosen.size > 0 || selectedBox) && (
                 <div className="flex flex-col gap-1.5 border-t border-[rgba(196,163,115,0.08)] pt-3">
                   {selectedBox && (
                     <div className="flex justify-between">
