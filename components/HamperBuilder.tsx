@@ -36,7 +36,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
   const [selectedBox,  setSelectedBox]  = useState<HamperBox | null>(null);
   const [products,     setProducts]     = useState<BuilderProduct[]>([]);
   const [loadingProds, setLoadingProds] = useState(true);
-  const [catFilter,    setCatFilter]    = useState<string>("all");
+  const [catFilter,    setCatFilter]    = useState<string | null>(null);
   const [chosen,       setChosen]       = useState<Map<string, number>>(new Map());
   const [giftMessage,  setGiftMessage]  = useState("");
   const [hidePrices,   setHidePrices]   = useState(false);
@@ -65,8 +65,8 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
   const remaining   = Math.max(0, minSpend - runningTotal);
   const canAdd      = !!selectedBox && runningTotal >= minSpend;
 
-  const categories = ["all", ...Array.from(new Set(products.map(p => p.category)))];
-  const visibleProducts = catFilter === "all" ? products : products.filter(p => p.category === catFilter);
+  const categories = Array.from(new Set(products.map(p => p.category)));
+  const visibleProducts = catFilter ? products.filter(p => p.category === catFilter) : [];
 
   function setQty(productId: string, delta: number) {
     setChosen(prev => {
@@ -228,7 +228,12 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
 
             {/* Category filter */}
             <div className="flex gap-2 flex-wrap mb-4">
-              {categories.map(cat => (
+              {loadingProds ? (
+                <div className="flex items-center gap-2 py-1">
+                  <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.20)] border-t-brass animate-spin" />
+                  <span className="font-body font-light text-[rgba(245,237,224,0.38)] text-sm">Loading…</span>
+                </div>
+              ) : categories.map(cat => (
                 <button
                   key={cat}
                   onClick={() => setCatFilter(cat)}
@@ -239,18 +244,15 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
                       : "border border-[rgba(196,163,115,0.16)] text-[rgba(245,237,224,0.38)] hover:border-[rgba(196,163,115,0.30)]",
                   ].join(" ")}
                 >
-                  {cat === "all" ? "All" : CATEGORY_LABELS[cat] ?? cat}
+                  {CATEGORY_LABELS[cat] ?? cat}
                 </button>
               ))}
             </div>
 
-            {loadingProds ? (
-              <div className="flex items-center gap-2 py-6">
-                <div className="w-4 h-4 rounded-full border-2 border-[rgba(196,163,115,0.20)] border-t-brass animate-spin" />
-                <span className="font-body font-light text-[rgba(245,237,224,0.38)] text-sm">Loading products…</span>
-              </div>
+            {!catFilter ? (
+              <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-sm py-4">Select a category above to browse products.</p>
             ) : visibleProducts.length === 0 ? (
-              <p className="font-body font-light text-[rgba(245,237,224,0.30)] text-sm py-4">No products found in this category.</p>
+              <p className="font-body font-light text-[rgba(245,237,224,0.30)] text-sm py-4">No products available in this category.</p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {visibleProducts.map(p => {
