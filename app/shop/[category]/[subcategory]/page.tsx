@@ -222,58 +222,60 @@ export default async function SubcategoryPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Product grid */}
-      <section className="px-6 py-20">
-        <div className="max-w-6xl mx-auto">
+      {/* Product grid — hidden for gift category (builder handles it) */}
+      {category !== "gift" && (
+        <section className="px-6 py-20">
+          <div className="max-w-6xl mx-auto">
 
-          {error && (
-            <div className="text-center py-20">
-              <p className="font-display text-[0.64rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.40)] mb-4">
-                Something went wrong
-              </p>
-              <p className="font-body font-light italic text-[rgba(245,237,224,0.32)] text-base">
-                We could not load this collection. Please try again shortly.
-              </p>
-            </div>
-          )}
+            {error && (
+              <div className="text-center py-20">
+                <p className="font-display text-[0.64rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.40)] mb-4">
+                  Something went wrong
+                </p>
+                <p className="font-body font-light italic text-[rgba(245,237,224,0.32)] text-base">
+                  We could not load this collection. Please try again shortly.
+                </p>
+              </div>
+            )}
 
-          {!error && products.length === 0 && (
-            <div className="text-center py-24">
-              <p className="font-display text-[0.64rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.40)] mb-5">
-                Nothing here yet
-              </p>
-              <p className="font-body font-light italic text-[rgba(245,237,224,0.32)] text-base max-w-xs mx-auto leading-relaxed">
-                This collection is being curated. Return soon — something sacred
-                is on its way.
-              </p>
-            </div>
-          )}
+            {!error && products.length === 0 && (
+              <div className="text-center py-24">
+                <p className="font-display text-[0.64rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.40)] mb-5">
+                  Nothing here yet
+                </p>
+                <p className="font-body font-light italic text-[rgba(245,237,224,0.32)] text-base max-w-xs mx-auto leading-relaxed">
+                  This collection is being curated. Return soon — something sacred
+                  is on its way.
+                </p>
+              </div>
+            )}
 
-          {!error && products.length > 0 && (
-            <div
-              className="scroll-strip flex gap-5 overflow-x-auto pb-4 -mx-6 px-6"
-              style={{ scrollbarWidth: "none" }}
-            >
-              {products.map((product) => (
-                <div key={product.id} className="flex-shrink-0 w-64 md:w-72">
-                  <ProductCard
-                    id={product.id}
-                    slug={product.slug}
-                    name={product.name}
-                    category={product.category}
-                    subcategorySlug={getSubcategorySlug(product)}
-                    label={buildLabel(product)}
-                    price={product.price}
-                    description={product.short_description || product.description || undefined}
-                    imageUrl={product.image_url || undefined}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+            {!error && products.length > 0 && (
+              <div
+                className="scroll-strip flex gap-5 overflow-x-auto pb-4 -mx-6 px-6"
+                style={{ scrollbarWidth: "none" }}
+              >
+                {products.map((product) => (
+                  <div key={product.id} className="flex-shrink-0 w-64 md:w-72">
+                    <ProductCard
+                      id={product.id}
+                      slug={product.slug}
+                      name={product.name}
+                      category={product.category}
+                      subcategorySlug={getSubcategorySlug(product)}
+                      label={buildLabel(product)}
+                      price={product.price}
+                      description={product.short_description || product.description || undefined}
+                      imageUrl={product.image_url || undefined}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
 
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
     </div>
   );
