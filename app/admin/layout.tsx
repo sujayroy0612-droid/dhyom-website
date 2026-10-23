@@ -9,7 +9,6 @@ const NAV_MAIN = [
   { label: "Dashboard",    href: "/admin",                     icon: "▦" },
   { label: "Orders",       href: "/admin/orders",              icon: "≡" },
   { label: "Products",     href: "/admin/products",            icon: "⊞" },
-  { label: "Hampers",      href: "/admin/hampers",             icon: "◻" },
   { label: "Hamper Pricing", href: "/admin/hamper-pricing",    icon: "%" },
   { label: "Shipping",      href: "/admin/shipping",            icon: "⬡" },
   { label: "Offline Sales", href: "/admin/offline-sales",      icon: "◉" },
