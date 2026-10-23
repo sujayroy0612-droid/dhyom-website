@@ -58,12 +58,13 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
     const p = products.find(pr => pr.id === id);
     return sum + (p?.price ?? 0) * qty;
   }, 0);
-  const boxPrice    = selectedBox?.price ?? 0;
+  const boxPrice     = selectedBox?.price ?? 0;
   const runningTotal = productTotal + boxPrice;
-  const minSpend    = activeLevel.min_spend;
-  const progress    = Math.min(100, Math.round((runningTotal / minSpend) * 100));
-  const remaining   = Math.max(0, minSpend - runningTotal);
-  const canAdd      = !!selectedBox && runningTotal >= minSpend;
+  const minSpend     = activeLevel.min_spend;
+  const progress     = Math.min(100, Math.round((runningTotal / minSpend) * 100));
+  const remaining    = Math.max(0, minSpend - runningTotal);
+  const canAdd       = !!selectedBox && runningTotal >= minSpend;
+  const budgetFull   = runningTotal >= minSpend;
 
   const categories = Array.from(new Set(products.map(p => p.category)));
   const visibleProducts = catFilter ? products.filter(p => p.category === catFilter) : [];
@@ -249,6 +250,13 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
               ))}
             </div>
 
+            {budgetFull && (
+              <div className="mb-4 px-3 py-2.5 rounded-[4px] bg-[rgba(196,163,115,0.07)] border border-[rgba(196,163,115,0.22)] flex items-center gap-2">
+                <span className="text-brass text-[0.7rem]">✓</span>
+                <p className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-brass">Minimum spend reached — remove an item to add more</p>
+              </div>
+            )}
+
             {!catFilter ? (
               <p className="font-body font-light text-[rgba(245,237,224,0.28)] text-sm py-4">Select a category above to browse products.</p>
             ) : visibleProducts.length === 0 ? (
@@ -276,7 +284,13 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
                           <button
                             type="button"
                             onClick={() => setQty(p.id, 1)}
-                            className="w-full text-center font-display text-[0.44rem] tracking-[0.14em] uppercase text-brass border border-[rgba(196,163,115,0.28)] hover:border-[rgba(196,163,115,0.50)] hover:bg-[rgba(196,163,115,0.05)] py-1.5 rounded-[3px] transition-all duration-150"
+                            disabled={budgetFull}
+                            className={[
+                              "w-full text-center font-display text-[0.44rem] tracking-[0.14em] uppercase py-1.5 rounded-[3px] transition-all duration-150",
+                              budgetFull
+                                ? "text-[rgba(245,237,224,0.18)] border border-[rgba(245,237,224,0.08)] cursor-not-allowed"
+                                : "text-brass border border-[rgba(196,163,115,0.28)] hover:border-[rgba(196,163,115,0.50)] hover:bg-[rgba(196,163,115,0.05)]",
+                            ].join(" ")}
                           >
                             Add
                           </button>
@@ -284,7 +298,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
                           <div className="flex items-center border border-[rgba(196,163,115,0.30)] rounded-[3px] overflow-hidden w-full justify-between">
                             <button type="button" onClick={() => setQty(p.id, -1)} className="w-8 h-7 flex items-center justify-center text-brass font-display hover:bg-[rgba(196,163,115,0.06)] transition-colors">−</button>
                             <span className="font-display text-ivory text-sm select-none">{qty}</span>
-                            <button type="button" onClick={() => setQty(p.id, 1)} disabled={qty >= 10} className="w-8 h-7 flex items-center justify-center text-brass font-display hover:bg-[rgba(196,163,115,0.06)] disabled:opacity-30 transition-colors">+</button>
+                            <button type="button" onClick={() => setQty(p.id, 1)} disabled={budgetFull || qty >= 10} className="w-8 h-7 flex items-center justify-center text-brass font-display hover:bg-[rgba(196,163,115,0.06)] disabled:opacity-30 transition-colors">+</button>
                           </div>
                         )}
                       </div>
