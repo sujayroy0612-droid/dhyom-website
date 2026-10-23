@@ -22,32 +22,27 @@ async function verifyAdmin(req: NextRequest): Promise<boolean> {
 export async function GET(req: NextRequest) {
   if (!await verifyAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const sb = adminClient();
-  const { data, error } = await sb.from("hamper_boxes").select("id,name,image_url").eq("is_active", true).order("name");
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ boxes: data });
-}
-
-export async function POST(req: NextRequest) {
-  if (!await verifyAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const body = await req.json();
-  const { product_id, box_id, extra_price } = body;
-  if (!product_id || !box_id) return NextResponse.json({ error: "product_id and box_id required" }, { status: 400 });
-  const sb = adminClient();
   const { data, error } = await sb
-    .from("hamper_product_boxes")
-    .upsert({ product_id, box_id, extra_price: extra_price ?? 0 }, { onConflict: "product_id,box_id" })
-    .select()
-    .single();
+    .from("products")
+    .select("id,name,category,price,cogs,hamper_price")
+    .in("category", ["candle", "idol", "bracelet", "pooja-essentials"])
+    .eq("is_visible", true)
+    .order("category")
+    .order("name");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ link: data });
+  return NextResponse.json({ products: data ?? [] });
 }
 
-export async function DELETE(req: NextRequest) {
+export async function PATCH(req: NextRequest) {
   if (!await verifyAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  const { cogs, hamper_price } = await req.json();
   const sb = adminClient();
-  const { error } = await sb.from("hamper_product_boxes").delete().eq("id", id);
+  const { error } = await sb
+    .from("products")
+    .update({ cogs, hamper_price })
+    .eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

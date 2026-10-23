@@ -8,7 +8,7 @@ export async function GET() {
 
   const [levelsRes, boxesRes] = await Promise.all([
     sb.from("hamper_config").select("id,level,name,min_spend,sort_order").order("sort_order"),
-    sb.from("hamper_boxes").select("id,name,image_url,price").order("name"),
+    sb.from("hamper_boxes").select("id,name,image_url,price,stock,is_active").eq("is_active", true).order("name"),
   ]);
 
   return NextResponse.json({
