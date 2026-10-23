@@ -21,6 +21,8 @@ export async function GET(req: NextRequest) {
     .in("category", categories)
     .eq("is_visible", true)
     .gt("stock", 0)
+    .not("hamper_price", "is", null)
+    .gt("hamper_price", 0)
     .order("category")
     .order("name");
 
