@@ -8,6 +8,8 @@ interface Product {
   cogs: number | null; hamper_price: number | null;
 }
 
+interface HamperBox { id: string; name: string; price: number; }
+
 interface HamperSettings {
   min_total: number; max_total: number;
   gst_rate: number; shipping_allowance: number;
@@ -32,6 +34,9 @@ export default function HamperPricingPage() {
   const [settingDraft,  setSettingDraft]  = useState<HamperSettings | null>(null);
   const [saving,        setSaving]        = useState<Record<string, boolean>>({});
   const [savingSettings,setSavingSettings]= useState(false);
+  const [boxes,         setBoxes]         = useState<HamperBox[]>([]);
+  const [boxPriceDrafts,setBoxPriceDrafts]= useState<Record<string, string>>({});
+  const [savingBox,     setSavingBox]     = useState<Record<string, boolean>>({});
   const [toast,         setToast]         = useState("");
 
   function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(""), 4000); }
@@ -43,9 +48,10 @@ export default function HamperPricingPage() {
 
   const load = useCallback(async () => {
     const token = await getToken();
-    const [prodRes, settRes] = await Promise.all([
+    const [prodRes, settRes, boxRes] = await Promise.all([
       fetch("/api/admin/hamper-pricing/products", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
       fetch("/api/hampers/settings").then(r => r.json()),
+      fetch("/api/hampers/builder-config").then(r => r.json()),
     ]);
     const prods: Product[] = prodRes.products ?? [];
     setProducts(prods);
@@ -55,6 +61,11 @@ export default function HamperPricingPage() {
     const s: HamperSettings = settRes.settings ?? null;
     setSettings(s);
     setSettingDraft(s ? { ...s } : null);
+    const bxList: HamperBox[] = boxRes.boxes ?? [];
+    setBoxes(bxList);
+    const bxDrafts: Record<string, string> = {};
+    for (const b of bxList) bxDrafts[b.id] = String(b.price);
+    setBoxPriceDrafts(bxDrafts);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -81,6 +92,21 @@ export default function HamperPricingPage() {
       showToast("Saved");
     } else showToast("Save failed");
     setSaving(s => ({ ...s, [p.id]: false }));
+  }
+
+  async function saveBoxPrice(box: HamperBox) {
+    setSavingBox(s => ({ ...s, [box.id]: true }));
+    const token = await getToken();
+    const res = await fetch(`/api/admin/hampers/boxes?id=${box.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name: box.name, price: Number(boxPriceDrafts[box.id] ?? 0) }),
+    });
+    if (res.ok) {
+      setBoxes(prev => prev.map(b => b.id === box.id ? { ...b, price: Number(boxPriceDrafts[box.id] ?? 0) } : b));
+      showToast("Box price saved");
+    } else showToast("Save failed");
+    setSavingBox(s => ({ ...s, [box.id]: false }));
   }
 
   async function saveSettings() {
@@ -154,6 +180,35 @@ export default function HamperPricingPage() {
               <button onClick={saveSettings} disabled={savingSettings} className={BTN}>
                 {savingSettings ? "Saving…" : "Save Settings"}
               </button>
+            </div>
+          </section>
+        )}
+
+        {/* Gift Box Prices */}
+        {boxes.length > 0 && (
+          <section className="mb-10">
+            <h2 className="font-display text-[0.58rem] tracking-[0.18em] uppercase text-brass mb-4">Gift Box Prices</h2>
+            <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-sm mb-4">Set to 0 to include the box free. A non-zero price adds to the customer's hamper total.</p>
+            <div className="flex flex-col gap-2">
+              {boxes.map(box => (
+                <div key={box.id} className="bg-[#1a0a12] border border-[rgba(196,163,115,0.10)] rounded-[5px] p-3 flex items-center gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-display text-ivory text-[0.78rem]" style={{ letterSpacing: "0.03em" }}>{box.name}</p>
+                  </div>
+                  <div className="w-36">
+                    <label className={LABEL}>Price (₹, 0 = Included)</label>
+                    <input
+                      type="number"
+                      className={FIELD}
+                      value={boxPriceDrafts[box.id] ?? "0"}
+                      onChange={e => setBoxPriceDrafts(d => ({ ...d, [box.id]: e.target.value }))}
+                    />
+                  </div>
+                  <button onClick={() => saveBoxPrice(box)} disabled={savingBox[box.id]} className={BTN}>
+                    {savingBox[box.id] ? "…" : "Save"}
+                  </button>
+                </div>
+              ))}
             </div>
           </section>
         )}
