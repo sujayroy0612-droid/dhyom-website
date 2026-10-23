@@ -79,6 +79,11 @@ const SUBCATEGORIES: Record<
       title: "Wedding",
       description: "For the beginning of a shared sacred life.",
     },
+    {
+      slug: "birthday",
+      title: "Birthday Gifting",
+      description: "A gift that carries intention, not just occasion.",
+    },
   ],
   "pooja-essentials": [
     {
