@@ -359,7 +359,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
                     <div className="flex justify-between">
                       <span className="font-display text-[rgba(196,163,115,0.50)] text-[0.68rem]" style={{ letterSpacing: "0.04em" }}>Box · {selectedBox.name}</span>
                       <span className="font-display text-[rgba(245,237,224,0.38)] text-[0.68rem]">
-                        {selectedBox.price > 0 ? `₹${selectedBox.price.toLocaleString("en-IN")}` : "—"}
+                        {selectedBox.price > 0 ? `₹${selectedBox.price.toLocaleString("en-IN")}` : "Included"}
                       </span>
                     </div>
                   )}
