@@ -6,31 +6,37 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart, type CartItem } from "@/lib/cart/CartContext";
 
-interface HamperBox { id: string; name: string; image_url: string | null; price: number; }
+interface HamperBox { id: string; name: string; image_url: string | null; price: number; stock: number | null; }
 interface BuilderProduct {
-  id: string; name: string; price: number; category: string;
-  fragrance: string | null; variant_label: string | null;
+  id: string; name: string; price: number; hamper_price: number | null;
+  category: string; fragrance: string | null; variant_label: string | null;
   image_url: string | null; stock: number;
 }
+interface HamperSettings { min_total: number; max_total: number; }
 
 interface Props {
   category:     string;
   subcategory:  string;
   occasionName: string;
   boxes:        HamperBox[];
+  settings:     HamperSettings;
 }
-
-const MIN_SPEND = 1399;
-const MAX_SPEND = 2300;
 
 const CATEGORY_LABELS: Record<string, string> = {
   candle: "Candles", idol: "Idols", bracelet: "Bracelets",
   "pooja-essentials": "Pooja Essentials",
 };
 
-export default function HamperBuilder({ category, subcategory, occasionName, boxes }: Props) {
+function hamperPrice(p: BuilderProduct): number {
+  return p.hamper_price ?? p.price;
+}
+
+export default function HamperBuilder({ category, subcategory, occasionName, boxes, settings }: Props) {
   const router = useRouter();
   const { addItems } = useCart();
+
+  const MIN_SPEND = settings.min_total;
+  const MAX_SPEND = settings.max_total;
 
   const [selectedBox,  setSelectedBox]  = useState<HamperBox | null>(null);
   const [products,     setProducts]     = useState<BuilderProduct[]>([]);
@@ -54,7 +60,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
 
   const productTotal = Array.from(chosen.entries()).reduce((sum, [id, qty]) => {
     const p = products.find(pr => pr.id === id);
-    return sum + (p?.price ?? 0) * qty;
+    return sum + hamperPrice(p!) * qty;
   }, 0);
   const boxPrice     = selectedBox?.price ?? 0;
   const runningTotal = productTotal + boxPrice;
@@ -112,7 +118,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
         id:              p.id,
         cartItemId:      crypto.randomUUID(),
         name:            p.name,
-        price:           p.price,
+        price:           hamperPrice(p),
         quantity:        qty,
         category:        p.category,
         subcategorySlug: subcategory,
@@ -238,7 +244,8 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {visibleProducts.map(p => {
-                  const qty = chosen.get(p.id) ?? 0;
+                  const qty   = chosen.get(p.id) ?? 0;
+                  const hprice = hamperPrice(p);
                   const label = [p.fragrance, p.variant_label].filter(Boolean).join(" · ");
                   return (
                     <div key={p.id} className={[RING, "p-3 flex flex-col gap-2", qty > 0 ? "border-[rgba(196,163,115,0.40)] bg-[rgba(196,163,115,0.04)]" : ""].join(" ")}>
@@ -251,7 +258,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
                       <div className="flex-1 min-w-0">
                         <p className="font-display text-ivory text-[0.72rem] leading-tight" style={{ letterSpacing: "0.04em" }}>{p.name}</p>
                         {label && <p className="font-display text-[0.40rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.42)] mt-0.5">{label}</p>}
-                        <p className="font-display text-brass text-[0.68rem] mt-1">₹{p.price.toLocaleString("en-IN")}</p>
+                        <p className="font-display text-brass text-[0.68rem] mt-1">₹{hprice.toLocaleString("en-IN")}</p>
                       </div>
                       <div className="flex items-center justify-between mt-auto">
                         {qty === 0 ? (
@@ -359,10 +366,11 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
                   {Array.from(chosen.entries()).map(([id, qty]) => {
                     const p = products.find(pr => pr.id === id);
                     if (!p) return null;
+                    const hprice = hamperPrice(p);
                     return (
                       <div key={id} className="flex justify-between gap-2">
                         <span className="font-display text-[rgba(245,237,224,0.55)] text-[0.68rem] truncate" style={{ letterSpacing: "0.02em" }}>{qty}× {p.name}</span>
-                        <span className="font-display text-[rgba(245,237,224,0.38)] text-[0.68rem] flex-shrink-0">₹{(p.price * qty).toLocaleString("en-IN")}</span>
+                        <span className="font-display text-[rgba(245,237,224,0.38)] text-[0.68rem] flex-shrink-0">₹{(hprice * qty).toLocaleString("en-IN")}</span>
                       </div>
                     );
                   })}

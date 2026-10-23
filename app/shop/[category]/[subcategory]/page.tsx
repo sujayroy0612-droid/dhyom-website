@@ -212,7 +212,7 @@ export default async function SubcategoryPage({ params }: PageProps) {
                 <p className="font-body font-light italic text-[rgba(245,237,224,0.42)] text-sm mt-0.5">Choose products, a gift box, and a personal message. ₹1,399 – ₹2,300</p>
               </div>
               <Link
-                href={`/shop/${category}/${subcategory}/hamper`}
+                href={`/shop/${category}/${subcategory}/build-your-own-hamper`}
                 className="flex-shrink-0 font-display text-[0.52rem] tracking-[0.18em] uppercase text-brass border border-[rgba(196,163,115,0.35)] hover:border-brass hover:bg-[rgba(196,163,115,0.08)] px-5 py-2.5 rounded-[3px] transition-all duration-200 text-center"
               >
                 Start Building →
