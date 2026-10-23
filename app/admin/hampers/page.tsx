@@ -25,6 +25,7 @@ export default function AdminHampersPage() {
   const [levels,      setLevels]      = useState<HamperLevel[]>([]);
   const [boxes,       setBoxes]       = useState<HamperBox[]>([]);
   const [levelDrafts, setLevelDrafts] = useState<Record<string, { name: string; min_spend: string }>>({});
+  const [boxDrafts,   setBoxDrafts]   = useState<Record<string, { name: string; price: string }>>({});
   const [saving,      setSaving]      = useState<Record<string, boolean>>({});
   const [toast,       setToast]       = useState("");
 
@@ -52,6 +53,9 @@ export default function AdminHampersPage() {
         const drafts: Record<string, { name: string; min_spend: string }> = {};
         for (const l of lvls) drafts[l.id] = { name: l.name, min_spend: String(l.min_spend) };
         setLevelDrafts(drafts);
+        const bxDrafts: Record<string, { name: string; price: string }> = {};
+        for (const b of (d.boxes ?? [])) bxDrafts[b.id] = { name: b.name, price: String(b.price) };
+        setBoxDrafts(bxDrafts);
       });
   }, []);
 
@@ -95,6 +99,23 @@ export default function AdminHampersPage() {
       } else showToast("Failed to add box");
     } catch { showToast("Upload error"); }
     setAddingBox(false);
+  }
+
+  async function saveBox(box: HamperBox) {
+    const draft = boxDrafts[box.id];
+    if (!draft) return;
+    setSaving(s => ({ ...s, [box.id]: true }));
+    const token = await getToken();
+    const res = await fetch(`/api/admin/hampers/boxes?id=${box.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ name: draft.name.trim(), price: Number(draft.price) || 0 }),
+    });
+    if (res.ok) {
+      setBoxes(prev => prev.map(b => b.id === box.id ? { ...b, name: draft.name.trim(), price: Number(draft.price) || 0 } : b));
+      showToast("Box saved");
+    } else showToast("Save failed");
+    setSaving(s => ({ ...s, [box.id]: false }));
   }
 
   async function deleteBox(id: string) {
@@ -167,28 +188,53 @@ export default function AdminHampersPage() {
             {boxes.length === 0 && (
               <p className="font-body font-light text-[rgba(245,237,224,0.30)] text-sm">No boxes yet. Add one below.</p>
             )}
-            {boxes.map(box => (
-              <div key={box.id} className="bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[5px] p-3 flex items-center gap-4">
-                {box.image_url && (
-                  <div className="w-12 h-12 flex-shrink-0 relative rounded-[3px] overflow-hidden bg-[#270b1b]">
-                    <Image src={box.image_url} alt={box.name} fill className="object-cover" sizes="48px" />
+            {boxes.map(box => {
+              const draft = boxDrafts[box.id] ?? { name: box.name, price: String(box.price) };
+              return (
+                <div key={box.id} className="bg-[#1a0a12] border border-[rgba(196,163,115,0.12)] rounded-[5px] p-3 flex items-center gap-4">
+                  {box.image_url && (
+                    <div className="w-12 h-12 flex-shrink-0 relative rounded-[3px] overflow-hidden bg-[#270b1b]">
+                      <Image src={box.image_url} alt={box.name} fill className="object-cover" sizes="48px" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 grid grid-cols-2 gap-2">
+                    <div>
+                      <label className={LABEL}>Name</label>
+                      <input
+                        className={FIELD}
+                        value={draft.name}
+                        onChange={e => setBoxDrafts(d => ({ ...d, [box.id]: { ...draft, name: e.target.value } }))}
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL}>Price (₹)</label>
+                      <input
+                        type="number"
+                        className={FIELD}
+                        value={draft.price}
+                        onChange={e => setBoxDrafts(d => ({ ...d, [box.id]: { ...draft, price: e.target.value } }))}
+                      />
+                    </div>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-display text-ivory text-[0.80rem]" style={{ letterSpacing: "0.04em" }}>{box.name}</p>
-                  <p className="font-display text-brass text-[0.62rem]">
-                    {box.price > 0 ? `₹${box.price.toLocaleString("en-IN")}` : "Included (₹0)"}
-                  </p>
+                  <div className="flex flex-col gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => saveBox(box)}
+                      disabled={saving[box.id]}
+                      className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-brass border border-[rgba(196,163,115,0.28)] hover:border-[rgba(196,163,115,0.50)] px-3 py-1.5 rounded-[3px] transition-all duration-150 disabled:opacity-40"
+                    >
+                      {saving[box.id] ? "…" : "Save"}
+                    </button>
+                    <button
+                      onClick={() => deleteBox(box.id)}
+                      disabled={saving[box.id]}
+                      className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-[rgba(200,80,80,0.60)] hover:text-[rgba(200,80,80,0.85)] border border-[rgba(200,80,80,0.20)] hover:border-[rgba(200,80,80,0.45)] px-3 py-1.5 rounded-[3px] transition-all duration-150 disabled:opacity-40"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => deleteBox(box.id)}
-                  disabled={saving[box.id]}
-                  className="font-display text-[0.44rem] tracking-[0.12em] uppercase text-[rgba(200,80,80,0.60)] hover:text-[rgba(200,80,80,0.85)] border border-[rgba(200,80,80,0.20)] hover:border-[rgba(200,80,80,0.45)] px-3 py-1.5 rounded-[3px] transition-all duration-150 disabled:opacity-40 flex-shrink-0"
-                >
-                  {saving[box.id] ? "…" : "Delete"}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Add new box */}

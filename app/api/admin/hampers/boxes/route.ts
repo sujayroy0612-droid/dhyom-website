@@ -33,6 +33,17 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ box: data });
 }
 
+export async function PATCH(req: NextRequest) {
+  if (!await verifyAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const id = req.nextUrl.searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  const { name, price } = await req.json();
+  const sb = adminClient();
+  const { error } = await sb.from("hamper_boxes").update({ name, price }).eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(req: NextRequest) {
   if (!await verifyAdmin(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const id = req.nextUrl.searchParams.get("id");
