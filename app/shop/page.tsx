@@ -38,14 +38,6 @@ const CATEGORIES = [
     description: "Curated boxes for the festivals and occasions that mark a sacred year.",
   },
   {
-    slug:         "birthday-gift",
-    href:         "/shop/gift/birthday",
-    assetKey:     "category_birthday_gift",
-    title:        "Birthday Gifting",
-    description:  "Build a hamper that feels personal — for the one who deserves more than a card.",
-    visibleWhen:  "gift",
-  },
-  {
     slug:        "pooja-essentials",
     href:        "/shop/pooja-essentials",
     assetKey:    "category_pooja_essentials",
