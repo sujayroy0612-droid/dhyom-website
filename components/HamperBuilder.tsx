@@ -45,7 +45,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
   // Load all in-stock visible products
   useEffect(() => {
     setLoadingProds(true);
-    fetch("/api/hampers/products")
+    fetch("/api/hampers/products?categories=candle,idol,bracelet,pooja-essentials,gift")
       .then(r => r.json())
       .then((d: { products?: BuilderProduct[] }) => {
         setProducts(d.products ?? []);
