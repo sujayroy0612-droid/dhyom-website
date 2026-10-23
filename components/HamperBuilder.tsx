@@ -45,7 +45,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
   // Load all in-stock visible products
   useEffect(() => {
     setLoadingProds(true);
-    fetch("/api/hampers/products?categories=candle,idol,bracelet,pooja-essentials,gift")
+    fetch("/api/hampers/products?categories=candle,idol,bracelet,pooja-essentials")
       .then(r => r.json())
       .then((d: { products?: BuilderProduct[] }) => {
         setProducts(d.products ?? []);
@@ -64,7 +64,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, lev
   const progress     = Math.min(100, Math.round((runningTotal / minSpend) * 100));
   const remaining    = Math.max(0, minSpend - runningTotal);
   const canAdd       = !!selectedBox && runningTotal >= minSpend;
-  const budgetFull   = runningTotal >= minSpend;
+  const budgetFull   = runningTotal >= minSpend + 50;
 
   const categories = Array.from(new Set(products.map(p => p.category)));
   const visibleProducts = catFilter ? products.filter(p => p.category === catFilter) : [];
