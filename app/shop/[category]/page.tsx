@@ -174,28 +174,28 @@ export default function CategoryPage({ params }: PageProps) {
       </section>
 
       {/* Subcategory tiles */}
-      <section className="px-6 py-16">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <section className="px-6 py-10">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {subcategories.map((sub) => (
             <Link
               key={sub.slug}
               href={`/shop/${category}/${sub.slug}`}
-              className="group bg-damson border border-[rgba(196,163,115,0.14)] rounded-[6px] flex flex-col justify-between p-8 min-h-[180px] hover:border-[rgba(196,163,115,0.50)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.40)] hover:-translate-y-0.5 transition-all duration-300"
+              className="group bg-damson border border-[rgba(196,163,115,0.14)] rounded-[5px] flex flex-col justify-between p-4 hover:border-[rgba(196,163,115,0.50)] hover:shadow-[0_8px_24px_rgba(15,5,8,0.35)] hover:-translate-y-0.5 transition-all duration-300"
             >
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5">
                 <h2
                   className="font-display text-ivory leading-tight"
-                  style={{ fontSize: "1.05rem", letterSpacing: "0.05em" }}
+                  style={{ fontSize: "0.88rem", letterSpacing: "0.04em" }}
                 >
                   {sub.title}
                 </h2>
-                <p className="font-body font-light italic text-[rgba(245,237,224,0.48)] text-sm leading-relaxed">
+                <p className="font-body font-light italic text-[rgba(245,237,224,0.42)] text-xs leading-relaxed">
                   {sub.description}
                 </p>
               </div>
-              <div className="flex items-center gap-2 mt-6 font-display text-[0.58rem] tracking-[0.2em] uppercase text-[rgba(196,163,115,0.45)] group-hover:text-brass transition-colors duration-200">
+              <div className="flex items-center gap-1.5 mt-3 font-display text-[0.50rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.45)] group-hover:text-brass transition-colors duration-200">
                 View
-                <svg width="12" height="10" viewBox="0 0 12 10" fill="none" stroke="currentColor" strokeWidth="1.2">
+                <svg width="10" height="8" viewBox="0 0 12 10" fill="none" stroke="currentColor" strokeWidth="1.2">
                   <path d="M1 5h10M7 1l4 4-4 4" />
                 </svg>
               </div>
