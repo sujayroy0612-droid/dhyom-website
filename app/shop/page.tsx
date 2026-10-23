@@ -11,30 +11,43 @@ export const metadata = { title: "Shop — Dhyom" };
 const CATEGORIES = [
   {
     slug:        "candle",
+    href:        "/shop/candle",
     assetKey:    "category_candle",
     title:       "Candles",
     description: "Two collections of scented wax — Nakshatra in glass, Mandala in tin.",
   },
   {
     slug:        "idol",
+    href:        "/shop/idol",
     assetKey:    "category_idol",
     title:       "Idols",
     description: "Ganesha and Lakshmi, cast for the home altar.",
   },
   {
     slug:        "bracelet",
+    href:        "/shop/bracelet",
     assetKey:    "category_bracelet",
     title:       "Spiritual Bracelets",
     description: "Rudraksh and rose quartz, hand-knotted for daily practice.",
   },
   {
     slug:        "gift",
+    href:        "/shop/gift",
     assetKey:    "category_gift",
     title:       "Gift Sets",
     description: "Curated boxes for the festivals and occasions that mark a sacred year.",
   },
   {
+    slug:         "birthday-gift",
+    href:         "/shop/gift/birthday",
+    assetKey:     "category_birthday_gift",
+    title:        "Birthday Gifting",
+    description:  "Build a hamper that feels personal — for the one who deserves more than a card.",
+    visibleWhen:  "gift",
+  },
+  {
     slug:        "pooja-essentials",
+    href:        "/shop/pooja-essentials",
     assetKey:    "category_pooja_essentials",
     title:       "Pooja Essentials",
     description: "Incense, ghee batti, camphor — the foundational items of daily ritual.",
@@ -49,7 +62,7 @@ export default async function ShopPage() {
   ]);
   const visibleCatSlugs = new Set((catVisRes.data ?? []).map((r) => r.category as string));
   const visibleCategories = visibleCatSlugs.size > 0
-    ? CATEGORIES.filter((c) => visibleCatSlugs.has(c.slug))
+    ? CATEGORIES.filter((c) => visibleCatSlugs.has("visibleWhen" in c ? (c.visibleWhen as string) : c.slug))
     : CATEGORIES;
 
   return (
@@ -87,7 +100,7 @@ export default async function ShopPage() {
             return (
               <Link
                 key={cat.slug}
-                href={`/shop/${cat.slug}`}
+                href={cat.href}
                 className="group bg-damson border border-[rgba(196,163,115,0.14)] rounded-[6px] overflow-hidden flex flex-col hover:border-[rgba(196,163,115,0.50)] hover:shadow-[0_12px_40px_rgba(15,5,8,0.40)] hover:-translate-y-0.5 transition-all duration-300 h-full"
               >
                 {/* Image — shown when asset exists, placeholder otherwise */}
