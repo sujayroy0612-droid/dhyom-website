@@ -18,3 +18,17 @@ export function MetaPixelPageView() {
   }, [pathname]);
   return null;
 }
+
+export function MetaViewContent({ productId, price }: { productId: string; price: number }) {
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.fbq) {
+      window.fbq("track", "ViewContent", {
+        content_ids: [productId],
+        content_type: "product",
+        value: price,
+        currency: "INR",
+      });
+    }
+  }, [productId, price]);
+  return null;
+}

@@ -384,12 +384,15 @@ export default function CheckoutPage() {
           }
           trackEvent("purchase_completed");
           if (typeof window !== "undefined" && window.fbq) {
+            const contentIds = (base.items as Array<{ id: string; isHamperBox?: boolean }>)
+              .filter(i => !i.isHamperBox)
+              .map(i => i.id);
             window.fbq("track", "Purchase", {
               value: base.total,
               currency: "INR",
-              content_ids: [orderNumber],
+              content_ids: contentIds,
               content_type: "product",
-            });
+            }, { eventID: response.razorpay_payment_id });
           }
           orderPlacedRef.current = true;
           clearCart();

@@ -1,6 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createHmac } from "crypto";
+import { createHmac, createHash } from "crypto";
+
+function sha256hex(value: string): string {
+  return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+}
+
+async function sendMetaCAPIEvent(opts: {
+  eventId:    string;
+  eventTime:  number;
+  value:      number;
+  contentIds: string[];
+  email?:     string | null;
+  phone?:     string | null;
+}): Promise<void> {
+  const pixelId     = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+  const accessToken = process.env.META_CAPI_ACCESS_TOKEN;
+  if (!pixelId || !accessToken) return;
+
+  const userData: Record<string, string> = {};
+  if (opts.email) userData.em = sha256hex(opts.email);
+  if (opts.phone) {
+    const digits     = opts.phone.replace(/\D/g, "");
+    const normalized = digits.startsWith("91") ? digits : `91${digits}`;
+    userData.ph      = sha256hex(normalized);
+  }
+
+  const payload = {
+    data: [{
+      event_name:        "Purchase",
+      event_time:        opts.eventTime,
+      event_id:          opts.eventId,
+      action_source:     "website",
+      event_source_url:  "https://www.dhyom.in/checkout",
+      user_data:         userData,
+      custom_data: {
+        currency:     "INR",
+        value:        opts.value,
+        content_ids:  opts.contentIds,
+        content_type: "product",
+      },
+    }],
+  };
+
+  const res = await fetch(
+    `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${accessToken}`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Meta CAPI ${res.status}: ${text.slice(0, 300)}`);
+  }
+}
 
 function adminClient() {
   return createClient(
@@ -98,7 +149,27 @@ export async function POST(req: NextRequest) {
       console.error("[verify-payment] stock deduction error (non-fatal):", stockErr);
     }
 
-    // ── 5. Fire founder notification (server-to-server, non-blocking) ─────
+    // ── 5. Meta Conversions API — non-blocking, must never fail the order ──
+    void (async () => {
+      try {
+        type RawItem = { id: string; isHamperBox?: boolean };
+        const contentIds = ((base.items as RawItem[] | undefined) ?? [])
+          .filter(i => !i.isHamperBox)
+          .map(i => i.id);
+        await sendMetaCAPIEvent({
+          eventId:   razorpayPaymentId,
+          eventTime: Math.floor(Date.now() / 1000),
+          value:     base.total as number,
+          contentIds,
+          email:     base.email  as string | null,
+          phone:     base.phone  as string | null,
+        });
+      } catch (capiErr) {
+        console.error("[verify-payment] Meta CAPI error (non-fatal):", capiErr);
+      }
+    })();
+
+    // ── 6. Fire founder notification (server-to-server, non-blocking) ─────
     const host     = req.headers.get("host") ?? "dhyom.in";
     const protocol = host.startsWith("localhost") ? "http" : "https";
     void fetch(`${protocol}://${host}/api/notify-order`, {
