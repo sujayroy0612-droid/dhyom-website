@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "Dhyom — Sacred Home & Pooja Décor",
   description:
     "Premium eco-conscious Indian home and pooja décor. Curated with reverence for tradition and the earth.",
+  verification: {
+    google: "90Szan0CE6iqh3pkeU0Q0iEcQga_M7TsBsEzjoHTHKg",
+  },
 };
 
 export default async function RootLayout({
