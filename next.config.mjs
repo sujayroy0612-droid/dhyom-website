@@ -24,7 +24,7 @@ const nextConfig = {
     const csp = [
       "default-src 'self'",
       // Next.js + Razorpay popup need unsafe-inline; Razorpay script is external
-      "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com",
+      "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://www.googletagmanager.com",
       // framer-motion and Tailwind runtime class generation need unsafe-inline; Google Fonts stylesheet
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // product images from Cloudinary; Razorpay may load its own logo
@@ -32,7 +32,7 @@ const nextConfig = {
       // Next.js self-hosted fonts + Google Fonts (Cinzel, Cormorant Garamond)
       "font-src 'self' data: https://fonts.gstatic.com",
       // Supabase (REST + realtime websocket) + Razorpay API
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://region1.google-analytics.com",
       // Razorpay payment modal is an iframe inside the page
       "frame-src https://*.razorpay.com",
       // Nobody should be able to embed dhyom.in in an iframe (clickjacking)
