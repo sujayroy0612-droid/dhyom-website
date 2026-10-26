@@ -383,6 +383,14 @@ export default function CheckoutPage() {
             return;
           }
           trackEvent("purchase_completed");
+          if (typeof window !== "undefined" && window.fbq) {
+            window.fbq("track", "Purchase", {
+              value: base.total,
+              currency: "INR",
+              content_ids: [orderNumber],
+              content_type: "product",
+            });
+          }
           orderPlacedRef.current = true;
           clearCart();
           router.push(`/checkout/offer/${orderNumber}`);
