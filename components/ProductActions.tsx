@@ -42,6 +42,14 @@ export default function ProductActions({
   function handleAddToCart() {
     addItem({ kind: "product", cartItemId: crypto.randomUUID(), id: productId, name: productName, price, quantity: qty, category, subcategorySlug, label, imageUrl });
     trackEvent("add_to_cart", productId);
+    if (typeof window !== "undefined" && window.fbq) {
+      window.fbq("track", "AddToCart", {
+        content_ids: [productId],
+        content_type: "product",
+        value: price * qty,
+        currency: "INR",
+      });
+    }
     setAddedState("added");
     setTimeout(() => setAddedState("idle"), 1800);
   }

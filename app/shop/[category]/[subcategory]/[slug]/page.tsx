@@ -8,6 +8,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductActions from "@/components/ProductActions";
 import ProductGallery from "@/components/ProductGallery";
 import FunnelTracker from "@/components/FunnelTracker";
+import { MetaViewContent } from "@/components/MetaPixel";
 import WishlistButton from "@/components/WishlistButton";
 
 /* ─── Display name maps ───────────────────────────────── */
@@ -171,6 +172,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-black-plum">
       <FunnelTracker productId={product.id} />
+      <MetaViewContent productId={product.id} price={product.price} />
 
       {/* ══ PRODUCT DETAIL ══════════════════════════════════ */}
       <section className="pt-20">
