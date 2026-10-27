@@ -178,6 +178,17 @@ export default function Header({
             Home
           </Link>
 
+          {/* Build Your Hamper */}
+          <Link
+            href="/build-your-hamper"
+            className={[
+              "flex items-center font-display text-[0.62rem] tracking-[0.2em] uppercase transition-colors duration-200",
+              pathname === "/build-your-hamper" ? "text-brass" : "text-[rgba(245,237,224,0.50)] hover:text-ivory",
+            ].join(" ")}
+          >
+            Build Hamper
+          </Link>
+
           {/* ── SHOP — click-only dropdown ── */}
           <div ref={shopRef} className="relative h-16 flex items-center">
             {/* Trigger button */}
@@ -450,6 +461,18 @@ export default function Header({
               ].join(" ")}
             >
               Home
+            </Link>
+
+            {/* Build Hamper */}
+            <Link
+              href="/build-your-hamper"
+              onClick={closeAll}
+              className={[
+                "py-3.5 font-display text-[0.62rem] tracking-[0.2em] uppercase border-b border-[rgba(196,163,115,0.08)] transition-colors duration-200",
+                pathname === "/build-your-hamper" ? "text-brass" : "text-[rgba(245,237,224,0.50)]",
+              ].join(" ")}
+            >
+              Build Hamper
             </Link>
 
             {/* Account / Sign In */}
