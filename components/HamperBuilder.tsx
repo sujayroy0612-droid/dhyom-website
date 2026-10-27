@@ -165,7 +165,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
             Build Your {occasionName} Hamper
           </h1>
           <p className="font-body font-light italic text-[rgba(245,237,224,0.40)] text-[0.92rem]">
-            Select a box, fill it with what feels right. Min ₹{MIN_SPEND.toLocaleString("en-IN")} · Max ₹{MAX_SPEND.toLocaleString("en-IN")}
+            Select a box, fill it with what feels right. Min ₹{MIN_SPEND.toLocaleString("en-IN")}{MAX_SPEND < 50000 ? ` · Max ₹${MAX_SPEND.toLocaleString("en-IN")}` : ""}
           </p>
         </div>
       </div>
@@ -369,7 +369,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
               <div>
                 <div className="flex justify-between items-baseline mb-1.5">
                   <span className="font-display text-[0.38rem] tracking-[0.12em] uppercase text-[rgba(196,163,115,0.38)]">
-                    Min ₹{MIN_SPEND.toLocaleString("en-IN")} · Max ₹{MAX_SPEND.toLocaleString("en-IN")}
+                    Min ₹{MIN_SPEND.toLocaleString("en-IN")}{MAX_SPEND < 50000 ? ` · Max ₹${MAX_SPEND.toLocaleString("en-IN")}` : ""}
                   </span>
                   <span className="font-display text-brass text-[0.68rem]">₹{runningTotal.toLocaleString("en-IN")}</span>
                 </div>
