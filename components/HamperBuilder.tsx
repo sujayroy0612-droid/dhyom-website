@@ -183,8 +183,8 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
             ) : boxes.length === 1 ? (
               <div className="rounded-[4px] border border-[rgba(196,163,115,0.30)] bg-[rgba(196,163,115,0.04)] overflow-hidden">
                 {boxes[0].image_url && (
-                  <div className="w-full h-40 relative overflow-hidden bg-[#270b1b]">
-                    <Image src={boxes[0].image_url} alt={boxes[0].name} fill className="object-cover" sizes="600px" />
+                  <div className="w-full h-52 relative bg-[#270b1b]">
+                    <Image src={boxes[0].image_url} alt={boxes[0].name} fill className="object-contain" sizes="600px" />
                   </div>
                 )}
                 <div className="px-4 py-3 flex justify-between items-center">
