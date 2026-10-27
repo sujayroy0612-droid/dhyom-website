@@ -24,7 +24,7 @@ interface Props {
 
 const CATEGORY_LABELS: Record<string, string> = {
   candle: "Candles", idol: "Idols", bracelet: "Bracelets",
-  "pooja-essentials": "Pooja Essentials",
+  "pooja-essentials": "Pooja Essentials", edibles: "Edibles",
 };
 
 function hamperPrice(p: BuilderProduct): number {
@@ -49,7 +49,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
 
   useEffect(() => {
     setLoadingProds(true);
-    fetch("/api/hampers/products?categories=candle,idol,bracelet,pooja-essentials")
+    fetch("/api/hampers/products?categories=candle,idol,bracelet,pooja-essentials,edibles")
       .then(r => r.json())
       .then((d: { products?: BuilderProduct[] }) => {
         setProducts(d.products ?? []);
@@ -72,14 +72,23 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
   const categories = Array.from(new Set(products.map(p => p.category)));
   const visibleProducts = catFilter ? products.filter(p => p.category === catFilter) : [];
 
-  function setQty(productId: string, delta: number) {
+  function selectProduct(productId: string) {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
     setChosen(prev => {
       const next = new Map(prev);
-      const current = next.get(productId) ?? 0;
-      const newQty = Math.max(0, Math.min(current + delta, 10));
-      if (newQty === 0) next.delete(productId); else next.set(productId, newQty);
+      // Swap out any existing selection in the same category
+      for (const [id] of Array.from(next.entries())) {
+        const ep = products.find(p => p.id === id);
+        if (ep?.category === product.category) next.delete(id);
+      }
+      next.set(productId, 1);
       return next;
     });
+  }
+
+  function removeProduct(productId: string) {
+    setChosen(prev => { const next = new Map(prev); next.delete(productId); return next; });
   }
 
   const handleAddToCart = useCallback(() => {
@@ -247,6 +256,11 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
                   const qty   = chosen.get(p.id) ?? 0;
                   const hprice = hamperPrice(p);
                   const label = [p.fragrance, p.variant_label].filter(Boolean).join(" · ");
+                  // True when another product in this category is already selected (swap case)
+                  const isSwap = qty === 0 && Array.from(chosen.keys()).some(id => {
+                    const ep = products.find(pr => pr.id === id);
+                    return ep?.category === p.category;
+                  });
                   return (
                     <div key={p.id} className={[RING, "p-3 flex flex-col gap-2", qty > 0 ? "border-[rgba(196,163,115,0.40)] bg-[rgba(196,163,115,0.04)]" : ""].join(" ")}>
                       <div className="w-full aspect-square relative rounded-[3px] overflow-hidden bg-[#270b1b]">
@@ -264,23 +278,27 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
                         {qty === 0 ? (
                           <button
                             type="button"
-                            onClick={() => setQty(p.id, 1)}
-                            disabled={budgetFull}
+                            onClick={() => selectProduct(p.id)}
+                            disabled={!isSwap && budgetFull}
                             className={[
                               "w-full text-center font-display text-[0.44rem] tracking-[0.14em] uppercase py-1.5 rounded-[3px] transition-all duration-150",
-                              budgetFull
+                              (!isSwap && budgetFull)
                                 ? "text-[rgba(245,237,224,0.18)] border border-[rgba(245,237,224,0.08)] cursor-not-allowed"
+                                : isSwap
+                                ? "text-ivory border border-[rgba(196,163,115,0.45)] hover:bg-[rgba(196,163,115,0.08)]"
                                 : "text-brass border border-[rgba(196,163,115,0.28)] hover:border-[rgba(196,163,115,0.50)] hover:bg-[rgba(196,163,115,0.05)]",
                             ].join(" ")}
                           >
-                            Add
+                            {isSwap ? "Swap In" : "Add"}
                           </button>
                         ) : (
-                          <div className="flex items-center border border-[rgba(196,163,115,0.30)] rounded-[3px] overflow-hidden w-full justify-between">
-                            <button type="button" onClick={() => setQty(p.id, -1)} className="w-8 h-7 flex items-center justify-center text-brass font-display hover:bg-[rgba(196,163,115,0.06)] transition-colors">−</button>
-                            <span className="font-display text-ivory text-sm select-none">{qty}</span>
-                            <button type="button" onClick={() => setQty(p.id, 1)} disabled={budgetFull || qty >= 10} className="w-8 h-7 flex items-center justify-center text-brass font-display hover:bg-[rgba(196,163,115,0.06)] disabled:opacity-30 transition-colors">+</button>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeProduct(p.id)}
+                            className="w-full text-center font-display text-[0.44rem] tracking-[0.14em] uppercase py-1.5 rounded-[3px] text-[rgba(245,237,224,0.50)] border border-[rgba(196,163,115,0.38)] bg-[rgba(196,163,115,0.06)] hover:bg-transparent hover:text-[rgba(245,237,224,0.35)] transition-all duration-150"
+                          >
+                            Selected ✓
+                          </button>
                         )}
                       </div>
                     </div>
