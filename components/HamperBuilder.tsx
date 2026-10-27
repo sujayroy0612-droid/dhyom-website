@@ -38,7 +38,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
   const MIN_SPEND = settings.min_total;
   const MAX_SPEND = settings.max_total;
 
-  const [selectedBox,  setSelectedBox]  = useState<HamperBox | null>(null);
+  const [selectedBox,  setSelectedBox]  = useState<HamperBox | null>(boxes.length === 1 ? boxes[0] : null);
   const [products,     setProducts]     = useState<BuilderProduct[]>([]);
   const [loadingProds, setLoadingProds] = useState(true);
   const [catFilter,    setCatFilter]    = useState<string | null>(null);
@@ -177,9 +177,27 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
 
           {/* Step 1 — Box */}
           <div>
-            <p className={LABEL}>Step 1 — Choose your gift box</p>
+            <p className={LABEL}>{boxes.length === 1 ? "Your Gift Box" : "Step 1 — Choose your gift box"}</p>
             {boxes.length === 0 ? (
               <p className="font-body font-light text-[rgba(245,237,224,0.30)] text-sm">No box options configured yet.</p>
+            ) : boxes.length === 1 ? (
+              <div className="rounded-[4px] border border-[rgba(196,163,115,0.30)] bg-[rgba(196,163,115,0.04)] overflow-hidden">
+                {boxes[0].image_url && (
+                  <div className="w-full aspect-[4/3] relative overflow-hidden bg-[#270b1b]">
+                    <Image src={boxes[0].image_url} alt={boxes[0].name} fill className="object-cover" sizes="600px" />
+                  </div>
+                )}
+                <div className="px-4 py-3 flex justify-between items-center">
+                  <div>
+                    <p className="font-display text-ivory text-[0.80rem]" style={{ letterSpacing: "0.04em" }}>{boxes[0].name}</p>
+                    {boxes[0].price > 0
+                      ? <p className="font-display text-brass text-[0.65rem] mt-0.5">₹{boxes[0].price.toLocaleString("en-IN")}</p>
+                      : <p className="font-display text-[rgba(196,163,115,0.38)] text-[0.65rem] mt-0.5">Included</p>
+                    }
+                  </div>
+                  <span className="font-display text-[0.40rem] tracking-[0.14em] uppercase text-[rgba(100,215,100,0.70)] border border-[rgba(100,215,100,0.28)] px-2 py-1 rounded-[3px]">Included ✓</span>
+                </div>
+              </div>
             ) : (
               <div className="flex flex-col gap-2">
                 {boxes.map(box => (
@@ -419,7 +437,7 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
 
               {!canAdd && (
                 <p className="font-display text-[0.34rem] tracking-[0.08em] uppercase text-[rgba(245,237,224,0.25)] text-center -mt-1">
-                  {!selectedBox ? "Choose a box first" : `Add ₹${remaining.toLocaleString("en-IN")} more to continue`}
+                  {`Add ₹${remaining.toLocaleString("en-IN")} more to continue`}
                 </p>
               )}
 
