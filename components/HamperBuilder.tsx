@@ -181,13 +181,13 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
             {boxes.length === 0 ? (
               <p className="font-body font-light text-[rgba(245,237,224,0.30)] text-sm">No box options configured yet.</p>
             ) : boxes.length === 1 ? (
-              <div className="rounded-[4px] border border-[rgba(196,163,115,0.30)] bg-[rgba(196,163,115,0.04)] overflow-hidden">
+              <div className="rounded-[4px] border border-[rgba(196,163,115,0.30)] bg-[rgba(196,163,115,0.04)] overflow-hidden flex items-center gap-4 pr-4">
                 {boxes[0].image_url && (
-                  <div className="w-full h-52 relative bg-[#270b1b]">
-                    <Image src={boxes[0].image_url} alt={boxes[0].name} fill className="object-contain" sizes="600px" />
+                  <div className="w-32 h-32 flex-shrink-0 relative bg-[#270b1b]">
+                    <Image src={boxes[0].image_url} alt={boxes[0].name} fill className="object-contain" sizes="128px" />
                   </div>
                 )}
-                <div className="px-4 py-3 flex justify-between items-center">
+                <div className="flex-1 flex justify-between items-center py-3">
                   <div>
                     <p className="font-display text-ivory text-[0.80rem]" style={{ letterSpacing: "0.04em" }}>{boxes[0].name}</p>
                     {boxes[0].price > 0
