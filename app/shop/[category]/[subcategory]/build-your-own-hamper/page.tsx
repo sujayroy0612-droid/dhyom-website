@@ -49,7 +49,7 @@ export default async function HamperBuilderPage({ params }: PageProps) {
 
   if (catVisRes.data?.is_visible === false) notFound();
 
-  const settings: HamperSettings = settingsRes.data ?? { min_total: 1399, max_total: 2300 };
+  const settings: HamperSettings = settingsRes.data ?? { min_total: 999, max_total: 999999 };
   const boxes = (boxesRes.data ?? []) as HamperBox[];
   const occasionName = OCCASION_NAMES[subcategory] ?? subcategory;
 
