@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       const resend = new Resend(resendKey);
       await resend.emails.send({
         from: fromEmail,
-        to: "sujayroy0612@gmail.com",
+        to: "dhyomecom@gmail.com",
         subject: `Bulk Gifting Enquiry — ${num_boxes} boxes (${subcategory ?? "gift"})`,
         html: `
           <div style="font-family:sans-serif;max-width:480px;padding:24px">
