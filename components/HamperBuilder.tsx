@@ -26,6 +26,8 @@ const CATEGORY_LABELS: Record<string, string> = {
   candle: "Candles", idol: "Idols", bracelet: "Bracelets",
   "pooja-essentials": "Pooja Essentials", edibles: "Edibles",
 };
+const CATEGORY_MAX: Record<string, number> = { bracelet: 2 };
+function categoryMax(cat: string) { return CATEGORY_MAX[cat] ?? 1; }
 
 function hamperPrice(p: BuilderProduct): number {
   return p.hamper_price ?? p.price;
@@ -75,14 +77,20 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
   function selectProduct(productId: string) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
+    const max = categoryMax(product.category);
     setChosen(prev => {
       const next = new Map(prev);
-      // Swap out any existing selection in the same category
-      for (const [id] of Array.from(next.entries())) {
-        const ep = products.find(p => p.id === id);
-        if (ep?.category === product.category) next.delete(id);
+      const catIds = Array.from(next.keys()).filter(id => {
+        const ep = products.find(pr => pr.id === id);
+        return ep?.category === product.category;
+      });
+      const catCount = catIds.reduce((s, id) => s + (next.get(id) ?? 0), 0);
+      if (catCount < max) {
+        next.set(productId, (next.get(productId) ?? 0) + 1);
+      } else {
+        catIds.forEach(id => next.delete(id));
+        next.set(productId, 1);
       }
-      next.set(productId, 1);
       return next;
     });
   }
@@ -274,11 +282,11 @@ export default function HamperBuilder({ category, subcategory, occasionName, box
                   const qty   = chosen.get(p.id) ?? 0;
                   const hprice = hamperPrice(p);
                   const label = [p.fragrance, p.variant_label].filter(Boolean).join(" · ");
-                  // True when another product in this category is already selected (swap case)
-                  const isSwap = qty === 0 && Array.from(chosen.keys()).some(id => {
+                  const catCount = Array.from(chosen.keys()).reduce((s, id) => {
                     const ep = products.find(pr => pr.id === id);
-                    return ep?.category === p.category;
-                  });
+                    return s + (ep?.category === p.category ? (chosen.get(id) ?? 0) : 0);
+                  }, 0);
+                  const isSwap = qty === 0 && catCount >= categoryMax(p.category);
                   return (
                     <div key={p.id} className={[RING, "p-3 flex flex-col gap-2", qty > 0 ? "border-[rgba(196,163,115,0.40)] bg-[rgba(196,163,115,0.04)]" : ""].join(" ")}>
                       <div className="w-full aspect-square relative rounded-[3px] overflow-hidden bg-[#270b1b]">
