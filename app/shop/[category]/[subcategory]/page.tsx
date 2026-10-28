@@ -6,6 +6,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import type { DbProduct } from "@/lib/supabase/types";
 import ProductCard from "@/components/ProductCard";
 import FadeInView from "@/components/FadeInView";
+import BulkGiftingTrigger from "@/components/BulkGiftingTrigger";
 
 /* ─── Static metadata ─────────────────────────────────── */
 const CATEGORY_NAMES: Record<string, string> = {
@@ -217,6 +218,21 @@ export default async function SubcategoryPage({ params }: PageProps) {
               >
                 Start Building →
               </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Bulk Gifting CTA — gift category only */}
+      {category === "gift" && (
+        <section className="px-6 pt-4 pb-0">
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-[rgba(245,237,224,0.02)] border border-[rgba(245,237,224,0.10)] rounded-[6px] px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="font-display text-[rgba(245,237,224,0.75)]" style={{ fontSize: "0.92rem", letterSpacing: "0.04em" }}>Bulk Gifting</p>
+                <p className="font-body font-light italic text-[rgba(245,237,224,0.35)] text-sm mt-0.5">Corporate orders, wedding favours, large quantities — we&apos;ll handle it.</p>
+              </div>
+              <BulkGiftingTrigger subcategory={subcategory} />
             </div>
           </div>
         </section>
