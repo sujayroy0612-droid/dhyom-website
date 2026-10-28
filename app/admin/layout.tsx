@@ -16,6 +16,7 @@ const NAV_MAIN = [
   { label: "Brand Assets",  href: "/admin/upload-brand-images", icon: "◈" },
   { label: "Analytics",    href: "/admin/analytics",           icon: "↗" },
   { label: "Reports",      href: "/admin/reports",             icon: "◎" },
+  { label: "Bulk Inquiries", href: "/admin/bulk-inquiries",   icon: "⊛" },
 ];
 
 
