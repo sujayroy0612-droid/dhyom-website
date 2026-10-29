@@ -6,7 +6,6 @@ import Button from "@/components/Button";
 import MagneticButton from "@/components/MagneticButton";
 import ProductCard from "@/components/ProductCard";
 import NewsletterForm from "@/components/NewsletterForm";
-import FadeIn from "@/components/FadeIn";
 import FadeInView from "@/components/FadeInView";
 import CardGrid from "@/components/CardGrid";
 import TestimonialCarousel from "@/components/TestimonialCarousel";
