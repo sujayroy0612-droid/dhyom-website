@@ -157,12 +157,13 @@ function getSubcategorySlug(p: DbProduct): string {
 export default async function Home() {
   const supabase = createServerClient();
   const cols = "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,is_featured,created_at";
-  const [featuredRes, reviewsRes, assets, catVisRes, hamperBoxRes] = await Promise.all([
+  const [featuredRes, reviewsRes, assets, catVisRes, hamperBoxRes, hamperSettingsRes] = await Promise.all([
     supabase.from("products").select(cols).eq("is_featured", true).eq("is_visible", true).limit(12),
     supabase.from("reviews").select("*").eq("approved", true).order("created_at", { ascending: false }).limit(6),
     fetchSiteAssets().catch((): SiteAssets => ({})),
     supabase.from("category_visibility").select("category").eq("is_visible", true),
     supabase.from("hamper_boxes").select("image_url").eq("is_active", true).order("name").limit(1).maybeSingle(),
+    supabase.from("hamper_settings").select("min_total").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const featured = (featuredRes.data ?? []) as DbProduct[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -180,16 +181,22 @@ export default async function Home() {
     ? assets.hero_background.replace("/upload/", "/upload/c_limit,w_828,q_auto:good,f_auto/")
     : undefined;
 
-  const hamperBoxImage = (hamperBoxRes.data as { image_url: string | null } | null)?.image_url ?? null;
+  const hamperMinTotal = (hamperSettingsRes.data as { min_total: number } | null)?.min_total ?? 999;
 
   const heroSlides: HeroSlide[] = [
     {
-      eyebrow: "GIFTING, PERSONALISED",
-      headline: "Build Your Own Diwali Hamper",
-      subtext: "Choose your box, your fragrances and your message. Hampers from ₹999.",
+      eyebrow: "WEDDING SEASON GIFTING",
+      headline: "Gifts That Honour the Occasion",
+      subtext: `Build a hamper of candles, incense and sacred keepsakes for the couple, the family, and every guest. From ₹${hamperMinTotal.toLocaleString("en-IN")}.`,
       buttonLabel: "BUILD YOUR HAMPER",
       buttonHref: "/build-your-hamper",
-      imageUrl: hamperBoxImage,
+      // TODO: set imageUrl to "/hero-wedding.jpg" once the photo is placed in /public/
+      imageUrl: null,
+      backgroundGradient: true,
+      secondaryLink: {
+        text: "Gifting for 25 or more guests? Message us on WhatsApp",
+        href: "https://wa.me/918986995277?text=Hi%20Dhyom%2C%20I%20would%20like%20to%20order%20wedding%20hampers%20in%20bulk.",
+      },
       headingTag: "h1",
     },
     {
@@ -205,10 +212,7 @@ export default async function Home() {
 
   return (
     <>
-    {/* Preload slide 1 image (hamper box) and mobile poster for slide 2 */}
-    {hamperBoxImage && (
-      <link rel="preload" as="image" href={hamperBoxImage} />
-    )}
+    {/* Preload mobile poster for slide 2 */}
     {mobilePosterUrl && (
       <link rel="preload" as="image" href={mobilePosterUrl} media="(max-width: 767px)" />
     )}

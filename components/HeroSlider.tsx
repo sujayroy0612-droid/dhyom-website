@@ -14,7 +14,9 @@ export interface HeroSlide {
   subtext?: string;
   buttonLabel: string;
   buttonHref: string;
-  imageUrl?: string | null; // null = use parallax+video bg (slide 2 style)
+  imageUrl?: string | null;
+  backgroundGradient?: boolean; // true = just bg-damson + overlays, no image or video
+  secondaryLink?: { text: string; href: string }; // small text link under button
   bannerText?: string | null;
   headingTag?: "h1" | "h2";
 }
@@ -107,6 +109,8 @@ export default function HeroSlider({ slides, heroDesktopBg, heroMobilePoster }: 
             className="object-cover"
             sizes="100vw"
           />
+        ) : slide.backgroundGradient ? (
+          null /* bg-damson base colour shows through with the overlays */
         ) : (
           <>
             {heroDesktopBg && (
@@ -139,8 +143,8 @@ export default function HeroSlider({ slides, heroDesktopBg, heroMobilePoster }: 
         }}
       />
 
-      {/* ── Candle inner-glow (video/parallax slides only) ─── */}
-      {!slide.imageUrl && (
+      {/* ── Candle inner-glow (video/parallax slide only) ──── */}
+      {!slide.imageUrl && !slide.backgroundGradient && (
         <div
           aria-hidden="true"
           className="absolute pointer-events-none hidden md:block"
@@ -189,6 +193,17 @@ export default function HeroSlider({ slides, heroDesktopBg, heroMobilePoster }: 
           <p className="mt-4 font-display text-[0.50rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.50)]">
             {slide.bannerText}
           </p>
+        )}
+
+        {slide.secondaryLink && (
+          <a
+            href={slide.secondaryLink.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 font-body font-light italic text-[rgba(196,163,115,0.70)] text-sm hover:text-brass hover:underline transition-colors duration-200"
+          >
+            {slide.secondaryLink.text}
+          </a>
         )}
       </div>
 
