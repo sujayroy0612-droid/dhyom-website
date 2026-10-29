@@ -191,8 +191,8 @@ export default function HeroSlider({ slides, heroDesktopBg, heroMobilePoster }: 
             {/* MOBILE (<md): stacked layout — image on top, text below */}
             <div className="flex flex-col md:hidden min-h-screen">
 
-              {/* Image frame — 4:3, object-position right center shows the box */}
-              <div className="relative w-full flex-shrink-0" style={{ aspectRatio: "4/3" }}>
+              {/* Image frame — 16:9 matches the photo exactly → zero cropping, full box always visible */}
+              <div className="relative w-full flex-shrink-0" style={{ aspectRatio: "16/9" }}>
                 {slide.imageUrl && (
                   <Image
                     src={slide.imageUrl}
@@ -200,7 +200,7 @@ export default function HeroSlider({ slides, heroDesktopBg, heroMobilePoster }: 
                     fill
                     priority
                     className="object-cover"
-                    style={{ objectPosition: "right center" }}
+                    style={{ objectPosition: "center center" }}
                     sizes="100vw"
                   />
                 )}
