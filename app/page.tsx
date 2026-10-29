@@ -157,12 +157,11 @@ function getSubcategorySlug(p: DbProduct): string {
 export default async function Home() {
   const supabase = createServerClient();
   const cols = "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,is_featured,created_at";
-  const [featuredRes, reviewsRes, assets, catVisRes, hamperBoxRes, hamperSettingsRes] = await Promise.all([
+  const [featuredRes, reviewsRes, assets, catVisRes, hamperSettingsRes] = await Promise.all([
     supabase.from("products").select(cols).eq("is_featured", true).eq("is_visible", true).limit(12),
     supabase.from("reviews").select("*").eq("approved", true).order("created_at", { ascending: false }).limit(6),
     fetchSiteAssets().catch((): SiteAssets => ({})),
     supabase.from("category_visibility").select("category").eq("is_visible", true),
-    supabase.from("hamper_boxes").select("image_url").eq("is_active", true).order("name").limit(1).maybeSingle(),
     supabase.from("hamper_settings").select("min_total").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const featured = (featuredRes.data ?? []) as DbProduct[];
