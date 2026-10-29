@@ -9,12 +9,11 @@ import NewsletterForm from "@/components/NewsletterForm";
 import FadeIn from "@/components/FadeIn";
 import FadeInView from "@/components/FadeInView";
 import CardGrid from "@/components/CardGrid";
-import HeroBackground from "@/components/HeroBackground";
-import HeroParallaxBg from "@/components/HeroParallaxBg";
 import TestimonialCarousel from "@/components/TestimonialCarousel";
 import { createServerClient } from "@/lib/supabase/server";
 import { fetchSiteAssets, type SiteAssets } from "@/lib/supabase/site-assets";
 import type { DbProduct } from "@/lib/supabase/types";
+import HeroSlider, { type HeroSlide } from "@/components/HeroSlider";
 
 /* ─── Category → asset key map ───────────────────────── */
 const CATEGORY_ASSET: Record<string, string> = {
@@ -159,11 +158,12 @@ function getSubcategorySlug(p: DbProduct): string {
 export default async function Home() {
   const supabase = createServerClient();
   const cols = "id,name,type,subcategory,collection,fragrance,price,description,image_url,category,stock,is_featured,created_at";
-  const [featuredRes, reviewsRes, assets, catVisRes] = await Promise.all([
+  const [featuredRes, reviewsRes, assets, catVisRes, hamperBoxRes] = await Promise.all([
     supabase.from("products").select(cols).eq("is_featured", true).eq("is_visible", true).limit(12),
     supabase.from("reviews").select("*").eq("approved", true).order("created_at", { ascending: false }).limit(6),
     fetchSiteAssets().catch((): SiteAssets => ({})),
     supabase.from("category_visibility").select("category").eq("is_visible", true),
+    supabase.from("hamper_boxes").select("image_url").eq("is_active", true).order("name").limit(1).maybeSingle(),
   ]);
   const featured = (featuredRes.data ?? []) as DbProduct[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -181,91 +181,46 @@ export default async function Home() {
     ? assets.hero_background.replace("/upload/", "/upload/c_limit,w_828,q_auto:good,f_auto/")
     : undefined;
 
+  const hamperBoxImage = (hamperBoxRes.data as { image_url: string | null } | null)?.image_url ?? null;
+
+  const heroSlides: HeroSlide[] = [
+    {
+      eyebrow: "GIFTING, PERSONALISED",
+      headline: "Build Your Own Diwali Hamper",
+      subtext: "Choose your box, your fragrances and your message. Hampers from ₹999.",
+      buttonLabel: "BUILD YOUR HAMPER",
+      buttonHref: "/build-your-hamper",
+      imageUrl: hamperBoxImage,
+      headingTag: "h1",
+    },
+    {
+      eyebrow: "Sacred · Sustainable · Indian",
+      headline: "Bring the Sacred",
+      headlineAccent: "Home",
+      buttonLabel: "Explore the Collection",
+      buttonHref: "/shop",
+      imageUrl: null, // uses parallax + video bg
+      headingTag: "h2",
+    },
+  ];
+
   return (
     <>
-    {/* Preload the optimized mobile poster so it doesn't block LCP */}
+    {/* Preload slide 1 image (hamper box) and mobile poster for slide 2 */}
+    {hamperBoxImage && (
+      <link rel="preload" as="image" href={hamperBoxImage} />
+    )}
     {mobilePosterUrl && (
       <link rel="preload" as="image" href={mobilePosterUrl} media="(max-width: 767px)" />
     )}
     <div className="min-h-screen">
 
-      {/* ══ 1. HERO ══════════════════════════════════════════ */}
-      <section className="relative flex flex-col items-center justify-center min-h-screen text-center px-6 bg-damson overflow-hidden">
-        {/* Desktop only: parallax image — explicitly hidden on mobile so video shows unobstructed */}
-        {assets.hero_background && (
-          <HeroParallaxBg
-            src={assets.hero_background.replace("/upload/", "/upload/c_limit,w_2400,q_auto:best,f_auto/")}
-          />
-        )}
-
-        {/* Mobile only: portrait video — optimized poster reduces LCP */}
-        <HeroBackground
-          videoSrc="/videos/hero-video.mp4"
-          posterUrl={mobilePosterUrl}
-        />
-
-        {/* Gradient overlay */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(61,20,40,0.82) 0%, rgba(61,20,40,0.48) 28%, rgba(61,20,40,0.42) 50%, rgba(61,20,40,0.50) 72%, rgba(61,20,40,0.82) 100%)",
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(ellipse 70% 55% at 50% 38%, rgba(107,42,72,0.38) 0%, transparent 70%)",
-          }}
-        />
-
-        {/* Candle inner-glow — desktop only, positioned over the candle jar (right ~75%, top ~58%) */}
-        <div
-          aria-hidden="true"
-          className="absolute pointer-events-none hidden md:block"
-          style={{
-            left: "68%",
-            top: "42%",
-            width: "32vw",
-            height: "52vh",
-            transform: "translate(-50%, -50%)",
-            background:
-              "radial-gradient(ellipse 55% 60% at 50% 50%, rgba(201,162,39,0.22) 0%, rgba(201,162,39,0.10) 40%, rgba(201,162,39,0.02) 70%, transparent 100%)",
-            animation: "candle-breathe 4.2s ease-in-out infinite",
-          }}
-        />
-
-        <FadeIn delay={0} className="relative">
-          <p className="font-display text-[0.62rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.60)] mb-7">
-            Sacred · Sustainable · Indian
-          </p>
-        </FadeIn>
-
-        <FadeIn delay={0.14} className="relative">
-          <h1
-            className="font-display text-ivory mb-10 max-w-3xl"
-            style={{ fontSize: "clamp(2.6rem, 6vw, 4.8rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
-          >
-            Bring the Sacred
-            <br />
-            <span className="text-brass">Home</span>
-          </h1>
-        </FadeIn>
-
-        <FadeIn delay={0.30} className="relative">
-          <MagneticButton strength={7}>
-            <Link
-              href="/shop"
-              className="inline-flex items-center justify-center font-display uppercase tracking-[0.22em] rounded-full transition-colors duration-200 active:scale-[0.98] px-8 py-2.5 text-[0.65rem] bg-brass text-ink border border-brass hover:bg-[#d4b383] hover:border-[#d4b383]"
-            >
-              Explore the Collection
-            </Link>
-          </MagneticButton>
-        </FadeIn>
-
-      </section>
+      {/* ══ 1. HERO SLIDER ═══════════════════════════════════ */}
+      <HeroSlider
+        slides={heroSlides}
+        heroDesktopBg={assets.hero_background ?? null}
+        heroMobilePoster={mobilePosterUrl ?? null}
+      />
 
 
       {/* ══ 2. BEST SELLING ══════════════════════════════════ */}
