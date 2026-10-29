@@ -77,7 +77,7 @@ const SUBCATEGORIES: Record<
     {
       slug: "wedding",
       title: "Wedding",
-      description: "For the beginning of a shared sacred life.",
+      description: "For the couple, the family and every guest.",
     },
     {
       slug: "birthday",
