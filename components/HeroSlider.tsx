@@ -191,8 +191,10 @@ export default function HeroSlider({ slides, heroDesktopBg, heroMobilePoster }: 
             {/* MOBILE (<md): stacked layout — image on top, text below */}
             <div className="flex flex-col md:hidden min-h-screen">
 
-              {/* Image frame — 16:9 matches the photo exactly → zero cropping, full box always visible */}
-              <div className="relative w-full flex-shrink-0" style={{ aspectRatio: "16/9" }}>
+              {/* Image frame — 1:1 square, scale(1.1) zooms to box area, translateY shifts it
+                  slightly down so the hamper is centred in the frame with a bit of breathing
+                  room above the lid. overflow-hidden clips the scaled image edges. */}
+              <div className="relative w-full flex-shrink-0 overflow-hidden" style={{ aspectRatio: "1/1" }}>
                 {slide.imageUrl && (
                   <Image
                     src={slide.imageUrl}
@@ -200,7 +202,11 @@ export default function HeroSlider({ slides, heroDesktopBg, heroMobilePoster }: 
                     fill
                     priority
                     className="object-cover"
-                    style={{ objectPosition: "center center" }}
+                    style={{
+                      objectPosition: "right center",
+                      transform: "scale(1.1) translateY(4%)",
+                      transformOrigin: "right center",
+                    }}
                     sizes="100vw"
                   />
                 )}
