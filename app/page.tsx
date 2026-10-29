@@ -189,9 +189,8 @@ export default async function Home() {
       subtext: `Build a hamper of candles, incense and sacred keepsakes for the couple, the family, and every guest. From ₹${hamperMinTotal.toLocaleString("en-IN")}.`,
       buttonLabel: "BUILD YOUR HAMPER",
       buttonHref: "/build-your-hamper",
-      // TODO: set imageUrl to "/hero-wedding.jpg" once the photo is placed in /public/
-      imageUrl: null,
-      backgroundGradient: true,
+      imageUrl: "/hero-wedding.jpg",
+      textAlign: "left",
       secondaryLink: {
         text: "Gifting for 25 or more guests? Message us on WhatsApp",
         href: "https://wa.me/918986995277?text=Hi%20Dhyom%2C%20I%20would%20like%20to%20order%20wedding%20hampers%20in%20bulk.",
