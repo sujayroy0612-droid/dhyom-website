@@ -44,39 +44,9 @@ const SUBCATEGORIES: Record<
       description: "Light, fragrance, and intention — for the festival of lights.",
     },
     {
-      slug: "rakhi",
-      title: "Rakhi",
-      description: "For the bond that does not need occasion to mean something.",
-    },
-    {
-      slug: "chhath",
-      title: "Chhath Puja",
-      description: "Sacred items for the festival of the sun and the dawn it honours.",
-    },
-    {
-      slug: "ganesh-chaturthi",
-      title: "Ganesh Chaturthi",
-      description: "Assembled for the arrival of Ganesha.",
-    },
-    {
-      slug: "dussehra",
-      title: "Dussehra",
-      description: "For the day that marks what goodness can do.",
-    },
-    {
-      slug: "corporate",
-      title: "Corporate Gifting",
-      description: "Rooted in Indian tradition. For the workplace that values meaning.",
-    },
-    {
       slug: "wedding",
       title: "Wedding",
       description: "For the couple, the family and every guest.",
-    },
-    {
-      slug: "birthday",
-      title: "Birthday Gifting",
-      description: "A gift that carries intention, not just occasion.",
     },
   ],
   "pooja-essentials": [
