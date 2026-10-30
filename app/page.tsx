@@ -141,6 +141,20 @@ const pillars = [
   },
 ];
 
+/* ─── Festival campaign section config ───────────────── */
+const FESTIVAL_CAMPAIGN = {
+  eyebrow:         "DIWALI",
+  headline:        "The Diwali",
+  headlineAccent:  "Collection",
+  paragraph:       "A gift that keeps the home lit long after the festival ends. Candles, incense, and intention, assembled for the people who make your Diwali.",
+  buttonLabel:     "SHOP THE COLLECTION",
+  buttonHref:      "/shop/gift/diwali",
+  secondLinkLabel: "Or build your own hamper",
+  secondLinkHref:  "/build-your-hamper",
+  imageUrl:        "/diwali-collection.jpg",
+  imageAlt:        "Dhyom Diwali gift box — a decorative Mughal-pattern gift box with brass latches, surrounded by lit diyas, marigold flowers, and scattered rose petals in warm candlelight",
+};
+
 /* ─── Helpers ─────────────────────────────────────────── */
 function buildLabel(p: DbProduct): string {
   const first = p.collection
@@ -336,54 +350,43 @@ export default async function Home() {
         <div className="max-w-6xl mx-auto flex flex-col lg:flex-row">
 
           <div className="lg:w-3/5 aspect-[4/3] lg:aspect-auto lg:min-h-[520px] bg-[#270b1b] relative overflow-hidden flex-shrink-0">
-            {assets.seasonal_banner ? (
-              <Image
-                src={assets.seasonal_banner}
-                alt="Seasonal collection"
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 60vw"
-              />
-            ) : (
-              <>
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0"
-                  style={{
-                    background: "radial-gradient(ellipse 80% 80% at 30% 60%, rgba(107,42,72,0.25) 0%, transparent 70%)",
-                  }}
-                />
-                <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center font-display text-[0.55rem] tracking-[0.22em] uppercase text-[rgba(196,163,115,0.18)]">
-                  Campaign image coming soon
-                </span>
-              </>
-            )}
+            <Image
+              src={FESTIVAL_CAMPAIGN.imageUrl}
+              alt={FESTIVAL_CAMPAIGN.imageAlt}
+              fill
+              className="object-contain"
+              sizes="(max-width: 1024px) 100vw, 60vw"
+            />
           </div>
 
           <div className="lg:w-2/5 flex flex-col justify-center px-10 py-16 lg:py-20">
             <p className="font-display text-[0.60rem] tracking-[0.28em] uppercase text-[rgba(196,163,115,0.55)] mb-5">
-              Raksha Bandhan
+              {FESTIVAL_CAMPAIGN.eyebrow}
             </p>
             <h2
               className="font-display text-ivory mb-5"
               style={{ fontSize: "clamp(1.8rem, 3vw, 2.6rem)", letterSpacing: "0.05em", lineHeight: 1.12 }}
             >
-              The Rakhi
+              {FESTIVAL_CAMPAIGN.headline}
               <br />
-              <span className="text-brass">Collection</span>
+              <span className="text-brass">{FESTIVAL_CAMPAIGN.headlineAccent}</span>
             </h2>
             <div className="w-8 h-px bg-[rgba(196,163,115,0.35)] mb-7" />
             <p className="font-body font-light italic text-[rgba(245,237,224,0.55)] text-base leading-relaxed mb-10">
-              A gift she will light every morning. A ritual that begins
-              because of you. Candles, incense, and intention — assembled
-              for the bond you cherish most.
+              {FESTIVAL_CAMPAIGN.paragraph}
             </p>
-            <div>
+            <div className="flex flex-col items-start gap-4">
               <MagneticButton strength={6}>
-                <Link href="/shop/gift">
-                  <Button size="md">Shop the Collection</Button>
+                <Link href={FESTIVAL_CAMPAIGN.buttonHref}>
+                  <Button size="md">{FESTIVAL_CAMPAIGN.buttonLabel}</Button>
                 </Link>
               </MagneticButton>
+              <Link
+                href={FESTIVAL_CAMPAIGN.secondLinkHref}
+                className="font-display text-[0.54rem] tracking-[0.18em] uppercase text-[rgba(196,163,115,0.55)] hover:text-brass transition-colors duration-200"
+              >
+                {FESTIVAL_CAMPAIGN.secondLinkLabel}
+              </Link>
             </div>
           </div>
 
