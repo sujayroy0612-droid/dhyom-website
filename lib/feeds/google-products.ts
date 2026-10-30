@@ -13,6 +13,18 @@ function adminClient() {
 const HEALTH_CLAIM_RE =
   /\b(heal|heals|healing|cure[sd]?|cures|medicin|medicinal|therap[iy]|therapeutic|remedies|remedy|treat[sm]?|treats|treatment)\b/i;
 
+const BASE_URL = "https://www.dhyom.in";
+
+export function productPageUrl(p: {
+  category: string;
+  collection?: string | null;
+  subcategory?: string | null;
+  slug: string | null;
+}): string {
+  const subcat = p.collection ?? p.subcategory ?? "";
+  return `${BASE_URL}/shop/${p.category}/${subcat}/${p.slug ?? ""}`;
+}
+
 export interface FeedProduct extends DbProduct {
   // Columns fetched for the feed (subset of DbProduct)
   short_description: string | null;

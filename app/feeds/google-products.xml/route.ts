@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildGoogleFeed } from "@/lib/feeds/google-products";
+import { buildGoogleFeed, productPageUrl } from "@/lib/feeds/google-products";
 import type { FeedProduct } from "@/lib/feeds/google-products";
 
 const BASE_URL = "https://www.dhyom.in";
@@ -72,10 +72,6 @@ function optimizeImage(url: string): string {
   return url;
 }
 
-function productUrl(p: FeedProduct): string {
-  const subcat = p.collection ?? p.subcategory ?? "";
-  return `${BASE_URL}/shop/${p.category}/${subcat}/${p.slug}`;
-}
 
 function productTypePath(p: FeedProduct): string {
   const cat = CATEGORY_NAMES[p.category] ?? p.category;
@@ -136,7 +132,7 @@ export async function GET() {
       `      <g:id>${xmlEscape(p.id)}</g:id>`,
       `      <g:title>${xmlEscape(title)}</g:title>`,
       `      <g:description>${xmlEscape(description)}</g:description>`,
-      `      <g:link>${xmlEscape(productUrl(p))}</g:link>`,
+      `      <g:link>${xmlEscape(productPageUrl(p))}</g:link>`,
       `      <g:image_link>${xmlEscape(mainImage)}</g:image_link>`,
       ...extraImages.map((u) => `      <g:additional_image_link>${xmlEscape(u)}</g:additional_image_link>`),
       `      <g:availability>${availability}</g:availability>`,
