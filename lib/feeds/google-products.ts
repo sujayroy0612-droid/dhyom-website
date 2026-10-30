@@ -19,10 +19,10 @@ export function productPageUrl(p: {
   category: string;
   collection?: string | null;
   subcategory?: string | null;
-  slug: string;
+  slug: string | null;
 }): string {
   const subcat = p.collection ?? p.subcategory ?? "";
-  return `${BASE_URL}/shop/${p.category}/${subcat}/${p.slug}`;
+  return `${BASE_URL}/shop/${p.category}/${subcat}/${p.slug ?? ""}`;
 }
 
 export interface FeedProduct extends DbProduct {
