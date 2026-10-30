@@ -28,12 +28,6 @@ const SUBCATEGORIES: Record<
       description:
         "He who clears the way — for the home that makes room for new beginnings.",
     },
-    {
-      slug: "lakshmi",
-      title: "Lakshmi",
-      description:
-        "Abundance arrived as presence. For the threshold of the home.",
-    },
   ],
   bracelet: [
     {
