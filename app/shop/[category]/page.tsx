@@ -55,21 +55,6 @@ const SUBCATEGORIES: Record<
       title: "Incense Sticks",
       description: "Hand-rolled, slow to burn. For the daily ritual, offered without ceremony.",
     },
-    {
-      slug: "incense-cones",
-      title: "Incense Cones",
-      description: "For the corner you return to. One cone, the room entirely changed.",
-    },
-    {
-      slug: "ghee-batti",
-      title: "Ghee Batti",
-      description: "Pure cow ghee in the traditional form. For the diya as it has always burned.",
-    },
-    {
-      slug: "camphor",
-      title: "Camphor Tablets",
-      description: "For the aarti flame. As clean and certain as it has always been.",
-    },
   ],
 };
 
